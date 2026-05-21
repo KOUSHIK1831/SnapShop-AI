@@ -155,6 +155,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profile) {
           role = profile.role || role;
           is_blocked = !!profile.is_blocked;
+
+          // If not already blocked by profile, check seller status
+          if (!is_blocked && role === 'seller') {
+            const { data: seller } = await supabase.from('sellers')
+              .select('status')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+            if (seller?.status === 'blocked') {
+              is_blocked = true;
+            }
+          }
         } else {
           // Profile missing - create one
           await supabase.from('profiles').upsert({
@@ -218,6 +229,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             },
             (payload) => {
               if (payload.new && (payload.new as any).is_blocked) {
+                supabase.auth.signOut().then(() => {
+                  dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+                  sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+                  window.location.href = '/auth';
+                });
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'sellers',
+              filter: `user_id=eq.${session.user.id}`,
+            },
+            (payload) => {
+              if (payload.new && (payload.new as any).status === 'blocked') {
                 supabase.auth.signOut().then(() => {
                   dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
                   sessionStorage.setItem('apnabazar_blocked_alert', 'true');
@@ -322,8 +351,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) return { error: normalizePasswordLoginError(error) };
 
       if (data.user) {
-        const { data: profile } = await supabase.from('profiles').select('is_blocked').eq('id', data.user.id).single();
-        if (profile?.is_blocked) {
+        const { data: profile } = await supabase.from('profiles').select('is_blocked, role').eq('id', data.user.id).single();
+        let blocked = profile?.is_blocked;
+
+        if (!blocked && profile?.role === 'seller') {
+          const { data: seller } = await supabase.from('sellers').select('status').eq('user_id', data.user.id).maybeSingle();
+          if (seller?.status === 'blocked') blocked = true;
+        }
+
+        if (blocked) {
           await supabase.auth.signOut();
           return { error: new Error('You have been blocked by the admin. Please contact the admin for any queries at admin@apnabazar.app') };
         }

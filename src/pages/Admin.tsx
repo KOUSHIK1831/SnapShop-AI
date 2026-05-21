@@ -227,18 +227,34 @@ export default function Admin() {
     if (!confirm(newStatus === 'blocked' ? t('admin.confirm.blockStore') : t('admin.confirm.unblockStore'))) return;
     const { error } = await supabase.from("sellers").update({ status: newStatus }).eq("id", seller.id);
     if (!error) {
+      // Synchronize with profiles table
+      await supabase.from("profiles").update({ is_blocked: newStatus === 'blocked' }).eq("id", seller.user_id);
+      
       const updated = { ...seller, status: newStatus };
       dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller: updated, products: state.sellerProducts, orders: state.sellerOrders } });
       dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map(s => s.id === seller.id ? updated : s) });
+      
+      // Also update profiles in state if they are loaded
+      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map(p => p.id === seller.user_id ? { ...p, is_blocked: newStatus === 'blocked' } : p) });
+      
       toast({ title: newStatus === 'blocked' ? t('admin.toasts.storeBlocked') : t('admin.toasts.storeUnblocked'), variant: newStatus === 'blocked' ? "destructive" : "default" });
     }
   };
 
   const toggleUserBlock = async (profile: Profile) => {
+    const isBlocking = !profile.is_blocked;
     if (!confirm(profile.is_blocked ? t('admin.confirm.unblockUser') : t('admin.confirm.blockUser'))) return;
-    const { error } = await supabase.from("profiles").update({ is_blocked: !profile.is_blocked }).eq("id", profile.id);
+    const { error } = await supabase.from("profiles").update({ is_blocked: isBlocking }).eq("id", profile.id);
     if (!error) {
-      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map(p => p.id === profile.id ? { ...p, is_blocked: !p.is_blocked } : p) });
+      // If user is a seller, also update their seller status
+      if (profile.role === 'seller') {
+        await supabase.from("sellers").update({ status: isBlocking ? 'blocked' : 'active' }).eq("user_id", profile.id);
+        
+        // Update sellers in state if they are loaded
+        dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map(s => s.user_id === profile.id ? { ...s, status: isBlocking ? 'blocked' : 'active' } : s) });
+      }
+
+      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map(p => p.id === profile.id ? { ...p, is_blocked: isBlocking } : p) });
       toast({ title: profile.is_blocked ? t('admin.toasts.userUnblocked') : t('admin.toasts.userBlocked'), variant: profile.is_blocked ? "default" : "destructive" });
     }
   };
