@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { Save, Loader2, Search, IndianRupee, Package } from 'lucide-react';
+import { Save, Loader2, Search, IndianRupee, Package, Trash2 } from 'lucide-react';
 
 interface InventoryEditorProps {
   products: Product[];
   onUpdate: (id: string, updates: Partial<Product>) => Promise<unknown>;
+  onDelete?: (id: string) => Promise<unknown>;
 }
 
-export default function InventoryEditor({ products, onUpdate }: InventoryEditorProps) {
+export default function InventoryEditor({ products, onUpdate, onDelete }: InventoryEditorProps) {
   const [edits, setEdits] = useState<Record<string, { stock: string; low_stock_threshold: string }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -58,6 +60,21 @@ export default function InventoryEditor({ products, onUpdate }: InventoryEditorP
     setSaving((prev) => ({ ...prev, [product.id]: false }));
     toast({ title: 'Stock updated', description: `${product.title} stock set to ${stock}` });
   }, [edits, onUpdate, toast]);
+
+  const handleDelete = useCallback(async (product: Product) => {
+    if (!onDelete) return;
+    if (!confirm(t('product.deleteConfirm'))) return;
+
+    setDeleting((prev) => ({ ...prev, [product.id]: true }));
+    try {
+      await onDelete(product.id);
+      toast({ title: 'Product removed', description: `${product.title} has been removed from your catalog.` });
+    } catch (error) {
+      toast({ title: 'Error removing product', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setDeleting((prev) => ({ ...prev, [product.id]: false }));
+    }
+  }, [onDelete, t, toast]);
 
   const handleSaveAll = useCallback(async () => {
     const productsToUpdate = products.flatMap((product) => {
@@ -177,18 +194,37 @@ export default function InventoryEditor({ products, onUpdate }: InventoryEditorP
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleSave(product)}
-                        disabled={saving[product.id]}
-                      >
-                        {saving[product.id] ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Save className="size-3.5" />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSave(product)}
+                          disabled={saving[product.id]}
+                          title="Save changes"
+                        >
+                          {saving[product.id] ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Save className="size-3.5" />
+                          )}
+                        </Button>
+                        {onDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(product)}
+                            disabled={deleting[product.id]}
+                            className="text-muted-foreground hover:text-destructive"
+                            title={t('product.delete')}
+                          >
+                            {deleting[product.id] ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-3.5" />
+                            )}
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -204,3 +240,4 @@ export default function InventoryEditor({ products, onUpdate }: InventoryEditorP
     </div>
   );
 }
+

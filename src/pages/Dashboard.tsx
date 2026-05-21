@@ -128,7 +128,7 @@ export default function Dashboard() {
           )}
           {activeTab === 'orders' && <Orders orders={orders} onUpdateStatus={updateOrderStatus} />}
           {activeTab === 'upload' && <UploadZone sellerId={seller.id} onComplete={fetchProducts} />}
-          {activeTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} />}
+          {activeTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
           {activeTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
         </div>
       </div>

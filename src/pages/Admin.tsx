@@ -209,7 +209,15 @@ export default function Admin() {
     if (!confirm(t('admin.confirm.deleteProduct'))) return;
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (!error) {
-      dispatch({ type: 'SET_SELECTED_SELLER', payload: { ...state, products: state.sellerProducts.filter(p => p.id !== id) } });
+      dispatch({ 
+        type: 'SET_SELECTED_SELLER', 
+        payload: { 
+          seller: state.selectedSeller, 
+          products: state.sellerProducts.filter(p => p.id !== id),
+          orders: state.sellerOrders
+        } 
+      });
+      fetchGlobalStats();
       toast({ title: t('admin.toasts.productDeleted') });
     }
   };
