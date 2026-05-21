@@ -200,7 +200,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       checkUser(session);
     });
 
-    return () => subscription.unsubscribe();
+    // Real-time subscription to current user's profile status
+    let profileSubscription: any = null;
+    
+    const setupProfileSubscription = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        profileSubscription = supabase
+          .channel(`profile-status-${session.user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${session.user.id}`,
+            },
+            (payload) => {
+              if (payload.new && (payload.new as any).is_blocked) {
+                supabase.auth.signOut().then(() => {
+                  dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+                  sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+                  window.location.href = '/auth';
+                });
+              }
+            }
+          )
+          .subscribe();
+      }
+    };
+
+    setupProfileSubscription();
+
+    return () => {
+      subscription.unsubscribe();
+      if (profileSubscription) profileSubscription.unsubscribe();
+    };
   }, []);
   const signUp = async (phone: string, name: string, email: string, password: string, isBuyer = false) => {
     try {
