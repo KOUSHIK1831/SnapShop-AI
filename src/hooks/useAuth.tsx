@@ -8,7 +8,6 @@ interface StoredCredentials {
   email: string;
   password: string;
 }
-
 interface AuthUser {
   id: string;
   name?: string;
@@ -320,12 +319,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const email = identifier.includes('@')
         ? identifier.trim().toLowerCase()
         : getEmailForPhone(identifier) || `${identifier.replace(/\D/g, '')}@apnabazar.app`;
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error) {
-        storeCredentials(email, password);
-        return { error: null };
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: normalizePasswordLoginError(error) };
+
+      if (data.user) {
+        const { data: profile } = await supabase.from('profiles').select('is_blocked').eq('id', data.user.id).single();
+        if (profile?.is_blocked) {
+          await supabase.auth.signOut();
+          return { error: new Error('You have been blocked by the admin. Please contact the admin for any queries at admin@apnabazar.app') };
+        }
       }
-      return { error: normalizePasswordLoginError(error) };
+
+      storeCredentials(email, password);
+      return { error: null };
     } catch (err) {
       return { error: err instanceof Error ? err : new Error('Network error') };
     }

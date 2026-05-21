@@ -104,16 +104,16 @@ export default function Auth() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Success', description: 'Logged in successfully' });
-      // Read role directly from profile to navigate immediately
+      // Check if user was immediately signed out (blocked)
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-        const role = profile?.role || session.user.user_metadata?.role || 'seller';
-        if (role === 'buyer') navigate('/buyer');
-        else if (role === 'admin') navigate('/admin');
-        else navigate('/dashboard');
-      }
+      if (!session) return; 
+
+      toast({ title: 'Success', description: 'Logged in successfully' });
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      const role = profile?.role || session.user.user_metadata?.role || 'seller';
+      if (role === 'buyer') navigate('/buyer');
+      else if (role === 'admin') navigate('/admin');
+      else navigate('/dashboard');
     }
   };
 
