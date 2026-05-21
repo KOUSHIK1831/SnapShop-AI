@@ -91,7 +91,7 @@ export default function Auth() {
       sessionStorage.removeItem('apnabazar_blocked_alert');
       toast({ 
         title: 'Account Blocked', 
-        description: 'You have been blocked by the admin. Please contact the admin for any queries at admin@apnabazar.app', 
+        description: 'You have been blocked by the admin. Please contact the admin for any queries at koushikreddybanuri@gmail.com', 
         variant: 'destructive',
         duration: 10000
       });

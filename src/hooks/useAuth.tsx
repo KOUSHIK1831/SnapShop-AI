@@ -361,7 +361,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (blocked) {
           await supabase.auth.signOut();
-          return { error: new Error('You have been blocked by the admin. Please contact the admin for any queries at admin@apnabazar.app') };
+          return { error: new Error('You have been blocked by the admin. Please contact the admin for any queries at koushikreddybanuri@gmail.com') };
         }
       }
 
