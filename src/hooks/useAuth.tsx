@@ -136,104 +136,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    const restore = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const meta = session.user.user_metadata || {};
-        let role = meta.role || 'seller';
-        let is_blocked = false;
-        try {
-          const { data: profile } = await supabase.from('profiles').select('role, is_blocked').eq('id', session.user.id).single();
-          if (profile && typeof profile === 'object' && 'role' in profile && profile.role) {
-            role = profile.role as string;
-            is_blocked = !!(profile as { is_blocked?: boolean }).is_blocked;
-          }
-        } catch (e) {
-          // Profile missing - create one with role from metadata
-          try {
-            await supabase.from('profiles').upsert({
+    const checkUser = async (session: any) => {
+      if (!session?.user) {
+        dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+        return;
+      }
+
+      const meta = session.user.user_metadata || {};
+      let role = meta.role || 'seller';
+      let is_blocked = false;
+
+      try {
+        const { data: profile } = await supabase.from('profiles')
+          .select('role, is_blocked')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          role = profile.role || role;
+          is_blocked = !!profile.is_blocked;
+        } else {
+          // Profile missing - create one
+          await supabase.from('profiles').upsert({
+            id: session.user.id,
+            email: session.user.email,
+            role: role,
+          }, { onConflict: 'id' }).maybeSingle();
+        }
+      } catch (e) {
+        console.warn('[Auth] Profile check failed:', e);
+      }
+
+      if (is_blocked) {
+        await supabase.auth.signOut();
+        dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+        // Set a flag in session storage to show the blocked message on the Auth page
+        sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+      } else {
+        dispatch({
+          type: 'SET_AUTH',
+          payload: {
+            user: {
               id: session.user.id,
               email: session.user.email,
-              role: meta.role || 'seller',
-            }, { onConflict: 'id' }).maybeSingle();
-          } catch (e2) {
-            // ignore
-          }
-        }
-
-        if (is_blocked) {
-          await supabase.auth.signOut();
-          dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
-        } else {
-          dispatch({
-            type: 'SET_AUTH',
-            payload: {
-              user: {
-                id: session.user.id,
-                email: session.user.email,
-                name: meta.name || '',
-                phone: meta.phone || meta.phone_number || '',
-                role,
-                is_blocked,
-              },
-              loading: false,
+              name: meta.name || '',
+              phone: meta.phone || meta.phone_number || '',
+              role,
+              is_blocked,
             },
-          });
-        }
-      } else {
-        dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+            loading: false,
+          },
+        });
       }
+    };
+
+    const restore = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      await checkUser(session);
     };
     restore();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const meta = session.user.user_metadata || {};
-        (async () => {
-          let role = meta.role || 'seller';
-          let is_blocked = false;
-          try {
-            const { data: profile } = await supabase.from('profiles').select('role, is_blocked').eq('id', session.user.id).single();
-            if (profile && typeof profile === 'object' && 'role' in profile && profile.role) {
-              role = profile.role as string;
-              is_blocked = !!(profile as { is_blocked?: boolean }).is_blocked;
-            }
-          } catch (e) {
-            // Profile missing - create one with role from metadata
-            try {
-              await supabase.from('profiles').upsert({
-                id: session.user.id,
-                email: session.user.email,
-                role: meta.role || 'seller',
-              }, { onConflict: 'id' }).maybeSingle();
-            } catch (e2) {
-              // ignore
-            }
-          }
-
-          if (is_blocked) {
-            await supabase.auth.signOut();
-            dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
-          } else {
-            dispatch({
-              type: 'SET_AUTH',
-              payload: {
-                user: {
-                  id: session.user.id,
-                  email: session.user.email,
-                  name: meta.name || '',
-                  phone: meta.phone || meta.phone_number || '',
-                  role,
-                  is_blocked,
-                },
-                loading: false,
-              },
-            });
-          }
-        })();
-      } else {
-        dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
-      }
+      checkUser(session);
     });
 
     return () => subscription.unsubscribe();

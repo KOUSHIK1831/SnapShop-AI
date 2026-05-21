@@ -85,6 +85,20 @@ export default function Auth() {
   const { mode, showPassword, submitting, forgotEmail, forgotSent, form } = state;
 
   useEffect(() => {
+    // Check for blocked user alert
+    const wasBlocked = sessionStorage.getItem('apnabazar_blocked_alert');
+    if (wasBlocked === 'true') {
+      sessionStorage.removeItem('apnabazar_blocked_alert');
+      toast({ 
+        title: 'Account Blocked', 
+        description: 'You have been blocked by the admin. Please contact the admin for any queries at admin@apnabazar.app', 
+        variant: 'destructive',
+        duration: 10000
+      });
+    }
+  }, [toast]);
+
+  useEffect(() => {
     if (!loading && user) {
       if (user.role === 'seller') navigate('/dashboard');
       else if (user.role === 'admin') navigate('/admin');
