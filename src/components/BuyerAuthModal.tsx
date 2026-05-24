@@ -1,4 +1,4 @@
-import { useReducer } from 'react';
+import { useReducer, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,6 +122,45 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     } else {
       onSuccess(state.phone);
     }
+  };
+
+  const [cooldown, setCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const MAX_RESENDS = 3;
+
+  useEffect(() => {
+    if (!isOpen || !state.email || state.mode !== 'otp') return;
+    const resendData = sessionStorage.getItem(`otp_resend_${state.email}`);
+    if (resendData) {
+      const { count, nextAllowed } = JSON.parse(resendData);
+      setResendCount(count);
+      const remaining = Math.ceil((nextAllowed - Date.now()) / 1000);
+      if (remaining > 0) setCooldown(remaining);
+    }
+  }, [isOpen, state.email, state.mode]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || state.submitting || resendCount >= MAX_RESENDS) return;
+
+    const newCount = resendCount + 1;
+    setResendCount(newCount);
+    const nextCooldown = newCount === 1 ? 60 : newCount === 2 ? 180 : 300;
+    const nextAllowed = Date.now() + nextCooldown * 1000;
+    
+    sessionStorage.setItem(`otp_resend_${state.email}`, JSON.stringify({ 
+      count: newCount, 
+      nextAllowed 
+    }));
+    
+    setCooldown(nextCooldown);
+    // Reuse handleSignup to trigger a new OTP send
+    await signUp(state.phone, state.name, state.email, state.password, true);
   };
 
   return (
@@ -256,12 +295,29 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyOtp(); }}
               />
-              <button 
-                onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
-                className="text-xs text-primary hover:underline block mx-auto"
-              >
-                Back to signup
-              </button>
+              
+              <div className="flex flex-col items-center gap-2">
+                {resendCount >= MAX_RESENDS ? (
+                  <p className="text-[10px] text-destructive font-medium text-center px-4">
+                    Maximum resends reached. Please contact support if you haven't received the code.
+                  </p>
+                ) : (
+                  <button 
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={cooldown > 0 || state.submitting}
+                    className="text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+                  </button>
+                )}
+                <button 
+                  onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Back to signup
+                </button>
+              </div>
             </div>
           )}
 

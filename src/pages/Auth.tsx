@@ -288,7 +288,7 @@ export default function Auth() {
                 onChange={(v) => dispatch({ type: 'SET_OTP_VALUE', payload: v })}
                 onSubmit={handleVerifyOtp}
                 onResend={mode === 'otp-signup' ? handleCreateAccount : handleForgotPassword}
-                onBack={() => dispatch({ type: 'SET_MODE', payload: mode === 'otp-signup' ? 'signup' : 'forgot' })}
+                onBack={mode === 'otp-signup' ? (() => dispatch({ type: 'SET_MODE', payload: 'signup' })) : undefined}
               />
             )}
           </CardContent>
@@ -537,7 +537,20 @@ function OtpForm({ value, email, submitting, onChange, onSubmit, onResend, onBac
   onResend: (e?: React.FormEvent) => void;
   onBack: () => void;
 }) {
-  const [cooldown, setCooldown] = useState(60);
+  const [cooldown, setCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const MAX_RESENDS = 3;
+
+  useEffect(() => {
+    // Load persisted rate limit data
+    const resendData = sessionStorage.getItem(`otp_resend_${email}`);
+    if (resendData) {
+      const { count, nextAllowed } = JSON.parse(resendData);
+      setResendCount(count);
+      const remaining = Math.ceil((nextAllowed - Date.now()) / 1000);
+      if (remaining > 0) setCooldown(remaining);
+    }
+  }, [email]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -547,9 +560,22 @@ function OtpForm({ value, email, submitting, onChange, onSubmit, onResend, onBac
 
   const handleResend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (cooldown > 0) return;
+    if (cooldown > 0 || submitting || resendCount >= MAX_RESENDS) return;
+
+    const newCount = resendCount + 1;
+    setResendCount(newCount);
+    
+    // Increase cooldown based on count: 60s, 180s, 300s
+    const nextCooldown = newCount === 1 ? 60 : newCount === 2 ? 180 : 300;
+    const nextAllowed = Date.now() + nextCooldown * 1000;
+    
+    sessionStorage.setItem(`otp_resend_${email}`, JSON.stringify({ 
+      count: newCount, 
+      nextAllowed 
+    }));
+    
+    setCooldown(nextCooldown);
     onResend(e);
-    setCooldown(60);
   };
 
   return (
@@ -584,22 +610,32 @@ function OtpForm({ value, email, submitting, onChange, onSubmit, onResend, onBac
       </Button>
 
       <div className="flex flex-col items-center gap-2">
-        <button 
-          type="button" 
-          onClick={handleResend} 
-          disabled={cooldown > 0 || submitting}
-          className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline font-medium"
-        >
-          {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend Code'}
-        </button>
-        <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
-          <ArrowLeft className="size-3.5" /> Back
-        </button>
+        {resendCount >= MAX_RESENDS ? (
+          <p className="text-xs text-destructive font-medium text-center">
+            Maximum resend attempts reached. <br/> Please contact support if you still haven't received the code.
+          </p>
+        ) : (
+          <button 
+            type="button" 
+            onClick={handleResend} 
+            disabled={cooldown > 0 || submitting}
+            className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline font-medium"
+          >
+            {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+          </button>
+        )}
+        {onBack && (
+          <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+            <ArrowLeft className="size-3.5" /> Back
+          </button>
+        )}
       </div>
 
       <div className="text-center">
         <p className="text-[10px] text-muted-foreground italic">
-          If you don't see the email, please check your spam folder.
+          {resendCount >= MAX_RESENDS 
+            ? "For security, we've limited the number of OTP requests."
+            : "If you don't see the email, please check your spam folder."}
         </p>
       </div>
     </form>
