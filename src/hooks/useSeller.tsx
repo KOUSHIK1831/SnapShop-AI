@@ -71,6 +71,7 @@ export interface Order {
   gateway_payment_id?: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
+  unit_price: number;
   selected_size?: string | null;
   created_at: string;
   confirmed_at?: string;

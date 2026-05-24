@@ -107,6 +107,7 @@ describe("Dashboard page", () => {
       id: "seller-1",
       store_name: "Ravi Boutique",
       store_slug: "ravi-boutique",
+      verification_status: 'approved',
     };
     sellerState.products = [
       { id: "product-1", title: "Kurta", price: 999, seller_id: "seller-1" },

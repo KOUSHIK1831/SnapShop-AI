@@ -9,6 +9,7 @@ import StoreSetup from '@/components/StoreSetup';
 import StoreSettings from '@/components/StoreSettings';
 import Orders from '@/components/Orders';
 import InventoryEditor from '@/components/InventoryEditor';
+import Analytics from '@/components/Analytics';
 import { Button } from '@/components/ui/button';
 import { 
   LogOut, 
@@ -26,6 +27,7 @@ import {
   Ban,
   Clock,
   Lock,
+  BarChart3,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +38,7 @@ import AppTour from '@/components/AppTour';
 import FeedbackModal from '@/components/FeedbackModal';
 import { useWelcomeTour } from '@/hooks/useWelcomeTour';
 
-export type Tab = 'products' | 'orders' | 'upload' | 'inventory' | 'settings';
+export type Tab = 'products' | 'orders' | 'upload' | 'inventory' | 'analytics' | 'settings';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -155,6 +157,7 @@ export default function Dashboard() {
             />
           )}
           {activeTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
+          {activeTab === 'analytics' && <Analytics orders={orders} />}
           {activeTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
         </div>
       </div>
@@ -262,6 +265,7 @@ function DashboardTabs({ activeTab, setActiveTab, orders, t, isApproved }: any) 
   const tabs = [
     { id: 'products', label: t('dashboard.tabs.products'), icon: LayoutGrid, protected: true },
     { id: 'orders', label: t('dashboard.tabs.orders'), icon: ShoppingBag, protected: true },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, protected: true },
     { id: 'upload', label: t('dashboard.tabs.upload'), icon: Upload, protected: true },
     { id: 'inventory', label: 'Inventory', icon: ClipboardList, protected: true },
     { id: 'settings', label: t('dashboard.tabs.settings'), icon: Settings, protected: false },

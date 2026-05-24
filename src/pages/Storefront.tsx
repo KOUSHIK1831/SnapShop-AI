@@ -227,6 +227,10 @@ function StorefrontContent() {
         payStatus = "paid";
       }
 
+      const currentUnitPrice = product.discount_percent && product.discount_percent > 0
+        ? Math.round(product.price * (1 - product.discount_percent / 100))
+        : product.price;
+
       const { error } = await supabase.from("orders").insert({
         buyer_id: uid,
         seller_id: product.seller_id,
@@ -236,6 +240,7 @@ function StorefrontContent() {
         pay_method: payMethod,
         pay_status: payStatus,
         gateway_payment_id: gatewayId,
+        unit_price: currentUnitPrice,
         buyer_name:
           address.name ||
           currentUser?.name ||
