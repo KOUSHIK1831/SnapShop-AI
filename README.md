@@ -10,35 +10,35 @@ Public URL - https://apna-bazar-cs.vercel.app
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| **🤖 AI Product Digitization** | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with robust error handling (Zod validation, auto-retry, fallback) |
-| **👤 HITL Review Step** | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock before saving to DB |
-| **📱 Instant Storefront & App** | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Mobile via Capacitor (Android). |
-| **🔐 Role-Based Access Control** | Admin, Seller, and Buyer roles with Supabase Auth, RBAC route guards, and strict RLS policies. |
-| **🛒 Order & Stock Management** | End-to-end flow: size variants, stock tracking, low-stock alerts, order → stock decrement, status transitions (pending→confirmed→completed/cancelled) |
-| **📊 Seller Dashboard** | Analytics (revenue, order volume, insights), inventory editor, realtime order notifications |
-| **💬 WhatsApp Integration** | WhatsApp AI sales agent edge function + direct seller contact from product storefront |
-| **🌍 Multi-language Support** | Full i18n for **English**, **Hindi (हिन्दी)**, and **Telugu (తెలుగు)** with language persistence |
-| **📊 Admin Dashboard** | Platform-wide metrics, user management, seller verification/blocking, feedback handling |
-| **📈 Analytics & Benchmarks** | PostHog event tracking, AI accuracy evaluation (80% category accuracy), performance benchmarks documented |
-| **📱 Mobile Support** | Capacitor Android build, bottom tab navigation, native back-button handling |
+| Feature                          | Description                                                                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🤖 AI Product Digitization**   | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with robust error handling (Zod validation, auto-retry, fallback) |
+| **👤 HITL Review Step**          | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock before saving to DB                                                                                             |
+| **📱 Instant Storefront & App**  | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Mobile via Capacitor (Android).                                                                                        |
+| **🔐 Role-Based Access Control** | Admin, Seller, and Buyer roles with Supabase Auth, RBAC route guards, and strict RLS policies.                                                                                                                |
+| **🛒 Order & Stock Management**  | End-to-end flow: size variants, stock tracking, low-stock alerts, order → stock decrement, status transitions (pending→confirmed→completed/cancelled)                                                         |
+| **📊 Seller Dashboard**          | Analytics (revenue, order volume, insights), inventory editor, realtime order notifications                                                                                                                   |
+| **💬 WhatsApp Integration**      | WhatsApp AI sales agent edge function + direct seller contact from product storefront                                                                                                                         |
+| **🌍 Multi-language Support**    | Full i18n for **English**, **Hindi (हिन्दी)**, and **Telugu (తెలుగు)** with language persistence                                                                                                              |
+| **📊 Admin Dashboard**           | Platform-wide metrics, user management, seller verification/blocking, feedback handling                                                                                                                       |
+| **📈 Analytics & Benchmarks**    | PostHog event tracking, AI accuracy evaluation (80% category accuracy), performance benchmarks documented                                                                                                     |
+| **📱 Mobile Support**            | Capacitor Android build, bottom tab navigation, native back-button handling                                                                                                                                   |
 
 ---
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Framework** | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
-| **Build Tool** | [Vite 5](https://vitejs.dev/) |
-| **Styling** | [Tailwind CSS 3](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) |
+| Layer              | Technology                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **Framework**      | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)             |
+| **Build Tool**     | [Vite 5](https://vitejs.dev/)                                                              |
+| **Styling**        | [Tailwind CSS 3](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)           |
 | **Backend / BaaS** | [Supabase](https://supabase.com/) — Auth, PostgreSQL DB, Edge Functions, Storage, Realtime |
-| **AI** | Google Gemini 2.5 Flash (via Supabase Edge Function) |
-| **Routing** | [React Router v6](https://reactrouter.com/) |
-| **State & Data** | [TanStack React Query](https://tanstack.com/query) |
-| **Mobile** | [Capacitor](https://capacitorjs.com/) (Android) |
-| **Testing** | [Vitest](https://vitest.dev/) (Unit) + [Playwright](https://playwright.dev/) (E2E) |
+| **AI**             | Google Gemini 2.5 Flash (via Supabase Edge Function)                                       |
+| **Routing**        | [React Router v6](https://reactrouter.com/)                                                |
+| **State & Data**   | [TanStack React Query](https://tanstack.com/query)                                         |
+| **Mobile**         | [Capacitor](https://capacitorjs.com/) (Android)                                            |
+| **Testing**        | [Vitest](https://vitest.dev/) (Unit) + [Playwright](https://playwright.dev/) (E2E)         |
 
 ---
 
@@ -124,7 +124,7 @@ hackathon-cs/
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
-└── .env                        # Environment variables (not committed)
+└── .env.example                # Environment variables template
 ```
 
 ---
@@ -166,11 +166,13 @@ npm install
 
 ### 3. Configure environment variables
 
-Create a `.env` file in the project root with your Supabase credentials:
+Copy `.env.example` to your local environment configuration and update the values with your Supabase credentials.
 
-```env
+Required variables:
+
+```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
 ### 4. Backend & Database Setup (Supabase CLI)
@@ -193,18 +195,18 @@ The app will be available at `http://localhost:5173`.
 
 ## 📜 Available Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server with HMR |
-| `npm run build` | Production web build |
-| `npm run validate` | Run linting, type-check, and unit tests |
-| `npm run test` | Run unit tests with Vitest |
-| `npm run test:watch` | Run unit tests in watch mode |
-| `npm run evaluate-ai` | Run the AI evaluation benchmark script |
-| `npm run benchmark` | Run performance benchmarks (compression, latency, pipeline) |
-| `npm run i18n:scan` | Scan for missing translation keys |
-| `npx playwright test` | Run Playwright E2E tests |
-| `npx cap sync android` | Sync Capacitor Android build |
+| Command                | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `npm run dev`          | Start Vite dev server with HMR                              |
+| `npm run build`        | Production web build                                        |
+| `npm run validate`     | Run linting, type-check, and unit tests                     |
+| `npm run test`         | Run unit tests with Vitest                                  |
+| `npm run test:watch`   | Run unit tests in watch mode                                |
+| `npm run evaluate-ai`  | Run the AI evaluation benchmark script                      |
+| `npm run benchmark`    | Run performance benchmarks (compression, latency, pipeline) |
+| `npm run i18n:scan`    | Scan for missing translation keys                           |
+| `npx playwright test`  | Run Playwright E2E tests                                    |
+| `npx cap sync android` | Sync Capacitor Android build                                |
 
 ---
 
@@ -219,17 +221,17 @@ The app will be available at `http://localhost:5173`.
 
 ## 🌐 Routes
 
-| Path | Page | Access |
-|---|---|---|
-| `/` | Landing page | Public |
-| `/auth` | Login / Sign-up | Public |
-| `/dashboard` | Seller dashboard | 🔒 Protected (Seller) |
-| `/admin` | Admin dashboard | 🔒 Protected (Admin) |
-| `/buyer` | Buyer dashboard | 🔒 Protected (Buyer) |
-| `/store/:slug` | Public storefront | Public |
-| `/track-order/:orderId` | Track orders | 🔒 Protected (Buyer) |
-| `/reset-password` | Password reset | Public |
-| `*` | 404 Not Found | Public |
+| Path                    | Page              | Access                |
+| ----------------------- | ----------------- | --------------------- |
+| `/`                     | Landing page      | Public                |
+| `/auth`                 | Login / Sign-up   | Public                |
+| `/dashboard`            | Seller dashboard  | 🔒 Protected (Seller) |
+| `/admin`                | Admin dashboard   | 🔒 Protected (Admin)  |
+| `/buyer`                | Buyer dashboard   | 🔒 Protected (Buyer)  |
+| `/store/:slug`          | Public storefront | Public                |
+| `/track-order/:orderId` | Track orders      | 🔒 Protected (Buyer)  |
+| `/reset-password`       | Password reset    | Public                |
+| `*`                     | 404 Not Found     | Public                |
 
 ---
 
@@ -266,6 +268,7 @@ The buyer flow on the public storefront is:
 
 ApnaBazar includes a Capacitor setup for generating native Android apps.
 To build and sync for Android:
+
 ```bash
 npx cap sync android
 npx cap open android
@@ -277,14 +280,20 @@ npx cap open android
 
 The app supports three languages out of the box (750+ translated keys each):
 
--  **English** (`en`)
--  **Hindi** (`hi`)
--  **Telugu** (`te`)
+- **English** (`en`)
+- **Hindi** (`hi`)
+- **Telugu** (`te`)
 
 Users can switch languages using the **LanguageSwitcher** component in the navbar. Language preference is persisted in `localStorage`. Product data can also be generated in the seller's chosen language via AI localization.
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions to ApnaBazar! Whether you're fixing a bug, adding a feature, or improving documentation, please check out our [Contributing Guidelines](CONTRIBUTING.md) to get started.
+
+---
+
 ## 📄 License
 
-This project was built for a hackathon. All rights reserved.
+This project is licensed under the **GNU Affero General Public License (AGPL) v3**. See the [LICENSE](LICENSE) file for the full license text.
