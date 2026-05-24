@@ -1,64 +1,59 @@
-import { useLanguage } from '@/i18n/LanguageContext';
-import { Language, languageLabels } from '@/i18n/translations';
-import { Globe } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Globe, Check } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const languages: { code: Language; label: string; short: string }[] = [
+const languages = [
   { code: 'en', label: 'English', short: 'EN' },
   { code: 'te', label: 'తెలుగు', short: 'తె' },
   { code: 'hi', label: 'हिन्दी', short: 'हि' },
 ];
 
 export default function LanguageSwitcher({ variant = 'default', id }: { variant?: 'default' | 'compact', id?: string }) {
-  const { language, setLanguage } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const { i18n } = useTranslation();
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const current = languages.find((l) => (i18n.language || '').startsWith(l.code)) || languages[0];
 
-  const current = languages.find((l) => l.code === language) || languages[0];
+  const changeLanguage = (code: string) => {
+    i18n.changeLanguage(code);
+  };
 
   return (
-    <div ref={ref} className="relative" id={id}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 rounded-lg border border-border/50 bg-card/80 backdrop-blur-sm transition-all hover:bg-accent/10 ${
-          variant === 'compact' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'
-        }`}
-        aria-label="Switch language"
-      >
-        <Globe className={variant === 'compact' ? 'size-3' : 'size-3.5'} />
-        <span className="font-medium">{current.short}</span>
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border/50 bg-card shadow-surface-lg overflow-hidden animate-fade-in">
+    <div id={id}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={`flex items-center gap-1.5 rounded-lg border border-border/50 bg-card/80 backdrop-blur-sm transition-all hover:bg-accent/10 ${
+              variant === 'compact' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'
+            }`}
+            aria-label="Switch language"
+          >
+            <Globe className={variant === 'compact' ? 'size-3' : 'size-3.5'} />
+            <span className="font-medium">{current.short}</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[140px] z-[100] bg-card border-border/50 shadow-surface-lg animate-in fade-in zoom-in-95 duration-100">
           {languages.map((lang) => (
-            <button
+            <DropdownMenuItem
               key={lang.code}
-              onClick={() => {
-                setLanguage(lang.code);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent/10 ${ language === lang.code ? 'font-semibold text-primary bg-primary/5' : 'text-foreground' }`}
+              onClick={() => changeLanguage(lang.code)}
+              className={`flex items-center gap-2 cursor-pointer focus:bg-accent/10 focus:text-accent-foreground py-2 px-3 ${
+                (i18n.language || '').startsWith(lang.code) ? 'font-semibold text-primary bg-primary/5' : 'text-foreground'
+              }`}
             >
-              <span className="text-xs font-mono w-5">{lang.short}</span>
+              <span className="text-xs font-mono w-5 text-center opacity-70">{lang.short}</span>
               <span>{lang.label}</span>
-              {language === lang.code && (
-                <span className="ml-auto text-primary text-xs">✓</span>
+              {(i18n.language || '').startsWith(lang.code) && (
+                <Check className="ml-auto size-3.5 text-primary" />
               )}
-            </button>
+            </DropdownMenuItem>
           ))}
-        </div>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

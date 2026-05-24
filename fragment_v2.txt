@@ -1,0 +1,96 @@
+  const handlePlaceOrderWithAddress = async (
+    address: DeliveryAddress,
+    payMethod: "cod" | "online",
+  ) => {
+    const product = pendingProduct;
+    if (!product) return;
+    const currentUser = user;
+    const uid = currentUser?.id;
+    if (!uid) {
+      toast({
+        title: "Order failed",
+        description: "Please sign in to place an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Simulation of Online Payment Gateway
+      let gatewayId = null;
+      let payStatus: "pending" | "paid" = "pending" as const;
+
+      if (payMethod === "online") {
+        gatewayId = `pay_${Math.random().toString(36).slice(2, 11)}`;
+        payStatus = "paid";
+      }
+
+      const currentUnitPrice =
+        product.discount_percent && product.discount_percent > 0
+          ? Math.round(product.price * (1 - product.discount_percent / 100))
+          : product.price;
+
+      const { error } = await supabase.from("orders").insert({
+        buyer_id: uid,
+        seller_id: product.seller_id,
+        product_id: product.id,
+        quantity: 1,
+        status: "pending",
+        pay_method: payMethod,
+        pay_status: payStatus,
+        gateway_payment_id: gatewayId,
+        unit_price: currentUnitPrice,
+        buyer_name:
+          address.name ||
+          currentUser?.name ||
+          currentUser?.email?.split("@")[0] ||
+          "Buyer",
+        buyer_phone: address.phone || currentUser?.phone || "",
+        delivery_address: address,
+        selected_size: selectedSize || product.size || null,
+      });
+      if (error) {
+        console.error("Order error:", error);
+        toast({
+          title: "Order failed",
+          description: "Could not place order. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update stock if it's size-based
+      if (selectedSize && product.size_variants) {
+        const updatedVariants = product.size_variants.map((v) =>
+          v.size === selectedSize
+            ? { ...v, stock: Math.max(0, v.stock - 1) }
+            : v,
+        );
+        const totalStock = updatedVariants.reduce((acc, v) => acc + v.stock, 0);
+        await supabase
+          .from("products")
+          .update({
+            size_variants: updatedVariants,
+            stock: totalStock,
+          })
+          .eq("id", product.id);
+      } else if (product.stock !== undefined) {
+        await supabase
+          .from("products")
+          .update({
+            stock: Math.max(0, product.stock - 1),
+          })
+          .eq("id", product.id);
+      }
+
+      setOrderedProduct(product);
+      trackEvent("order_placed", {
+        productId: product.id,
+        productTitle: product.title,
+        price: product.price,
+        payMethod,
+        size: selectedSize,
+      });
+      toast({
+        title: t("storefront.orderPlaced"),
+        description:

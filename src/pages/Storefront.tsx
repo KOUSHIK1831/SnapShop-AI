@@ -155,8 +155,16 @@ function StorefrontContent() {
   }, [products, selectedCategory]);
 
   const handleOrder = async (product: Product) => {
-    if (product.size_variants && product.size_variants.length > 0 && !selectedSize) {
-      toast({ title: 'Please select a size', description: 'Choose a size before placing your order.', variant: 'default' });
+    if (
+      product.size_variants &&
+      product.size_variants.length > 0 &&
+      !selectedSize
+    ) {
+      toast({
+        title: "Please select a size",
+        description: "Choose a size before placing your order.",
+        variant: "default",
+      });
       return;
     }
 
@@ -203,6 +211,7 @@ function StorefrontContent() {
   const handlePlaceOrderWithAddress = async (
     address: DeliveryAddress,
     payMethod: "cod" | "online",
+    onlineType?: "upi_qr" | "razorpay",
   ) => {
     const product = pendingProduct;
     if (!product) return;
@@ -218,80 +227,60 @@ function StorefrontContent() {
     }
 
     try {
-      // Simulation of Online Payment Gateway
       let gatewayId = null;
-      let payStatus: "pending" | "paid" = "pending" as const;
+      let payStatus: "pending" | "paid" | "awaiting_verification" = "pending";
 
-      if (payMethod === "online") {
-        gatewayId = `pay_${Math.random().toString(36).slice(2, 11)}`;
-        payStatus = "paid";
+      // If user chose Razorpay, trigger the modal before saving to DB
+      if (payMethod === "online" && onlineType === "razorpay") {
+        const isRazorpayReady = await loadRazorpay();
+        if (!isRazorpayReady) {
+          toast({
+            title: "Payment Error",
+            description: "Razorpay SDK failed to load. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const currentUnitPrice =
+          product.discount_percent && product.discount_percent > 0
+            ? Math.round(product.price * (1 - product.discount_percent / 100))
+            : product.price;
+
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholder",
+          amount: Math.round(currentUnitPrice * 100),
+          currency: "INR",
+          name: "ApnaBazar",
+          description: `Order for ${product.title}`,
+          image: "/placeholder.svg",
+          handler: async function (response: any) {
+            await finalizeOrder(
+              product,
+              address,
+              payMethod,
+              "paid",
+              response.razorpay_payment_id,
+            );
+          },
+          prefill: {
+            name: address.name,
+            email: currentUser?.email || "",
+            contact: address.phone,
+          },
+          theme: { color: seller?.theme_color || "#7c3aed" },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        return; // Finalize happens in the callback
       }
 
-      const currentUnitPrice = product.discount_percent && product.discount_percent > 0
-        ? Math.round(product.price * (1 - product.discount_percent / 100))
-        : product.price;
-
-      const { error } = await supabase.from("orders").insert({
-        buyer_id: uid,
-        seller_id: product.seller_id,
-        product_id: product.id,
-        quantity: 1,
-        status: "pending",
-        pay_method: payMethod,
-        pay_status: payStatus,
-        gateway_payment_id: gatewayId,
-        unit_price: currentUnitPrice,
-        buyer_name:
-          address.name ||
-          currentUser?.name ||
-          currentUser?.email?.split("@")[0] ||
-          "Buyer",
-        buyer_phone: address.phone || currentUser?.phone || "",
-        delivery_address: address,
-        selected_size: selectedSize || product.size || null,
-      });
-      if (error) {
-        console.error("Order error:", error);
-        toast({
-          title: "Order failed",
-          description: "Could not place order. Please try again.",
-          variant: "destructive",
-        });
-        return;
+      // Handle COD or UPI QR (Manual verification)
+      if (payMethod === "online" && onlineType === "upi_qr") {
+        payStatus = "awaiting_verification";
       }
 
-      // Update stock if it's size-based
-      if (selectedSize && product.size_variants) {
-        const updatedVariants = product.size_variants.map(v => 
-          v.size === selectedSize ? { ...v, stock: Math.max(0, v.stock - 1) } : v
-        );
-        const totalStock = updatedVariants.reduce((acc, v) => acc + v.stock, 0);
-        await supabase.from('products').update({ 
-          size_variants: updatedVariants,
-          stock: totalStock
-        }).eq('id', product.id);
-      } else if (product.stock !== undefined) {
-        await supabase.from('products').update({ 
-          stock: Math.max(0, product.stock - 1) 
-        }).eq('id', product.id);
-      }
-
-      setOrderedProduct(product);
-      trackEvent("order_placed", {
-        productId: product.id,
-        productTitle: product.title,
-        price: product.price,
-        payMethod,
-        size: selectedSize,
-      });
-      toast({
-        title: t("storefront.orderPlaced"),
-        description:
-          payMethod === "online"
-            ? "Payment successful! Order sent."
-            : t("storefront.orderSent"),
-      });
-      setSelectedSize(null);
+      await finalizeOrder(product, address, payMethod, payStatus);
     } catch (err) {
       console.error(err);
       toast({
@@ -302,6 +291,105 @@ function StorefrontContent() {
     }
   };
 
+  const finalizeOrder = async (
+    product: Product,
+    address: DeliveryAddress,
+    payMethod: string,
+    payStatus: any,
+    gatewayId: string | null = null,
+  ) => {
+    const currentUser = user;
+    const uid = currentUser?.id;
+
+    const currentUnitPrice =
+      product.discount_percent && product.discount_percent > 0
+        ? Math.round(product.price * (1 - product.discount_percent / 100))
+        : product.price;
+
+    const { error } = await supabase.from("orders").insert({
+      buyer_id: uid,
+      seller_id: product.seller_id,
+      product_id: product.id,
+      quantity: 1,
+      status: "pending",
+      pay_method: payMethod,
+      pay_status: payStatus,
+      gateway_payment_id: gatewayId,
+      unit_price: currentUnitPrice,
+      buyer_name:
+        address.name ||
+        currentUser?.name ||
+        currentUser?.email?.split("@")[0] ||
+        "Buyer",
+      buyer_phone: address.phone || currentUser?.phone || "",
+      delivery_address: address,
+      selected_size: selectedSize || product.size || null,
+    });
+
+    if (error) {
+      console.error("Order error:", error);
+      toast({
+        title: "Order failed",
+        description: "Could not place order. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update stock if it's size-based
+    if (selectedSize && product.size_variants) {
+      const updatedVariants = product.size_variants.map((v) =>
+        v.size === selectedSize ? { ...v, stock: Math.max(0, v.stock - 1) } : v,
+      );
+      const totalStock = updatedVariants.reduce((acc, v) => acc + v.stock, 0);
+      await supabase
+        .from("products")
+        .update({
+          size_variants: updatedVariants,
+          stock: totalStock,
+        })
+        .eq("id", product.id);
+    } else if (product.stock !== undefined) {
+      await supabase
+        .from("products")
+        .update({
+          stock: Math.max(0, product.stock - 1),
+        })
+        .eq("id", product.id);
+    }
+
+    setOrderedProduct(product);
+    trackEvent("order_placed", {
+      productId: product.id,
+      productTitle: product.title,
+      price: product.price,
+      payMethod,
+      size: selectedSize,
+    });
+    toast({
+      title: t("storefront.orderPlaced"),
+      description:
+        payStatus === "paid"
+          ? "Payment successful! Order sent."
+          : t("storefront.orderSent"),
+    });
+    setSelectedSize(null);
+  };
+
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleAuthSuccess = async (phone?: string) => {
     setShowAuth(false);
     if (pendingProduct) {
@@ -309,7 +397,6 @@ function StorefrontContent() {
       setShowOrderConfirm(true);
     }
   };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background py-20 px-6">
@@ -608,7 +695,9 @@ function StorefrontContent() {
                   </div>
                   {product.size_variants && product.size_variants.length > 0 ? (
                     <div className="mb-4 space-y-2">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select Size</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Select Size
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {product.size_variants.map((v) => (
                           <button
@@ -617,15 +706,19 @@ function StorefrontContent() {
                             onClick={() => setSelectedSize(v.size)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                               selectedSize === v.size
-                                ? 'border-primary bg-primary text-white shadow-md'
+                                ? "border-primary bg-primary text-white shadow-md"
                                 : v.stock === 0
-                                ? 'border-border/50 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-50'
-                                : 'border-border/50 hover:border-primary/50 bg-card text-foreground shadow-sm'
+                                  ? "border-border/50 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-50"
+                                  : "border-border/50 hover:border-primary/50 bg-card text-foreground shadow-sm"
                             }`}
                           >
                             {v.size}
                             {v.stock > 0 && v.stock <= 5 && (
-                              <span className={`ml-1.5 text-[9px] font-bold ${selectedSize === v.size ? 'text-white' : 'text-amber-600'}`}>({v.stock})</span>
+                              <span
+                                className={`ml-1.5 text-[9px] font-bold ${selectedSize === v.size ? "text-white" : "text-amber-600"}`}
+                              >
+                                ({v.stock})
+                              </span>
                             )}
                           </button>
                         ))}
@@ -659,25 +752,27 @@ function StorefrontContent() {
                       ))}{" "}
                     </div>
                   )}{" "}
-                  {product.stock !== undefined && (!product.size_variants || product.size_variants.length === 0) && (
-                    <div className="mb-3">
-                      {" "}
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                          product.stock === 0
-                            ? "bg-red-100 text-red-700"
-                            : product.stock <=
-                                (product.low_stock_threshold || 5)
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {product.stock === 0
-                          ? "Out of Stock"
-                          : `In Stock (${product.stock})`}{" "}
-                      </span>{" "}
-                    </div>
-                  )}{" "}
+                  {product.stock !== undefined &&
+                    (!product.size_variants ||
+                      product.size_variants.length === 0) && (
+                      <div className="mb-3">
+                        {" "}
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            product.stock === 0
+                              ? "bg-red-100 text-red-700"
+                              : product.stock <=
+                                  (product.low_stock_threshold || 5)
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {product.stock === 0
+                            ? "Out of Stock"
+                            : `In Stock (${product.stock})`}{" "}
+                        </span>{" "}
+                      </div>
+                    )}{" "}
                   <div className="flex gap-2">
                     <Button
                       size="sm"
@@ -742,14 +837,16 @@ function StorefrontContent() {
         }
         sellerName={seller?.store_name || undefined}
         sellerContact={seller?.contact_number || seller?.phone || undefined}
+        sellerUpiId={seller?.seller_upi_id}
+        razorpayAccountId={seller?.razorpay_account_id}
+        preferredPaymentMethod={seller?.preferred_payment_method}
         initialAddress={{
           name: user?.name || "",
           phone: user?.phone?.replace(/^\+91/, "") || "",
         }}
         selectedSize={selectedSize}
         onConfirm={handlePlaceOrderWithAddress}
-      />
-      <BuyerAuthModal
+      />      <BuyerAuthModal
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}
         onSuccess={handleAuthSuccess}
