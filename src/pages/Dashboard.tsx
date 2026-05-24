@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSeller } from '@/hooks/useSeller';
@@ -11,40 +12,55 @@ import Orders from '@/components/Orders';
 import InventoryEditor from '@/components/InventoryEditor';
 import Analytics from '@/components/Analytics';
 import { Button } from '@/components/ui/button';
-import { 
-  LogOut, 
-  ExternalLink, 
-  Package, 
-  Upload, 
-  Store, 
-  Settings, 
-  LayoutGrid, 
-  Copy, 
-  Check, 
-  ShoppingBag, 
-  ClipboardList, 
+import {
+  LogOut,
+  ExternalLink,
+  Package,
+  Upload,
+  Store,
+  Settings,
+  LayoutGrid,
+  Copy,
+  Check,
+  ShoppingBag,
+  ClipboardList,
   HelpCircle,
   Ban,
   Clock,
   Lock,
   BarChart3,
-} from 'lucide-react';
+  Wrench,
+  User,
+  ChevronRight} from
+'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/i18n/LanguageContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 import AppTour from '@/components/AppTour';
 import FeedbackModal from '@/components/FeedbackModal';
 import { useWelcomeTour } from '@/hooks/useWelcomeTour';
+import { NetworkStrengthIndicator } from '@/components/NetworkStrengthIndicator';
+import { cn } from '@/lib/utils';
 
-export type Tab = 'products' | 'orders' | 'upload' | 'inventory' | 'analytics' | 'settings';
+export type Tab = 'products' | 'tools' | 'profile';
+export type SubTab = 'orders' | 'upload' | 'inventory' | 'analytics' | 'settings';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as Tab) || 'products';
+  const subTab = (searchParams.get('sub') as SubTab) || null;
+
+  const setActiveTab = (tab: Tab) => setSearchParams({ tab });
+  const setSubTab = (sub: SubTab | null) => {
+    if (sub) setSearchParams({ tab: activeTab, sub });
+    else setSearchParams({ tab: activeTab });
+  };
+
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const {
     seller,
     products,
@@ -58,19 +74,18 @@ export default function Dashboard() {
     updateSellerProfile,
     updateProduct,
     deleteProduct,
-    updateOrderStatus,
+    updateOrderStatus
   } = useSeller();
-  const [activeTab, setActiveTab] = useState<Tab>('products');
   const [copied, setCopied] = useState(false);
   const { startTour } = useWelcomeTour(setActiveTab);
 
   const isApproved = seller?.verification_status === 'approved';
 
   useEffect(() => {
-    if (seller && !isApproved && activeTab !== 'settings') {
-      setActiveTab('settings');
-      toast({ 
-        title: "Access Restricted", 
+    if (seller && !isApproved && activeTab !== 'profile') {
+      setSearchParams({ tab: 'profile', sub: 'settings' });
+      toast({
+        title: "Access Restricted",
         description: "Please complete your store setup and wait for admin approval to unlock all features.",
         variant: "default"
       });
@@ -81,14 +96,14 @@ export default function Dashboard() {
     let channel: any = null;
     if (seller?.id && isApproved) {
       fetchProducts();
-      channel = supabase.channel("orders-realtime")
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `seller_id=eq.${seller.id}` }, () => {
-          toast({ title: t('orders.newOrder'), description: t('orders.newOrderDesc') });
-          fetchOrders();
-        })
-        .subscribe();
+      channel = supabase.channel("orders-realtime").
+      on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `seller_id=eq.${seller.id}` }, () => {
+        toast({ title: t('orders.newOrder'), description: t('orders.newOrderDesc') });
+        fetchOrders();
+      }).
+      subscribe();
     }
-    return () => { if (channel) channel.unsubscribe(); };
+    return () => {if (channel) channel.unsubscribe();};
   }, [seller?.id, toast, t, fetchProducts, fetchOrders]);
 
   useEffect(() => {
@@ -96,7 +111,7 @@ export default function Dashboard() {
   }, [user?.role, navigate]);
 
   useEffect(() => {
-    const lowStock = products.filter(p => p.stock !== undefined && p.stock > 0 && p.stock <= (p.low_stock_threshold || 5));
+    const lowStock = products.filter((p) => p.stock !== undefined && p.stock > 0 && p.stock <= (p.low_stock_threshold || 5));
     if (lowStock.length > 0 && seller?.store_name) {
       toast({ title: "Low Stock Alert", description: `${lowStock.length} product(s) running low on stock.` });
     }
@@ -123,46 +138,113 @@ export default function Dashboard() {
             if (result?.error) toast({ title: 'Error creating store', description: (result.error as any).message || String(result.error), variant: 'destructive' });
           }} />
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 sm:pb-0">
       <AppTour setActiveTab={setActiveTab} />
-      <DashboardHeader 
-        seller={seller} 
-        t={t} 
-        signOut={signOut} 
-        startTour={startTour} 
-        copied={copied} 
-        copyStoreLink={copyStoreLink} 
-        navigate={navigate} 
-      />
+      <DashboardHeader
+        seller={seller}
+        t={t}
+        signOut={signOut}
+        startTour={startTour}
+        copied={copied}
+        copyStoreLink={copyStoreLink}
+        navigate={navigate} />
+      
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
         <VerificationStatusBanner seller={seller} onSubmit={submitForVerification} />
-        <DashboardStats productsCount={products.length} seller={seller} t={t} isApproved={isApproved} />
-        <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} orders={orders} t={t} isApproved={isApproved} />
+        
         <div className="animate-fade-in">
-          {activeTab === 'products' && (
-            <ProductsList products={products} t={t} onUpload={() => setActiveTab('upload')} onUpdate={updateProduct} onDelete={deleteProduct} />
+          {activeTab === 'products' &&
+            <>
+              <DashboardStats productsCount={products.length} seller={seller} t={t} isApproved={isApproved} />
+              <ProductsList products={products} t={t} onUpload={() => setSearchParams({ tab: 'tools', sub: 'upload' })} onUpdate={updateProduct} onDelete={deleteProduct} />
+            </>
+          }
+
+          {activeTab === 'tools' && (
+            <div className="space-y-6">
+              {!subTab ? (
+                <>
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Store Management</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <ToolCard 
+                      icon={ShoppingBag} 
+                      label={t('dashboard.tabs.orders')} 
+                      description="Manage and track customer orders"
+                      onClick={() => setSubTab('orders')} 
+                      color="green" 
+                    />
+                    <ToolCard 
+                      icon={Upload} 
+                      label={t('dashboard.tabs.upload')} 
+                      description="Digitize new products with AI"
+                      onClick={() => setSubTab('upload')} 
+                      color="blue" 
+                    />
+                    <ToolCard 
+                      icon={ClipboardList} 
+                      label="Inventory" 
+                      description="Quickly edit stock and prices"
+                      onClick={() => setSubTab('inventory')} 
+                      color="amber" 
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <button 
+                    onClick={() => setSubTab(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+                  >
+                    <ChevronRight className="size-4 rotate-180" /> Back to Manage
+                  </button>
+                  {subTab === 'orders' && <Orders orders={orders} onUpdateStatus={updateOrderStatus} />}
+                  {subTab === 'upload' &&
+                    <UploadZone
+                      sellerId={seller.id}
+                      onComplete={fetchProducts}
+                      usageToday={ai_usage_today}
+                      dailyLimit={seller.ai_daily_limit} />
+                  }
+                  {subTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
+                </div>
+              )}
+            </div>
           )}
-          {activeTab === 'orders' && <Orders orders={orders} onUpdateStatus={updateOrderStatus} />}
-          {activeTab === 'upload' && (
-            <UploadZone 
-              sellerId={seller.id} 
-              onComplete={fetchProducts} 
-              usageToday={ai_usage_today}
-              dailyLimit={seller.ai_daily_limit}
-            />
+
+          {activeTab === 'profile' && (
+            <div className="space-y-8">
+              <div className="flex flex-col items-center justify-center p-8 bg-card border border-border/50 rounded-3xl shadow-sm">
+                <div className="size-24 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <User className="size-12 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground">{seller.store_name}</h2>
+                <p className="text-muted-foreground">{user?.email}</p>
+                
+                <div className="flex gap-4 mt-6">
+                  <Button variant="outline" size="sm" onClick={() => setSubTab('analytics')} className={cn((subTab === 'analytics' || !subTab) && "bg-primary/5 border-primary text-primary")}>
+                    <BarChart3 className="size-4 mr-2" /> Analytics
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setSubTab('settings')} className={cn(subTab === 'settings' && "bg-primary/5 border-primary text-primary")}>
+                    <Settings className="size-4 mr-2" /> Settings
+                  </Button>
+                </div>
+              </div>
+
+              <div className="animate-fade-in">
+                {(subTab === 'analytics' || !subTab) && <Analytics orders={orders} />}
+                {subTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
+              </div>
+            </div>
           )}
-          {activeTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
-          {activeTab === 'analytics' && <Analytics orders={orders} />}
-          {activeTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function LoadingSkeleton() {
@@ -171,8 +253,8 @@ function LoadingSkeleton() {
       <div className="max-w-6xl mx-auto space-y-6">
         <Skeleton className="h-12 w-48" /><Skeleton className="h-64 w-full" />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
@@ -180,21 +262,21 @@ function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
         <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center"><Store className="size-4 text-white" /></div>
-        <h1 className="text-xl font-semibold text-foreground">ApnaBazar</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t("common.appName")}</h1>
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <ThemeToggle />
         <LanguageSwitcher />
-        {!showHeaderOnly && (
-          <>
+        {!showHeaderOnly &&
+        <>
             <FeedbackModal />
             <Button variant="ghost" size="sm" onClick={startTour} className="text-muted-foreground hover:text-primary"><HelpCircle className="size-4" /></Button>
           </>
-        )}
+        }
         <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="size-4 mr-2" />{t('common.signOut')}</Button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function DashboardHeader({ seller, t, signOut, startTour, copied, copyStoreLink, navigate }: any) {
@@ -205,11 +287,13 @@ function DashboardHeader({ seller, t, signOut, startTour, copied, copyStoreLink,
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
               <div className="size-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center"><Store className="size-4 text-white" /></div>
-              <div className="min-w-0"><h1 className="text-sm font-semibold text-foreground leading-tight">ApnaBazar</h1><p className="truncate text-[11px] text-muted-foreground leading-tight">{seller.store_name}</p></div>
+              <div className="min-w-0"><h1 className="text-sm font-semibold text-foreground leading-tight">{t("common.appName")}</h1><p className="truncate text-[11px] text-muted-foreground leading-tight">{seller.store_name}</p></div>
             </div>
+
             <div className="flex shrink-0 items-center gap-2">
+              <NetworkStrengthIndicator />
               <ThemeToggle /><LanguageSwitcher variant="compact" /><FeedbackModal />
-              <Button variant="ghost" size="sm" onClick={startTour} title="Help Tour"><HelpCircle className="size-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={startTour} title={t("auto.help_tour")}><HelpCircle className="size-4" /></Button>
               <Button variant="ghost" size="sm" onClick={signOut} title={t('common.signOut')}><LogOut className="size-3.5" /></Button>
             </div>
           </div>
@@ -226,82 +310,70 @@ function DashboardHeader({ seller, t, signOut, startTour, copied, copyStoreLink,
           </div>
         </div>
       </div>
-    </header>
-  );
+    </header>);
+
 }
 
 function DashboardStats({ productsCount, seller, t, isApproved }: any) {
   return (
     <div id="tour-welcome" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
       <StatCard icon={Package} value={isApproved ? productsCount : "—"} label={t('dashboard.totalProducts')} />
-      <StatCard 
-        icon={isApproved ? Upload : Lock} 
-        value={!isApproved ? "Locked" : productsCount > 0 ? t('dashboard.active') : t('dashboard.ready')} 
-        label={t('dashboard.aiAgent')} 
-        color={!isApproved ? "amber" : "green"} 
-      />
+      <StatCard
+        icon={isApproved ? Upload : Lock}
+        value={!isApproved ? t("auto.locked") : productsCount > 0 ? t('dashboard.active') : t('dashboard.ready')}
+        label={t('dashboard.aiAgent')}
+        color={!isApproved ? t("auto.amber") : t("auto.green")} />
+      
       <StatCard icon={Store} value={`/store/${seller.store_slug}`} label={t('dashboard.storeUrl')} color="amber" truncate />
-    </div>
+    </div>);
+
+}
+
+function ToolCard({ icon: Icon, label, description, onClick, color, active }: any) {
+  const colorMap: any = {
+    blue: 'text-blue-500 bg-blue-500/10',
+    green: 'text-green-500 bg-green-500/10',
+    amber: 'text-amber-500 bg-amber-500/10',
+    purple: 'text-purple-500 bg-purple-500/10',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center p-5 rounded-2xl border transition-all duration-300 text-left gap-4",
+        active 
+          ? "border-primary bg-primary/5 shadow-sm" 
+          : "border-border/50 bg-card hover:shadow-lg hover:border-border"
+      )}
+    >
+      <div className={cn("size-12 shrink-0 rounded-xl flex items-center justify-center", colorMap[color])}>
+        <Icon className="size-6" />
+      </div>
+      <div>
+        <p className="font-bold text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground line-clamp-1">{description}</p>
+      </div>
+      <ChevronRight className="size-4 ml-auto text-muted-foreground/50" />
+    </button>
   );
 }
 
 function StatCard({ icon: Icon, value, label, color, truncate }: any) {
+  const { t } = useTranslation();
   return (
     <div className="border border-border/50 rounded-xl p-5 bg-card shadow-surface hover:shadow-surface-lg transition-shadow">
       <div className="flex items-center gap-3">
-        <div className={`size-10 rounded-xl flex items-center justify-center ${color === 'green' ? 'bg-green-500/10 text-green-500' : color === 'amber' ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary'}`}>
+        <div className={`size-10 rounded-xl flex items-center justify-center ${color === 'green' ? t("auto.bg_green_500_10_text_green_500") : color === 'amber' ? t("auto.bg_amber_500_10_text_amber_500") : t("auto.bg_primary_10_text_primary")}`}>
           <Icon className="size-5" />
         </div>
         <div className="min-w-0">
-          <p className={`text-2xl font-bold text-foreground ${truncate ? 'text-sm truncate max-w-[140px]' : 'tabular-nums'}`}>{value}</p>
+          <p className={`text-2xl font-bold text-foreground ${truncate ? t("auto.text_sm_truncate_max_w_140px") : t("auto.tabular_nums")}`}>{value}</p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
       </div>
-    </div>
-  );
-}
+    </div>);
 
-function DashboardTabs({ activeTab, setActiveTab, orders, t, isApproved }: any) {
-  const tabs = [
-    { id: 'products', label: t('dashboard.tabs.products'), icon: LayoutGrid, protected: true },
-    { id: 'orders', label: t('dashboard.tabs.orders'), icon: ShoppingBag, protected: true },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, protected: true },
-    { id: 'upload', label: t('dashboard.tabs.upload'), icon: Upload, protected: true },
-    { id: 'inventory', label: 'Inventory', icon: ClipboardList, protected: true },
-    { id: 'settings', label: t('dashboard.tabs.settings'), icon: Settings, protected: false },
-  ];
-  return (
-    <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <div className="flex w-max gap-1 rounded-xl bg-muted/50 p-1">
-        {tabs.map((tab) => {
-          const isLocked = tab.protected && !isApproved;
-          return (
-            <button
-              key={tab.id}
-              data-tour={tab.id}
-              onClick={() => !isLocked && setActiveTab(tab.id as Tab)}
-              disabled={isLocked}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id 
-                  ? 'bg-card text-foreground shadow-surface' 
-                  : isLocked 
-                    ? 'text-muted-foreground/40 cursor-not-allowed' 
-                    : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {isLocked ? <Lock className="size-3.5" /> : <tab.icon className="size-4" />}
-              {tab.label}
-              {!isLocked && tab.id === 'orders' && orders.filter((o: any) => o.status === 'pending').length > 0 && (
-                <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-                  {orders.filter((o: any) => o.status === 'pending').length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
@@ -312,8 +384,8 @@ function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
         <h3 className="font-medium text-foreground mb-2">{t('dashboard.noProducts')}</h3>
         <p className="text-sm text-muted-foreground mb-4">{t('dashboard.noProductsDesc')}</p>
         <Button onClick={onUpload} className="bg-gradient-brand hover:opacity-90 transition-opacity"><Upload className="size-4 mr-2" />{t('dashboard.uploadProducts')}</Button>
-      </div>
-    );
+      </div>);
+
   }
   return (
     <>
@@ -322,16 +394,17 @@ function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
         <Button size="sm" variant="outline" onClick={onUpload} className="w-full border-border/50 sm:w-auto"><Upload className="size-3.5 mr-1.5" />{t('dashboard.addProducts')}</Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product: any) => (<ProductCard key={product.id} product={product} editable onUpdate={onUpdate} onDelete={onDelete} />))}
+        {products.map((product: any) => <ProductCard key={product.id} product={product} editable onUpdate={onUpdate} onDelete={onDelete} />)}
       </div>
-    </>
-  );
+    </>);
+
 }
 
-function VerificationStatusBanner({ seller, onSubmit }: { seller: any, onSubmit: any }) {
+function VerificationStatusBanner({ seller, onSubmit }: {seller: any;onSubmit: any;}) {
   const [showResubmit, setShowResubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   if (seller.verification_status === 'approved') return null;
 
@@ -342,13 +415,13 @@ function VerificationStatusBanner({ seller, onSubmit }: { seller: any, onSubmit:
           <Clock className="size-5 text-amber-600" />
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400">Store Verification Pending</h3>
-          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
-            Our admins are reviewing your business details. You can still manage your products, but your store might have limited visibility until approved.
+          <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400">{t("auto.store_verification_pending")}</h3>
+          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">{t("auto.our_admins_are_reviewing_your")}
+
           </p>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (seller.verification_status === 'rejected') {
@@ -365,44 +438,44 @@ function VerificationStatusBanner({ seller, onSubmit }: { seller: any, onSubmit:
             <Ban className="size-5 text-red-600" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-red-900 dark:text-red-400">Verification Rejected</h3>
-            <p className="text-xs text-red-700 dark:text-red-500 mt-1">
-              Reason: <span className="font-semibold italic">"{seller.admin_feedback || 'Documentation incomplete'}"</span>
+            <h3 className="text-sm font-bold text-red-900 dark:text-red-400">{t("auto.verification_rejected")}</h3>
+            <p className="text-xs text-red-700 dark:text-red-500 mt-1">{t("auto.reason")}
+              <span className="font-semibold italic">"{seller.admin_feedback || 'Documentation incomplete'}"</span>
             </p>
-            {!canResubmit && (
-              <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
-                <Clock className="size-3" /> You can resubmit in {hoursLeft} hours.
-              </p>
-            )}
+            {!canResubmit &&
+            <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
+                <Clock className="size-3" />{t("auto.you_can_resubmit_in")}{hoursLeft}{t("auto.hours")}
+            </p>
+            }
           </div>
-          {canResubmit && !showResubmit && (
-            <Button size="sm" onClick={() => setShowResubmit(true)} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-              Update & Resubmit
-            </Button>
-          )}
+          {canResubmit && !showResubmit &&
+          <Button size="sm" onClick={() => setShowResubmit(true)} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">{t("auto.update_resubmit")}
+
+          </Button>
+          }
         </div>
 
-        {showResubmit && (
-          <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
+        {showResubmit &&
+        <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
             <StoreSetup onComplete={async (data) => {
-              setIsSubmitting(true);
-              const { error } = await onSubmit({
-                gstin: data.gstin,
-                registered_business_name: data.registered_business_name,
-                documents: data.verification_documents
-              });
-              setIsSubmitting(false);
-              if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-              else {
-                toast({ title: "Resubmitted!", description: "Your details have been sent for re-verification." });
-                setShowResubmit(false);
-              }
-            }} />
-            <Button variant="ghost" size="sm" onClick={() => setShowResubmit(false)} className="w-full mt-2" disabled={isSubmitting}>Cancel</Button>
+            setIsSubmitting(true);
+            const { error } = await onSubmit({
+              gstin: data.gstin,
+              registered_business_name: data.registered_business_name,
+              documents: data.verification_documents
+            });
+            setIsSubmitting(false);
+            if (error) toast({ title: "Error", description: error.message, variant: "destructive" });else
+            {
+              toast({ title: "Resubmitted!", description: "Your details have been sent for re-verification." });
+              setShowResubmit(false);
+            }
+          }} />
+            <Button variant="ghost" size="sm" onClick={() => setShowResubmit(false)} className="w-full mt-2" disabled={isSubmitting}>{t("auto.cancel")}</Button>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   }
 
   return null;

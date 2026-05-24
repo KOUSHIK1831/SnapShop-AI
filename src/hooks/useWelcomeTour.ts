@@ -32,55 +32,33 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           element: '[data-tour="products"]',
           popover: {
             title: 'Product Catalog',
-            description: 'View and manage all your listed products here. You can edit details, update stock, or remove items.',
-            side: 'bottom',
+            description: 'Your primary view. Manage all your listed products, edit details, and track stock from here.',
+            side: 'top',
           },
           onHighlighted: () => {
             setActiveTab?.('products');
           }
         },
         {
-          element: '[data-tour="orders"]',
+          element: '[data-tour="tools"]',
           popover: {
-            title: 'Manage Orders',
-            description: 'Track and process customer orders. Keep your buyers happy with timely updates!',
-            side: 'bottom',
+            title: 'Store Management',
+            description: 'Your hub for daily operations. Process customer orders, upload new products with AI, and manage inventory.',
+            side: 'top',
           },
           onHighlighted: () => {
-            setActiveTab?.('orders');
+            setActiveTab?.('tools');
           }
         },
         {
-          element: '[data-tour="upload"]',
+          element: '[data-tour="profile"]',
           popover: {
-            title: 'AI Upload',
-            description: 'Upload product photos here. Our AI will automatically extract titles, prices, and categories for you.',
-            side: 'bottom',
+            title: 'Store Profile',
+            description: 'View deep analytics, update your store settings, and manage your account details.',
+            side: 'top',
           },
           onHighlighted: () => {
-            setActiveTab?.('upload');
-          }
-        },
-        {
-          element: '[data-tour="inventory"]',
-          popover: {
-            title: 'Stock Management',
-            description: 'Monitor your inventory levels and get alerts when items are running low.',
-            side: 'bottom',
-          },
-          onHighlighted: () => {
-            setActiveTab?.('inventory');
-          }
-        },
-        {
-          element: '[data-tour="settings"]',
-          popover: {
-            title: 'Store Settings',
-            description: 'Customize your store name, description, contact details, and theme.',
-            side: 'bottom',
-          },
-          onHighlighted: () => {
-            setActiveTab?.('settings');
+            setActiveTab?.('profile');
           }
         },
         {

@@ -5,8 +5,8 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
-} from 'react';
+  type ReactNode } from
+'react';
 
 export type NetworkStatus = 'fast' | 'medium' | 'slow' | 'offline' | 'unknown';
 
@@ -30,10 +30,10 @@ type SpeedTestConfig = NonNullable<ConstructorParameters<typeof SpeedTest>[0]>;
 const SPEED_TEST_CONFIG: SpeedTestConfig = {
   autoStart: false,
   measurements: [
-    { type: 'download', bytes: 100_000, count: 1, bypassMinDuration: true },
-  ],
+  { type: 'download', bytes: 100_000, count: 1, bypassMinDuration: true }],
+
   measureDownloadLoadedLatency: false,
-  measureUploadLoadedLatency: false,
+  measureUploadLoadedLatency: false
 };
 
 function isBrowserOnline(): boolean {
@@ -61,7 +61,7 @@ const makeOffline = (): NetworkInfo => ({
   downloadMbps: null,
   connected: false,
   isOnline: false,
-  lastUpdatedAt: null,
+  lastUpdatedAt: null
 });
 
 const makeUnknown = (): NetworkInfo => ({
@@ -69,7 +69,7 @@ const makeUnknown = (): NetworkInfo => ({
   downloadMbps: null,
   connected: false,
   isOnline: isBrowserOnline(),
-  lastUpdatedAt: null,
+  lastUpdatedAt: null
 });
 
 const makeFromMbps = (mbps: number | null): NetworkInfo => ({
@@ -77,14 +77,14 @@ const makeFromMbps = (mbps: number | null): NetworkInfo => ({
   downloadMbps: mbps,
   connected: mbps != null,
   isOnline: true,
-  lastUpdatedAt: Date.now(),
+  lastUpdatedAt: Date.now()
 });
 
 const NetworkContext = createContext<NetworkInfo>(makeUnknown());
 
-export function NetworkProvider({ children }: { children: ReactNode }) {
+export function NetworkProvider({ children }: {children: ReactNode;}) {
   const [info, setInfo] = useState<NetworkInfo>(() =>
-    isBrowserOnline() ? makeUnknown() : makeOffline(),
+  isBrowserOnline() ? makeUnknown() : makeOffline()
   );
 
   const mountedRef = useRef(true);
@@ -148,76 +148,40 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
 
       try {
         test.play();
-      } catch {
+      } catch (err) {
+        console.error('Speed test failed:', err);
         settle(makeUnknown());
       }
     };
 
-    const checkSpeed = () => {
-      if (!isBrowserOnline()) {
-        abortTest();
-        apply(makeOffline());
-        return;
-      }
-      runSpeedTest();
-    };
-
-    checkSpeed();
-
-    intervalRef.current = window.setInterval(checkSpeed, POLL_MS);
-
-    const onOnline = () => checkSpeed();
-    const onOffline = () => {
+    const handleOnline = () => runSpeedTest();
+    const handleOffline = () => {
       abortTest();
       apply(makeOffline());
     };
-    const onFocus = () => checkSpeed();
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') checkSpeed();
-    };
 
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    runSpeedTest();
+    intervalRef.current = window.setInterval(runSpeedTest, POLL_MS);
 
     return () => {
       mountedRef.current = false;
       abortTest();
-      if (intervalRef.current != null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisible);
+      if (intervalRef.current != null) window.clearInterval(intervalRef.current);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
   return (
-    <NetworkContext.Provider value={info}>{children}</NetworkContext.Provider>
-  );
+    <NetworkContext.Provider value={info}>
+      {children}
+    </NetworkContext.Provider>);
+
 }
 
-export function useNetworkStrength(): NetworkInfo {
+export function useNetworkStrength() {
   return useContext(NetworkContext);
-}
-
-const UPLOAD_RATIO = 0.2;
-
-export function getEstimatedUploadMbps(info: NetworkInfo): number | null {
-  if (!info.connected || !info.isOnline || info.downloadMbps == null)
-    return null;
-  return info.downloadMbps * UPLOAD_RATIO;
-}
-
-export function formatEstimatedUploadTime(seconds: number): string {
-  const s = Math.max(1, Math.round(seconds));
-  if (s < 60) return `~${s} sec`;
-  const m = Math.round(s / 60);
-  if (m < 60) return `~${m} min`;
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  return rem === 0 ? `~${h} hr` : `~${h} hr ${rem} min`;
 }

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import Auth from "./Auth";
 
@@ -8,11 +9,24 @@ const {
   signUpMock,
   toastMock,
   navigateMock,
+  supabaseMock,
 } = vi.hoisted(() => ({
   signInMock: vi.fn(),
   signUpMock: vi.fn(),
   toastMock: vi.fn(),
   navigateMock: vi.fn(),
+  supabaseMock: {
+    auth: {
+      getSession: vi.fn(),
+    },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(),
+        })),
+      })),
+    })),
+  },
 }));
 
 let mockUser: any = null;
@@ -23,6 +37,8 @@ vi.mock("@/hooks/useAuth", () => ({
     loading: false,
     signIn: { password: signInMock, sendOtp: vi.fn(), verifyOtp: vi.fn() },
     signUp: signUpMock,
+    resetPassword: vi.fn(),
+    verifyOtp: vi.fn(),
   }),
 }));
 
@@ -35,42 +51,64 @@ vi.mock("@/components/LanguageSwitcher", () => ({
   default: () => <div>LanguageSwitcher</div>,
 }));
 
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: supabaseMock,
+}));
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
     useNavigate: () => navigateMock,
+    useSearchParams: () => [new URLSearchParams(), vi.fn()],
   };
 });
-
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
 
 describe("Auth page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUser = null;
+    
+    // Default supabase mocks
+    supabaseMock.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
   it("signs in and navigates to the dashboard", async () => {
-
     signInMock.mockResolvedValue({ error: null });
-    mockUser = { role: "seller" };
+    supabaseMock.auth.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: "user-123", email: "seller@example.com", email_confirmed_at: new Date().toISOString() },
+        },
+      },
+    });
+    
+    // Profile mock for role
+    (supabaseMock.from as any).mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: { role: "seller" }, error: null }),
+        })),
+      })),
+    });
 
-    render(<Auth />);
-
-
-    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>
+    );
+    
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
       target: { value: "seller@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter your password"), {
-      target: { value: "secret123" },
+    fireEvent.change(screen.getByPlaceholderText(/password/i), {
+      target: { value: "password123" },
     });
-    fireEvent.submit(screen.getAllByRole("button", { name: "auth.signIn" }).slice(-1)[0].closest("form")!);
+    
+    fireEvent.submit(screen.getAllByRole("button", { name: /sign in/i }).slice(-1)[0].closest("form")!);
 
     await waitFor(() => {
-      expect(signInMock).toHaveBeenCalledWith("seller@example.com", "secret123");
+      expect(signInMock).toHaveBeenCalledWith("seller@example.com", "password123");
       expect(navigateMock).toHaveBeenCalledWith("/dashboard");
     });
   });
@@ -78,16 +116,20 @@ describe("Auth page", () => {
   it("shows a toast on sign-in error", async () => {
     signInMock.mockResolvedValue({ error: { message: "Invalid login" } });
 
-    render(<Auth />);
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>
+    );
     
-    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
       target: { value: "wrong@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter your password"), {
+    fireEvent.change(screen.getByPlaceholderText(/password/i), {
       target: { value: "wrongpass" },
     });
     
-    fireEvent.submit(screen.getAllByRole("button", { name: "auth.signIn" }).slice(-1)[0].closest("form")!);
+    fireEvent.submit(screen.getAllByRole("button", { name: /sign in/i }).slice(-1)[0].closest("form")!);
 
 
     await waitFor(() => {
@@ -104,30 +146,34 @@ describe("Auth page", () => {
   it("switches to sign-up mode and shows the confirmation toast", async () => {
     signUpMock.mockResolvedValue({ error: null });
 
-    render(<Auth />);
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>
+    );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "auth.signUp" }).slice(-1)[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /create account/i }).slice(-1)[0]);
     
-    fireEvent.change(screen.getByPlaceholderText("Enter 10-digit phone"), {
+    fireEvent.change(screen.getByPlaceholderText(/phone/i), {
       target: { value: "9876543210" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Full Name"), {
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), {
       target: { value: "New Seller" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Email Address"), {
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
       target: { value: "new@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Create Password (min 6 chars)"), {
+    fireEvent.change(screen.getByPlaceholderText(/password/i), {
       target: { value: "password123" },
     });
     
-    fireEvent.submit(screen.getAllByRole("button", { name: "auth.signUp" }).slice(-1)[0].closest("form")!);
+    fireEvent.submit(screen.getAllByRole("button", { name: /create account/i }).slice(-1)[0].closest("form")!);
 
 
     await waitFor(() => {
       expect(signUpMock).toHaveBeenCalled();
       expect(toastMock).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Account Created" }),
+        expect.objectContaining({ title: "Verification Required" }),
       );
     });
 

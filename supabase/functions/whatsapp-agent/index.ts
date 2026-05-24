@@ -238,7 +238,7 @@ async function runAgent(
   // Add user message
   history.push({ role: "user", content: userMessage });
 
-  let messages: Message[] = [...history];
+  const messages: Message[] = [...history];
 
   // Agentic loop — keep calling Claude until stop_reason is "end_turn"
   for (let i = 0; i < 10; i++) {

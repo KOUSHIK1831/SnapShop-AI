@@ -1,10 +1,10 @@
-import { ThemeProvider as NextThemesProvider } from 'next-themes';
+import { useTranslation } from "react-i18next";import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { ReactNode } from 'react';
 
-export default function ThemeProvider({ children }: { children: ReactNode }) {
+export default function ThemeProvider({ children }: {children: ReactNode;}) {const { t } = useTranslation();
   return (
-    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <NextThemesProvider attribute={t("auto.class")} defaultTheme={t("auto.light")} enableSystem={false}>
       {children}
-    </NextThemesProvider>
-  );
+    </NextThemesProvider>);
+
 }

@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 import InventoryEditor from './InventoryEditor';
-import { LanguageProvider } from '@/i18n/LanguageContext';
 import { Toaster } from '@/components/ui/toaster';
 
 const mockProducts = [
@@ -23,9 +22,7 @@ const mockProducts = [
 describe('InventoryEditor', () => {
   it('renders product information correctly', () => {
     render(
-      <LanguageProvider>
-        <InventoryEditor products={mockProducts} onUpdate={vi.fn()} />
-      </LanguageProvider>
+      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} />
     );
 
     expect(screen.getByText('Product 1')).toBeInTheDocument();
@@ -38,9 +35,7 @@ describe('InventoryEditor', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(
-      <LanguageProvider>
-        <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
-      </LanguageProvider>
+      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
     );
 
     const deleteButton = screen.getByTitle('Delete');
@@ -55,9 +50,7 @@ describe('InventoryEditor', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(
-      <LanguageProvider>
-        <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
-      </LanguageProvider>
+      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
     );
 
     const deleteButton = screen.getByTitle('Delete');

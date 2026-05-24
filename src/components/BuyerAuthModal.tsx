@@ -1,9 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { useReducer, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, Loader2, Store, Mail, Eye, EyeOff, UserPlus, LogIn } from 'lucide-react';
-import { useLanguage } from '@/i18n/LanguageContext';
 
 interface BuyerAuthModalProps {
   isOpen: boolean;
@@ -27,12 +27,12 @@ interface BuyerAuthState {
 }
 
 type BuyerAuthAction =
-  | { type: 'SET_MODE'; payload: ModalMode }
-  | { type: 'SET_FIELD'; payload: Partial<Omit<BuyerAuthState, 'mode' | 'submitting' | 'error'>> }
-  | { type: 'TOGGLE_PASSWORD' }
-  | { type: 'SET_SUBMITTING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'RESET' };
+{type: 'SET_MODE';payload: ModalMode;} |
+{type: 'SET_FIELD';payload: Partial<Omit<BuyerAuthState, 'mode' | 'submitting' | 'error'>>;} |
+{type: 'TOGGLE_PASSWORD';} |
+{type: 'SET_SUBMITTING';payload: boolean;} |
+{type: 'SET_ERROR';payload: string;} |
+{type: 'RESET';};
 
 const initialState: BuyerAuthState = {
   mode: 'login',
@@ -43,25 +43,46 @@ const initialState: BuyerAuthState = {
   otp: '',
   showPassword: false,
   submitting: false,
-  error: '',
+  error: ''
 };
 
 function reducer(state: BuyerAuthState, action: BuyerAuthAction): BuyerAuthState {
   switch (action.type) {
-    case 'SET_MODE': return { ...initialState, mode: action.payload, email: state.email, name: state.name, phone: state.phone, password: state.password };
-    case 'SET_FIELD': return { ...state, ...action.payload };
-    case 'TOGGLE_PASSWORD': return { ...state, showPassword: !state.showPassword };
-    case 'SET_SUBMITTING': return { ...state, submitting: action.payload };
-    case 'SET_ERROR': return { ...state, error: action.payload };
-    case 'RESET': return initialState;
-    default: return state;
+    case 'SET_MODE':return { ...initialState, mode: action.payload, email: state.email, name: state.name, phone: state.phone, password: state.password };
+    case 'SET_FIELD':return { ...state, ...action.payload };
+    case 'TOGGLE_PASSWORD':return { ...state, showPassword: !state.showPassword };
+    case 'SET_SUBMITTING':return { ...state, submitting: action.payload };
+    case 'SET_ERROR':return { ...state, error: action.payload };
+    case 'RESET':return initialState;
+    default:return state;
   }
 }
 
 export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }: BuyerAuthModalProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { signIn, signUp, verifyOtp } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
+
+  const [cooldown, setCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const MAX_RESENDS = 3;
+
+  useEffect(() => {
+    if (!isOpen || !state.email || state.mode !== 'otp') return;
+    const resendData = sessionStorage.getItem(`otp_resend_${state.email}`);
+    if (resendData) {
+      const { count, nextAllowed } = JSON.parse(resendData);
+      setResendCount(count);
+      const remaining = Math.ceil((nextAllowed - Date.now()) / 1000);
+      if (remaining > 0) setCooldown(remaining);
+    }
+  }, [isOpen, state.email, state.mode]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   if (!isOpen) return null;
 
@@ -92,12 +113,12 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     dispatch({ type: 'SET_ERROR', payload: '' });
     const { error } = await signUp(state.phone, state.name, state.email, state.password, true);
     dispatch({ type: 'SET_SUBMITTING', payload: false });
-    
+
     if (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
       return;
     }
-    
+
     // Switch to OTP mode
     dispatch({ type: 'SET_MODE', payload: 'otp' });
   };
@@ -109,13 +130,13 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: '' });
-    
-    const { error } = await verifyOtp({ 
-      email: state.email, 
-      token: state.otp, 
-      type: 'signup' 
+
+    const { error } = await verifyOtp({
+      email: state.email,
+      token: state.otp,
+      type: 'signup'
     });
-    
+
     dispatch({ type: 'SET_SUBMITTING', payload: false });
     if (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
@@ -124,27 +145,6 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     }
   };
 
-  const [cooldown, setCooldown] = useState(0);
-  const [resendCount, setResendCount] = useState(0);
-  const MAX_RESENDS = 3;
-
-  useEffect(() => {
-    if (!isOpen || !state.email || state.mode !== 'otp') return;
-    const resendData = sessionStorage.getItem(`otp_resend_${state.email}`);
-    if (resendData) {
-      const { count, nextAllowed } = JSON.parse(resendData);
-      setResendCount(count);
-      const remaining = Math.ceil((nextAllowed - Date.now()) / 1000);
-      if (remaining > 0) setCooldown(remaining);
-    }
-  }, [isOpen, state.email, state.mode]);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(() => setCooldown(c => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
   const handleResendOtp = async () => {
     if (cooldown > 0 || state.submitting || resendCount >= MAX_RESENDS) return;
 
@@ -152,183 +152,155 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     setResendCount(newCount);
     const nextCooldown = newCount === 1 ? 60 : newCount === 2 ? 180 : 300;
     const nextAllowed = Date.now() + nextCooldown * 1000;
-    
-    sessionStorage.setItem(`otp_resend_${state.email}`, JSON.stringify({ 
-      count: newCount, 
-      nextAllowed 
+
+    sessionStorage.setItem(`otp_resend_${state.email}`, JSON.stringify({
+      count: newCount,
+      nextAllowed
     }));
-    
+
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
+    await signIn.sendOtp(state.phone);
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
     setCooldown(nextCooldown);
-    // Reuse handleSignup to trigger a new OTP send
-    await signUp(state.phone, state.name, state.email, state.password, true);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-default w-full h-full border-none p-0"
-        onClick={onClose}
-        aria-label="Close"
-      />
-      <div className="relative w-full max-w-sm mx-4 bg-card rounded-2xl shadow-2xl border border-border/50 animate-slide-up overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-background w-full max-w-md rounded-2xl shadow-2xl border border-border/50 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-brand px-6 py-5 text-white">
-          <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors">
-            <X className="size-5" />
-          </button>
-          <div className="flex items-center gap-2 mb-2">
-            <Store className="size-5" />
-            <span className="text-sm font-medium opacity-80">{storeName || t('common.appName')}</span>
+        <div className="p-6 border-b border-border/50 flex items-center justify-between bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Store className="size-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">
+                {state.mode === 'otp' ? 'Verify OTP' : state.mode === 'signup' ? 'Create Buyer Account' : 'Sign In'}
+              </h2>
+              {storeName && <p className="text-xs text-muted-foreground mt-0.5">at {storeName}</p>}
+            </div>
           </div>
-          <h2 className="text-lg font-semibold">{t('buyerAuth.title')}</h2>
-          <p className="text-sm opacity-80 mt-1">{t('buyerAuth.desc')}</p>
+          <button onClick={onClose} className="size-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
+            <X className="size-5 text-muted-foreground" />
+          </button>
         </div>
 
-        {/* Mode toggle */}
-        {state.mode !== 'otp' && (
-          <div className="flex border-b border-border/50">
-            <button
-              onClick={() => dispatch({ type: 'SET_MODE', payload: 'login' })}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-                state.mode === 'login'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <LogIn className="size-3.5" /> Sign In
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-                state.mode === 'signup'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <UserPlus className="size-3.5" /> Create Account
-            </button>
-          </div>
-        )}
-
-        <div className="p-6 space-y-4">
-          {state.error && (
-            <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {state.error &&
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive animate-in slide-in-from-top-1">
               {state.error}
             </div>
-          )}
-
-          {state.mode === 'signup' && (
-            <>
-              <Input
-                placeholder="Full Name"
-                value={state.name}
-                onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { name: e.target.value } })}
-                autoComplete="name"
-              />
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">+91</div>
-                <Input
-                  type="tel"
-                  placeholder="Phone (optional)"
-                  value={state.phone}
-                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { phone: formatPhone(e.target.value) } })}
-                  className="pl-10"
-                  autoComplete="tel"
-                />
-              </div>
-            </>
-          )}
+          }
 
           {state.mode !== 'otp' ? (
-            <>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder="Email address"
-                  value={state.email}
-                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { email: e.target.value } })}
-                  className="pl-10"
-                  autoComplete="email"
-                />
+            <div className="space-y-4">
+              {state.mode === 'signup' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Enter your name"
+                      value={state.name}
+                      onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { name: e.target.value }})}
+                      className="pl-3"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={state.email}
+                    onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { email: e.target.value }})}
+                    className="pl-10"
+                  />
+                </div>
               </div>
 
-              <div className="relative">
-                <Input
-                  type={state.showPassword ? 'text' : 'password'}
-                  placeholder={state.mode === 'signup' ? 'Create password (min 6 chars)' : 'Password'}
-                  value={state.password}
-                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value } })}
-                  className="pr-10"
-                  autoComplete={state.mode === 'signup' ? 'new-password' : 'current-password'}
-                  onKeyDown={(e) => { 
-                    if (e.key === 'Enter') {
-                      if (state.mode === 'login') handleLogin();
-                      else handleSignup();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {state.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Verify your email</p>
-                <p className="text-xs text-muted-foreground">Enter 6-digit code sent to {state.email}</p>
-              </div>
-              <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="0 0 0 0 0 0"
-                value={state.otp}
-                onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { otp: e.target.value.replace(/\D/g, '').slice(0, 6) } })}
-                className="text-center text-2xl tracking-widest font-bold h-12"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyOtp(); }}
-              />
-              
-              <div className="flex flex-col items-center gap-2">
-                {resendCount >= MAX_RESENDS ? (
-                  <p className="text-[10px] text-destructive font-medium text-center px-4">
-                    Maximum resends reached. Please contact support if you haven't received the code.
-                  </p>
-                ) : (
-                  <button 
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={cooldown > 0 || state.submitting}
-                    className="text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <button
+                    onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground hover:text-foreground transition-colors z-10"
                   >
-                    {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+                    {state.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
-                )}
-                <button 
-                  onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  <Input
+                    type={state.showPassword ? 'text' : 'password'}
+                    placeholder="Min. 6 characters"
+                    value={state.password}
+                    onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value }})}
+                    className="pr-10"
+                  />
+                </div>
+              </div>
+
+              <Button
+                className="w-full bg-gradient-brand hover:opacity-90 h-11 text-sm font-bold"
+                onClick={state.mode === 'signup' ? handleSignup : handleLogin}
+                disabled={state.submitting}
+              >
+                {state.submitting ? <Loader2 className="size-4 animate-spin mr-2" /> : (state.mode === 'signup' ? <UserPlus className="size-4 mr-2" /> : <LogIn className="size-4 mr-2" />)}
+                {state.mode === 'signup' ? 'Create Account' : 'Sign In'}
+              </Button>
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => dispatch({ type: 'SET_MODE', payload: state.mode === 'login' ? 'signup' : 'login' })}
+                  className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Back to signup
+                  {state.mode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
                 </button>
               </div>
             </div>
-          )}
+          ) : (
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  We've sent a verification email to <span className="font-bold text-foreground">{state.email}</span>.
+                </p>
+                <p className="text-xs text-muted-foreground">Please check your inbox (and spam) for the OTP.</p>
+              </div>
 
-          <Button
-            onClick={state.mode === 'login' ? handleLogin : state.mode === 'signup' ? handleSignup : handleVerifyOtp}
-            disabled={state.submitting}
-            className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
-          >
-            {state.submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {state.mode === 'login' ? 'Sign In & Place Order' : state.mode === 'signup' ? 'Create Account' : 'Verify & Continue'}
-          </Button>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center block">Enter 6-Digit OTP</label>
+                <Input
+                  className="text-center text-2xl font-black tracking-[1em] h-14"
+                  maxLength={6}
+                  value={state.otp}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { otp: e.target.value.replace(/\D/g, '') }})}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  className="w-full bg-primary h-11 text-sm font-bold"
+                  onClick={handleVerifyOtp}
+                  disabled={state.submitting || state.otp.length !== 6}
+                >
+                  {state.submitting ? <Loader2 className="size-4 animate-spin mr-2" /> : 'Verify & Continue'}
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    onClick={handleResendOtp}
+                    disabled={cooldown > 0 || state.submitting || resendCount >= MAX_RESENDS}
+                    className="text-xs font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {cooldown > 0 ? `Resend OTP in ${cooldown}s` : resendCount >= MAX_RESENDS ? 'Max resends reached' : 'Resend Verification Email'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

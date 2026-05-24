@@ -2,10 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ReviewCard from './ReviewCard';
 
-vi.mock('@/i18n/LanguageContext', () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
-
 const mockProduct = {
   title: 'Test Kurta',
   description: 'A nice kurta',

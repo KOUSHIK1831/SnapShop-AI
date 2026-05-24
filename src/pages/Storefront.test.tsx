@@ -56,10 +56,6 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
-
 describe("Storefront page", () => {
   it("shows a not-found state when the seller slug does not exist", async () => {
     fromMock.mockImplementation(() => ({
@@ -72,7 +68,7 @@ describe("Storefront page", () => {
 
     render(<Storefront />);
 
-    expect(await screen.findByText("storefront.storeNotFound")).toBeInTheDocument();
+    expect(await screen.findByText(/store not found/i)).toBeInTheDocument();
   });
 
   it("opens buyer auth when an unauthenticated user tries to order", async () => {
@@ -114,7 +110,7 @@ describe("Storefront page", () => {
 
     render(<Storefront />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /storefront.orderNow/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /order now/i }));
 
     expect(await screen.findByText("BuyerAuthModal")).toBeInTheDocument();
   });
@@ -167,7 +163,7 @@ describe("Storefront page", () => {
 
     render(<Storefront />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /storefront.orderNow/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /order now/i }));
 
     await waitFor(() => {
       expect(screen.getByText("OrderConfirmation")).toBeInTheDocument();

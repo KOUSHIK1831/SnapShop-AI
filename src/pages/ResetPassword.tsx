@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer } from 'react';
+import { useTranslation } from "react-i18next";import React, { useEffect, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -21,18 +21,18 @@ interface State {
 }
 
 type Action =
-  | { type: 'SET_PAGE'; payload: PageState }
-  | { type: 'SET_FIELD'; payload: Partial<Pick<State, 'password' | 'confirm' | 'error'>> }
-  | { type: 'TOGGLE'; payload: 'showPassword' | 'showConfirm' }
-  | { type: 'SET_SUBMITTING'; payload: boolean };
+{type: 'SET_PAGE';payload: PageState;} |
+{type: 'SET_FIELD';payload: Partial<Pick<State, 'password' | 'confirm' | 'error'>>;} |
+{type: 'TOGGLE';payload: 'showPassword' | 'showConfirm';} |
+{type: 'SET_SUBMITTING';payload: boolean;};
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'SET_PAGE': return { ...state, page: action.payload };
-    case 'SET_FIELD': return { ...state, ...action.payload };
-    case 'TOGGLE': return { ...state, [action.payload]: !state[action.payload] };
-    case 'SET_SUBMITTING': return { ...state, submitting: action.payload };
-    default: return state;
+    case 'SET_PAGE':return { ...state, page: action.payload };
+    case 'SET_FIELD':return { ...state, ...action.payload };
+    case 'TOGGLE':return { ...state, [action.payload]: !state[action.payload] };
+    case 'SET_SUBMITTING':return { ...state, submitting: action.payload };
+    default:return state;
   }
 }
 
@@ -44,7 +44,7 @@ export default function ResetPassword() {
     showPassword: false,
     showConfirm: false,
     submitting: false,
-    error: '',
+    error: ''
   });
 
   const { updatePassword } = useAuth();
@@ -67,16 +67,16 @@ export default function ResetPassword() {
 
     // If recovery tokens are in the hash, exchange them for a session
     if (accessToken && refreshToken && type === 'recovery') {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) {
-            dispatch({ type: 'SET_PAGE', payload: 'invalid' });
-          } else {
-            // Clear the hash from the URL
-            window.history.replaceState(null, '', window.location.pathname);
-            dispatch({ type: 'SET_PAGE', payload: 'form' });
-          }
-        });
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).
+      then(({ error }) => {
+        if (error) {
+          dispatch({ type: 'SET_PAGE', payload: 'invalid' });
+        } else {
+          // Clear the hash from the URL
+          window.history.replaceState(null, '', window.location.pathname);
+          dispatch({ type: 'SET_PAGE', payload: 'form' });
+        }
+      });
       return;
     }
 
@@ -134,142 +134,142 @@ export default function ResetPassword() {
           <div className="mx-auto size-12 bg-gradient-brand rounded-xl flex items-center justify-center mb-4">
             <Store className="size-6 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">ApnaBazar</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t("common.appName")}</h1>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">
-              {state.page === 'success' ? 'Password Updated!' : 'Set New Password'}
+              {state.page === 'success' ? t("auto.password_updated") : t("auto.set_new_password")}
             </CardTitle>
             <CardDescription>
-              {state.page === 'success'
-                ? 'Redirecting you to sign in...'
-                : 'Choose a strong password for your account'}
+              {state.page === 'success' ? t("auto.redirecting_you_to_sign_in") : t("auto.choose_a_strong_password_for_y")
+
+              }
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             {/* Loading */}
-            {state.page === 'loading' && (
-              <div className="py-8 flex flex-col items-center gap-3">
+            {state.page === 'loading' &&
+            <div className="py-8 flex flex-col items-center gap-3">
                 <Loader2 className="size-8 text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Verifying reset link...</p>
+                <p className="text-sm text-muted-foreground">{t("auto.verifying_reset_link")}</p>
               </div>
-            )}
+            }
 
             {/* Invalid link */}
-            {state.page === 'invalid' && (
-              <div className="py-6 text-center space-y-4">
+            {state.page === 'invalid' &&
+            <div className="py-6 text-center space-y-4">
                 <div className="mx-auto size-14 bg-destructive/10 rounded-full flex items-center justify-center">
                   <AlertCircle className="size-7 text-destructive" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Link expired or invalid</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Password reset links expire after 1 hour. Please request a new one.
-                  </p>
+                  <p className="font-medium text-foreground">{t("auto.link_expired_or_invalid")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("auto.password_reset_links_expire_af")}
+
+                </p>
                 </div>
-                <Button onClick={() => navigate('/auth')} className="w-full bg-gradient-brand hover:opacity-90">
-                  Back to Sign In
-                </Button>
+                <Button onClick={() => navigate('/auth')} className="w-full bg-gradient-brand hover:opacity-90">{t("auto.back_to_sign_in")}
+
+              </Button>
               </div>
-            )}
+            }
 
             {/* Success */}
-            {state.page === 'success' && (
-              <div className="py-6 text-center space-y-4">
+            {state.page === 'success' &&
+            <div className="py-6 text-center space-y-4">
                 <div className="mx-auto size-14 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="size-7 text-green-600" />
                 </div>
-                <p className="text-sm text-muted-foreground">Redirecting to sign in...</p>
+                <p className="text-sm text-muted-foreground">{t("auto.redirecting_to_sign_in")}</p>
               </div>
-            )}
+            }
 
             {/* Form */}
-            {state.page === 'form' && (
-              <form onSubmit={handleSubmit} className="space-y-4">
+            {state.page === 'form' &&
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="size-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                     <KeyRound className="size-4 text-primary" />
                   </div>
-                  <p className="text-sm text-muted-foreground">Enter your new password below</p>
+                  <p className="text-sm text-muted-foreground">{t("auto.enter_your_new_password_below")}</p>
                 </div>
 
-                {state.error && (
-                  <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                {state.error &&
+              <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
                     {state.error}
                   </div>
-                )}
+              }
 
                 <div className="relative">
                   <Input
-                    type={state.showPassword ? 'text' : 'password'}
-                    placeholder="New password (min 6 chars)"
-                    value={state.password}
-                    onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value, error: '' } })}
-                    className="pr-10"
-                    autoComplete="new-password"
-                    autoFocus
-                  />
+                  type={state.showPassword ? t("auto.text") : t("auto.password")}
+                  placeholder={t("auto.new_password_min_6_chars")}
+                  value={state.password}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value, error: '' } })}
+                  className="pr-10"
+                  autoComplete={t("auto.new_password")}
+                  autoFocus />
+                
                   <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'TOGGLE', payload: 'showPassword' })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  type="button"
+                  onClick={() => dispatch({ type: 'TOGGLE', payload: 'showPassword' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  
                     {state.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
 
                 <div className="relative">
                   <Input
-                    type={state.showConfirm ? 'text' : 'password'}
-                    placeholder="Confirm new password"
-                    value={state.confirm}
-                    onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { confirm: e.target.value, error: '' } })}
-                    className="pr-10"
-                    autoComplete="new-password"
-                  />
+                  type={state.showConfirm ? t("auto.text") : t("auto.password")}
+                  placeholder={t("auto.confirm_new_password")}
+                  value={state.confirm}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { confirm: e.target.value, error: '' } })}
+                  className="pr-10"
+                  autoComplete={t("auto.new_password")} />
+                
                   <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'TOGGLE', payload: 'showConfirm' })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  type="button"
+                  onClick={() => dispatch({ type: 'TOGGLE', payload: 'showConfirm' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  
                     {state.showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
 
                 {/* Password strength hint */}
-                {state.password.length > 0 && (
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          state.password.length >= i * 3
-                            ? state.password.length >= 10 ? 'bg-green-500'
-                              : state.password.length >= 7 ? 'bg-amber-500'
-                              : 'bg-red-400'
-                            : 'bg-muted'
-                        }`}
-                      />
-                    ))}
-                  </div>
+                {state.password.length > 0 &&
+              <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((i) =>
+                <div
+                  key={i}
+                  className={`h-1 flex-1 rounded-full transition-colors ${
+                  state.password.length >= i * 3 ?
+                  state.password.length >= 10 ? t("auto.bg_green_500") :
+                  state.password.length >= 7 ? t("auto.bg_amber_500") : t("auto.bg_red_400") : t("auto.bg_muted")}`
+
+
+                  } />
+
                 )}
+                  </div>
+              }
 
                 <Button
-                  type="submit"
-                  disabled={state.submitting || !state.password || !state.confirm}
-                  className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
-                >
-                  {state.submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-                  Update Password
-                </Button>
+                type="submit"
+                disabled={state.submitting || !state.password || !state.confirm}
+                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity">
+                
+                  {state.submitting && <Loader2 className="size-4 mr-2 animate-spin" />}{t("auto.update_password")}
+
+              </Button>
               </form>
-            )}
+            }
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>);
+
 }

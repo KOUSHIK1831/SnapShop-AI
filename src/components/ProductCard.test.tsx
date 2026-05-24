@@ -2,8 +2,6 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { LanguageProvider } from "@/i18n/LanguageContext";
-
 import ProductCard from "./ProductCard";
 
 const product = {
@@ -22,9 +20,7 @@ function renderCard(
   overrides: Partial<ComponentProps<typeof ProductCard>> = {},
 ) {
   return render(
-    <LanguageProvider>
-      <ProductCard product={product} editable {...overrides} />
-    </LanguageProvider>,
+    <ProductCard product={product} editable {...overrides} />
   );
 }
 

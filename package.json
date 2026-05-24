@@ -13,7 +13,10 @@
     "test:watch": "vitest",
     "validate": "npm run lint && tsc --noEmit && npm run test",
     "evaluate-ai": "tsx scripts/evaluate-ai.ts",
-    "benchmark": "tsx scripts/benchmark.ts"
+    "benchmark": "tsx scripts/benchmark.ts",
+    "i18n:scan": "tsx scripts/extract-i18n-babel.ts --scan",
+    "i18n:replace": "tsx scripts/extract-i18n-babel.ts --replace",
+    "i18n:check": "tsx scripts/extract-i18n-babel.ts --check"
   },
   "dependencies": {
     "@cloudflare/speedtest": "^1.8.5",

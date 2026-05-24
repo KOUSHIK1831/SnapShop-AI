@@ -1,37 +1,59 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import LanguageSwitcher from "./LanguageSwitcher";
 
-const { setLanguageMock } = vi.hoisted(() => ({
-  setLanguageMock: vi.fn(),
+const { changeLanguageMock } = vi.hoisted(() => ({
+  changeLanguageMock: vi.fn(),
 }));
 
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({
-    language: "en",
-    setLanguage: setLanguageMock,
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      if (key === "auto.switch_language") return "Switch language";
+      return key;
+    },
+    i18n: {
+      language: "en",
+      changeLanguage: changeLanguageMock,
+    },
   }),
 }));
 
 describe("LanguageSwitcher", () => {
-  it("opens the menu and switches the selected language", () => {
+  it("opens the menu and switches the selected language", async () => {
     render(<LanguageSwitcher />);
 
-    fireEvent.click(screen.getByRole("button", { name: /switch language/i }));
-    fireEvent.click(screen.getByRole("button", { name: /తెలుగు/i }));
+    const trigger = screen.getByRole("button", { name: /switch language/i });
+    fireEvent.pointerDown(trigger, {
+      pointerId: 1,
+      pointerType: 'mouse',
+    });
+    fireEvent.click(trigger);
 
-    expect(setLanguageMock).toHaveBeenCalledWith("te");
+    const item = await screen.findByRole("menuitem", { name: /తెలుగు/i });
+    fireEvent.click(item);
+
+    expect(changeLanguageMock).toHaveBeenCalledWith("te");
   });
 
-  it("closes when clicking outside", () => {
+  it("closes when clicking outside", async () => {
     render(<LanguageSwitcher />);
 
-    fireEvent.click(screen.getByRole("button", { name: /switch language/i }));
-    expect(screen.getByText("English")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: /switch language/i });
+    fireEvent.pointerDown(trigger, {
+      pointerId: 1,
+      pointerType: 'mouse',
+    });
+    fireEvent.click(trigger);
 
-    fireEvent.mouseDown(document.body);
+    expect(await screen.findByText("English")).toBeInTheDocument();
 
-    expect(screen.queryByText("English")).not.toBeInTheDocument();
+    fireEvent.pointerDown(document.body);
+    fireEvent.pointerUp(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByText("English")).not.toBeInTheDocument();
+    });
   });
 });

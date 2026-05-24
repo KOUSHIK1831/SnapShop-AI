@@ -1,8 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { LanguageProvider } from "@/i18n/LanguageContext";
-
 import StoreSettings from "./StoreSettings";
 
 const { toastMock } = vi.hoisted(() => ({
@@ -33,9 +31,7 @@ describe("StoreSettings", () => {
     const onUpdate = vi.fn().mockResolvedValue({ error: null });
 
     render(
-      <LanguageProvider>
         <StoreSettings seller={seller} onUpdate={onUpdate} />
-      </LanguageProvider>,
     );
 
     fireEvent.change(screen.getByPlaceholderText("https://www.google.com/maps/embed?pb=..."), {
@@ -63,9 +59,7 @@ describe("StoreSettings", () => {
     const onUpdate = vi.fn().mockResolvedValue({ error: new Error("failed") });
 
     render(
-      <LanguageProvider>
         <StoreSettings seller={seller} onUpdate={onUpdate} />
-      </LanguageProvider>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /save settings/i }));

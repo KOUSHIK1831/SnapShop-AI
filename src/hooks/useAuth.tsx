@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import { useTranslation } from "react-i18next";import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailOtpType, MobileOtpType } from '@supabase/supabase-js';
 
@@ -22,16 +22,16 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (phone: string, name: string, email: string, password: string, isIntern?: boolean) => Promise<{ error: Error | null }>;
+  signUp: (phone: string, name: string, email: string, password: string, isIntern?: boolean) => Promise<{error: Error | null;}>;
   signIn: {
     sendOtp: (phone: string) => Promise<void>;
-    verifyOtp: (phone: string, otp: string) => Promise<{ error: Error | null }>;
-    password: (identifier: string, password: string) => Promise<{ error: Error | null }>;
+    verifyOtp: (phone: string, otp: string) => Promise<{error: Error | null;}>;
+    password: (identifier: string, password: string) => Promise<{error: Error | null;}>;
   };
-  verifyOtp: (params: { email?: string; phone?: string; token: string; type: EmailOtpType | MobileOtpType }) => Promise<{ error: Error | null }>;
+  verifyOtp: (params: {email?: string;phone?: string;token: string;type: EmailOtpType | MobileOtpType;}) => Promise<{error: Error | null;}>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
-  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{error: Error | null;}>;
+  updatePassword: (newPassword: string) => Promise<{error: Error | null;}>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,9 +40,9 @@ function storeCredentials(email: string, password: string) {
   try {
     sessionStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ email, password }));
   } catch {
+
     // sessionStorage unavailable
-  }
-}
+  }}
 
 function getStoredCredentials(): StoredCredentials | null {
   try {
@@ -57,9 +57,9 @@ function clearStoredCredentials() {
   try {
     sessionStorage.removeItem(CREDENTIALS_KEY);
   } catch {
+
     // sessionStorage unavailable
-  }
-}
+  }}
 
 function storePhoneEmail(phone: string, email: string) {
   try {
@@ -70,9 +70,9 @@ function storePhoneEmail(phone: string, email: string) {
     map[digits] = email;
     localStorage.setItem(PHONE_EMAIL_MAP_KEY, JSON.stringify(map));
   } catch {
+
     // localStorage unavailable
-  }
-}
+  }}
 
 function getEmailForPhone(phone: string) {
   try {
@@ -97,7 +97,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_KEY = 'apnabazar_auth_rate_limit';
 
-function getRateLimitData(): Record<string, { count: number, lockedUntil: number | null }> {
+function getRateLimitData(): Record<string, {count: number;lockedUntil: number | null;}> {
   try {
     const raw = localStorage.getItem(RATE_LIMIT_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -110,11 +110,11 @@ function saveRateLimitData(data: Record<string, any>) {
   try {
     localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data));
   } catch {
-    // localStorage unavailable
-  }
-}
 
-function checkLockout(identifier: string): { isLocked: boolean, remainingMs: number } {
+    // localStorage unavailable
+  }}
+
+function checkLockout(identifier: string): {isLocked: boolean;remainingMs: number;} {
   const data = getRateLimitData();
   const entry = data[identifier];
   if (!entry || !entry.lockedUntil) return { isLocked: false, remainingMs: 0 };
@@ -134,11 +134,11 @@ function recordFailure(identifier: string) {
   const data = getRateLimitData();
   const entry = data[identifier] || { count: 0, lockedUntil: null };
   entry.count += 1;
-  
+
   if (entry.count >= MAX_FAILED_ATTEMPTS) {
     entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
   }
-  
+
   data[identifier] = entry;
   saveRateLimitData(data);
   return entry;
@@ -177,22 +177,22 @@ type AuthState = {
   loading: boolean;
 };
 
-type AuthAction = 
-  | { type: 'SET_AUTH', payload: { user: AuthUser | null, loading: boolean } }
-  | { type: 'SET_LOADING', payload: boolean };
+type AuthAction =
+{type: 'SET_AUTH';payload: {user: AuthUser | null;loading: boolean;};} |
+{type: 'SET_LOADING';payload: boolean;};
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
-    case 'SET_AUTH': return { ...state, user: action.payload.user, loading: action.payload.loading };
-    case 'SET_LOADING': return { ...state, loading: action.payload };
-    default: return state;
+    case 'SET_AUTH':return { ...state, user: action.payload.user, loading: action.payload.loading };
+    case 'SET_LOADING':return { ...state, loading: action.payload };
+    default:return state;
   }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: {children: React.ReactNode;}) {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    loading: true,
+    loading: true
   });
 
   useEffect(() => {
@@ -207,10 +207,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let is_blocked = false;
 
       try {
-        const { data: profile } = await supabase.from('profiles')
-          .select('role, is_blocked')
-          .eq('id', session.user.id)
-          .single();
+        const { data: profile } = await supabase.from('profiles').
+        select('role, is_blocked').
+        eq('id', session.user.id).
+        single();
 
         if (profile) {
           role = profile.role || role;
@@ -218,10 +218,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // If not already blocked by profile, check seller status
           if (!is_blocked && role === 'seller') {
-            const { data: seller } = await supabase.from('sellers')
-              .select('status')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
+            const { data: seller } = await supabase.from('sellers').
+            select('status').
+            eq('user_id', session.user.id).
+            maybeSingle();
             if (seller?.status === 'blocked') {
               is_blocked = true;
             }
@@ -231,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.from('profiles').upsert({
             id: session.user.id,
             email: session.user.email,
-            role: role,
+            role: role
           }, { onConflict: 'id' }).maybeSingle();
         }
       } catch (e) {
@@ -254,10 +254,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               phone: meta.phone || meta.phone_number || '',
               role,
               is_blocked,
-              email_confirmed: !!session.user.email_confirmed_at,
+              email_confirmed: !!session.user.email_confirmed_at
             },
-            loading: false,
-          },
+            loading: false
+          }
         });
       }
     };
@@ -274,49 +274,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Real-time subscription to current user's profile status
     let profileSubscription: any = null;
-    
+
     const setupProfileSubscription = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
-        profileSubscription = supabase
-          .channel(`profile-status-${session.user.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'profiles',
-              filter: `id=eq.${session.user.id}`,
-            },
-            (payload) => {
-              if (payload.new && (payload.new as any).is_blocked) {
-                supabase.auth.signOut().then(() => {
-                  dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
-                  sessionStorage.setItem('apnabazar_blocked_alert', 'true');
-                  window.location.href = '/auth';
-                });
-              }
+        profileSubscription = supabase.
+        channel(`profile-status-${session.user.id}`).
+        on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${session.user.id}`
+          },
+          (payload) => {
+            if (payload.new && (payload.new as any).is_blocked) {
+              supabase.auth.signOut().then(() => {
+                dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+                sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+                window.location.href = '/auth';
+              });
             }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'sellers',
-              filter: `user_id=eq.${session.user.id}`,
-            },
-            (payload) => {
-              if (payload.new && (payload.new as any).status === 'blocked') {
-                supabase.auth.signOut().then(() => {
-                  dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
-                  sessionStorage.setItem('apnabazar_blocked_alert', 'true');
-                  window.location.href = '/auth';
-                });
-              }
+          }
+        ).
+        on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'sellers',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          (payload) => {
+            if (payload.new && (payload.new as any).status === 'blocked') {
+              supabase.auth.signOut().then(() => {
+                dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+                sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+                window.location.href = '/auth';
+              });
             }
-          )
-          .subscribe();
+          }
+        ).
+        subscribe();
       }
     };
 
@@ -337,9 +337,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
             phone: normalizePhone(phone),
-            role: isBuyer ? 'buyer' : 'seller',
-          },
-        },
+            role: isBuyer ? t("auto.buyer_795") : t("auto.seller")
+          }
+        }
       });
 
       if (error) {
@@ -356,7 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.from('profiles').upsert({
             id: data.user.id,
             email,
-            role: isBuyer ? 'buyer' : 'seller',
+            role: isBuyer ? t("auto.buyer_795") : t("auto.seller")
           }, { onConflict: 'id' });
         } catch (profileErr) {
           console.warn('[Auth] Profile upsert exception (non-fatal):', profileErr);
@@ -371,18 +371,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const sendOtp = async (phone: string) => {
     const { error } = await supabase.auth.signInWithOtp({
-      phone: normalizePhone(phone),
+      phone: normalizePhone(phone)
     });
     if (error) {
       throw new Error(error.message);
     }
   };
 
-  const genericVerifyOtp = async (params: { email?: string; phone?: string; token: string; type: EmailOtpType | MobileOtpType }) => {
+  const genericVerifyOtp = async (params: {email?: string;phone?: string;token: string;type: EmailOtpType | MobileOtpType;}) => {
     try {
       const verifyParams: any = {
         token: params.token,
-        type: params.type,
+        type: params.type
       };
       if (params.email) verifyParams.email = params.email;
       if (params.phone) verifyParams.phone = normalizePhone(params.phone);
@@ -400,7 +400,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.from('profiles').upsert({
           id: data.user.id,
           email: data.user.email || params.email,
-          role: meta.role || 'seller',
+          role: meta.role || 'seller'
         }, { onConflict: 'id' }).maybeSingle();
       }
 
@@ -413,20 +413,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const passwordLogin = async (identifier: string, password: string) => {
     try {
       const cleanIdentifier = identifier.trim().toLowerCase();
-      
+
       // Check rate limit
       const { isLocked, remainingMs } = checkLockout(cleanIdentifier);
       if (isLocked) {
         const minutes = Math.ceil(remainingMs / 60000);
-        return { error: new Error(`Too many failed attempts. Please try again in ${minutes} minute${minutes !== 1 ? 's' : ''} for security reasons.`) };
+        return { error: new Error(`Too many failed attempts. Please try again in ${minutes} minute${minutes !== 1 ? t("auto.s") : ''} for security reasons.`) };
       }
 
-      const email = cleanIdentifier.includes('@')
-        ? cleanIdentifier
-        : getEmailForPhone(cleanIdentifier) || `${cleanIdentifier.replace(/\D/g, '')}@apnabazar.app`;
-      
+      const email = cleanIdentifier.includes('@') ?
+      cleanIdentifier :
+      getEmailForPhone(cleanIdentifier) || `${cleanIdentifier.replace(/\D/g, '')}@apnabazar.app`;
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) {
         recordFailure(cleanIdentifier);
         return { error: normalizePasswordLoginError(error) };
@@ -463,7 +463,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password`
       });
       if (error) return { error: new Error(error.message) };
       return { error: null };
@@ -488,20 +488,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: state.user,
         loading: state.loading,
         signUp,
-        signIn: { 
-          sendOtp, 
-          verifyOtp: (phone: string, otp: string) => genericVerifyOtp({ phone, token: otp, type: 'sms' }), 
-          password: passwordLogin 
+        signIn: {
+          sendOtp,
+          verifyOtp: (phone: string, otp: string) => genericVerifyOtp({ phone, token: otp, type: 'sms' }),
+          password: passwordLogin
         },
         verifyOtp: genericVerifyOtp,
         signOut,
         resetPassword,
-        updatePassword,
-      }}
-    >
+        updatePassword
+      }}>
+      
       {children}
-    </AuthContext.Provider>
-  );
+    </AuthContext.Provider>);
+
 }
 
 export function useAuth() {

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState, useReducer, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  LogOut, 
-  Store, 
-  Users, 
-  Package, 
-  ShoppingBag, 
-  LayoutDashboard, 
+import {
+  LogOut,
+  Store,
+  Users,
+  Package,
+  ShoppingBag,
+  LayoutDashboard,
   ArrowLeft,
   ChevronRight,
   Search,
@@ -26,9 +27,8 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  XCircle
-} from "lucide-react";
-import { useLanguage } from "@/i18n/LanguageContext";
+  XCircle } from
+"lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -86,7 +86,7 @@ interface Order {
   created_at: string;
   confirmed_at?: string;
   completed_at?: string;
-  product: { title: string; price: number };
+  product: {title: string;price: number;};
 }
 
 interface AdminState {
@@ -102,25 +102,25 @@ interface AdminState {
   userSearch: string;
 }
 
-type AdminAction = 
-  | { type: 'SET_STATS'; payload: { profiles: Profile[], sellers: Seller[], totalProducts: number, totalOrders: number, feedback: Feedback[] } }
-  | { type: 'SET_SELECTED_SELLER'; payload: { seller: Seller | null, products: Product[], orders: Order[] } }
-  | { type: 'UPDATE_FEEDBACK'; payload: Feedback[] }
-  | { type: 'UPDATE_PROFILES'; payload: Profile[] }
-  | { type: 'UPDATE_SELLERS'; payload: Seller[] }
-  | { type: 'SET_SEARCH'; payload: string }
-  | { type: 'SET_USER_SEARCH'; payload: string };
+type AdminAction =
+{type: 'SET_STATS';payload: {profiles: Profile[];sellers: Seller[];totalProducts: number;totalOrders: number;feedback: Feedback[];};} |
+{type: 'SET_SELECTED_SELLER';payload: {seller: Seller | null;products: Product[];orders: Order[];};} |
+{type: 'UPDATE_FEEDBACK';payload: Feedback[];} |
+{type: 'UPDATE_PROFILES';payload: Profile[];} |
+{type: 'UPDATE_SELLERS';payload: Seller[];} |
+{type: 'SET_SEARCH';payload: string;} |
+{type: 'SET_USER_SEARCH';payload: string;};
 
 function adminReducer(state: AdminState, action: AdminAction): AdminState {
   switch (action.type) {
-    case 'SET_STATS': return { ...state, ...action.payload };
-    case 'SET_SELECTED_SELLER': return { ...state, selectedSeller: action.payload.seller, sellerProducts: action.payload.products, sellerOrders: action.payload.orders };
-    case 'UPDATE_FEEDBACK': return { ...state, feedback: action.payload };
-    case 'UPDATE_PROFILES': return { ...state, profiles: action.payload };
-    case 'UPDATE_SELLERS': return { ...state, sellers: action.payload };
-    case 'SET_SEARCH': return { ...state, search: action.payload };
-    case 'SET_USER_SEARCH': return { ...state, userSearch: action.payload };
-    default: return state;
+    case 'SET_STATS':return { ...state, ...action.payload };
+    case 'SET_SELECTED_SELLER':return { ...state, selectedSeller: action.payload.seller, sellerProducts: action.payload.products, sellerOrders: action.payload.orders };
+    case 'UPDATE_FEEDBACK':return { ...state, feedback: action.payload };
+    case 'UPDATE_PROFILES':return { ...state, profiles: action.payload };
+    case 'UPDATE_SELLERS':return { ...state, sellers: action.payload };
+    case 'SET_SEARCH':return { ...state, search: action.payload };
+    case 'SET_USER_SEARCH':return { ...state, userSearch: action.payload };
+    default:return state;
   }
 }
 
@@ -134,23 +134,29 @@ const initialAdminState: AdminState = {
   sellerOrders: [],
   feedback: [],
   search: "",
-  userSearch: "",
+  userSearch: ""
 };
 
+import { useNavigate, useSearchParams } from 'react-router-dom';
+// ...
 export default function Admin() {
   const { signOut } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [state, dispatch] = useReducer(adminReducer, initialAdminState);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const activeTab = searchParams.get('tab') || 'sellers';
+  const setActiveTab = (tab: string) => setSearchParams({ tab });
 
   const fetchGlobalStats = useCallback(async () => {
     const [profilesRes, sellersRes, productsRes, ordersRes, feedbackRes] = await Promise.all([
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase.from("sellers").select("*").order("created_at", { ascending: false }),
-      supabase.from("products").select("id", { count: "exact", head: true }),
-      supabase.from("orders").select("id", { count: "exact", head: true }),
-      supabase.from("feedback").select("*").order("created_at", { ascending: false }),
-    ]);
+    supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+    supabase.from("sellers").select("*").order("created_at", { ascending: false }),
+    supabase.from("products").select("id", { count: "exact", head: true }),
+    supabase.from("orders").select("id", { count: "exact", head: true }),
+    supabase.from("feedback").select("*").order("created_at", { ascending: false })]
+    );
 
     const emailByUserId = new Map((profilesRes.data || []).map((profile) => [profile.id, profile.email]));
     const storeNameBySellerId = new Map((sellersRes.data || []).map((seller) => [seller.id, seller.store_name]));
@@ -158,7 +164,7 @@ export default function Admin() {
     const enrichedFeedback = (feedbackRes.data || []).map((item) => ({
       ...item,
       user_email: emailByUserId.get(item.user_id) || undefined,
-      store_name: item.seller_id ? storeNameBySellerId.get(item.seller_id) : undefined,
+      store_name: item.seller_id ? storeNameBySellerId.get(item.seller_id) : undefined
     }));
 
     dispatch({
@@ -168,25 +174,25 @@ export default function Admin() {
         sellers: sellersRes.data || [],
         totalProducts: productsRes.count || 0,
         totalOrders: ordersRes.count || 0,
-        feedback: enrichedFeedback,
+        feedback: enrichedFeedback
       }
     });
   }, []);
 
   useEffect(() => {
     fetchGlobalStats();
-    const channel = supabase.channel("admin-all-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, () => fetchGlobalStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchGlobalStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "sellers" }, () => fetchGlobalStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchGlobalStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => fetchGlobalStats());
+    const channel = supabase.channel("admin-all-realtime").
+    on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, () => fetchGlobalStats()).
+    on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchGlobalStats()).
+    on("postgres_changes", { event: "*", schema: "public", table: "sellers" }, () => fetchGlobalStats()).
+    on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchGlobalStats()).
+    on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => fetchGlobalStats());
     channel.subscribe();
-    return () => { channel.unsubscribe(); supabase.removeChannel(channel); };
+    return () => {channel.unsubscribe();supabase.removeChannel(channel);};
   }, [fetchGlobalStats]);
 
   const updateFeedbackStatus = async (id: string, status: string, admin_response?: string) => {
-    const updateData: { status: string; admin_response?: string } = { status };
+    const updateData: {status: string;admin_response?: string;} = { status };
     if (admin_response !== undefined) updateData.admin_response = admin_response;
 
     const { error } = await supabase.from("feedback").update(updateData).eq("id", id);
@@ -194,7 +200,7 @@ export default function Admin() {
       toast({ title: t('admin.toasts.updateFailed'), description: error.message, variant: "destructive" });
       throw error;
     }
-    dispatch({ type: 'UPDATE_FEEDBACK', payload: state.feedback.map(f => f.id === id ? { ...f, status, admin_response: admin_response ?? f.admin_response } : f) });
+    dispatch({ type: 'UPDATE_FEEDBACK', payload: state.feedback.map((f) => f.id === id ? { ...f, status, admin_response: admin_response ?? f.admin_response } : f) });
     toast({ title: t('admin.toasts.updateSuccess') });
   };
 
@@ -202,16 +208,16 @@ export default function Admin() {
     if (!confirm(t('admin.confirm.deleteFeedback'))) return;
     const { error } = await supabase.from("feedback").delete().eq("id", id);
     if (!error) {
-      dispatch({ type: 'UPDATE_FEEDBACK', payload: state.feedback.filter(f => f.id !== id) });
+      dispatch({ type: 'UPDATE_FEEDBACK', payload: state.feedback.filter((f) => f.id !== id) });
       toast({ title: t('admin.toasts.feedbackDeleted') });
     }
   };
 
   const fetchSellerDetails = async (seller: Seller) => {
     const [productsRes, ordersRes] = await Promise.all([
-      supabase.from("products").select("*").eq("seller_id", seller.id).order("created_at", { ascending: false }),
-      supabase.from("orders").select("*, product:products(title, price)").eq("seller_id", seller.id).order("created_at", { ascending: false }),
-    ]);
+    supabase.from("products").select("*").eq("seller_id", seller.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("*, product:products(title, price)").eq("seller_id", seller.id).order("created_at", { ascending: false })]
+    );
     dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller, products: productsRes.data || [], orders: ordersRes.data || [] } });
   };
 
@@ -219,13 +225,13 @@ export default function Admin() {
     if (!confirm(t('admin.confirm.deleteProduct'))) return;
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (!error) {
-      dispatch({ 
-        type: 'SET_SELECTED_SELLER', 
-        payload: { 
-          seller: state.selectedSeller, 
-          products: state.sellerProducts.filter(p => p.id !== id),
+      dispatch({
+        type: 'SET_SELECTED_SELLER',
+        payload: {
+          seller: state.selectedSeller,
+          products: state.sellerProducts.filter((p) => p.id !== id),
           orders: state.sellerOrders
-        } 
+        }
       });
       fetchGlobalStats();
       toast({ title: t('admin.toasts.productDeleted') });
@@ -233,21 +239,21 @@ export default function Admin() {
   };
 
   const toggleSellerStatus = async (seller: Seller) => {
-    const newStatus = seller.status === 'active' ? 'blocked' : 'active';
+    const newStatus = seller.status === 'active' ? t("auto.blocked_581") : t("auto.active");
     if (!confirm(newStatus === 'blocked' ? t('admin.confirm.blockStore') : t('admin.confirm.unblockStore'))) return;
     const { error } = await supabase.from("sellers").update({ status: newStatus }).eq("id", seller.id);
     if (!error) {
       // Synchronize with profiles table
       await supabase.from("profiles").update({ is_blocked: newStatus === 'blocked' }).eq("id", seller.user_id);
-      
+
       const updated = { ...seller, status: newStatus };
       dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller: updated, products: state.sellerProducts, orders: state.sellerOrders } });
-      dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map(s => s.id === seller.id ? updated : s) });
-      
+      dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map((s) => s.id === seller.id ? updated : s) });
+
       // Also update profiles in state if they are loaded
-      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map(p => p.id === seller.user_id ? { ...p, is_blocked: newStatus === 'blocked' } : p) });
-      
-      toast({ title: newStatus === 'blocked' ? t('admin.toasts.storeBlocked') : t('admin.toasts.storeUnblocked'), variant: newStatus === 'blocked' ? "destructive" : "default" });
+      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map((p) => p.id === seller.user_id ? { ...p, is_blocked: newStatus === 'blocked' } : p) });
+
+      toast({ title: newStatus === 'blocked' ? t('admin.toasts.storeBlocked') : t('admin.toasts.storeUnblocked'), variant: newStatus === 'blocked' ? t("auto.destructive") : t("auto.default") });
     }
   };
 
@@ -258,91 +264,85 @@ export default function Admin() {
     if (!error) {
       // If user is a seller, also update their seller status
       if (profile.role === 'seller') {
-        await supabase.from("sellers").update({ status: isBlocking ? 'blocked' : 'active' }).eq("user_id", profile.id);
-        
+        await supabase.from("sellers").update({ status: isBlocking ? t("auto.blocked_581") : t("auto.active") }).eq("user_id", profile.id);
+
         // Update sellers in state if they are loaded
-        dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map(s => s.user_id === profile.id ? { ...s, status: isBlocking ? 'blocked' : 'active' } : s) });
+        dispatch({ type: 'UPDATE_SELLERS', payload: state.sellers.map((s) => s.user_id === profile.id ? { ...s, status: isBlocking ? t("auto.blocked_581") : t("auto.active") } : s) });
       }
 
-      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map(p => p.id === profile.id ? { ...p, is_blocked: isBlocking } : p) });
-      toast({ title: profile.is_blocked ? t('admin.toasts.userUnblocked') : t('admin.toasts.userBlocked'), variant: profile.is_blocked ? "default" : "destructive" });
+      dispatch({ type: 'UPDATE_PROFILES', payload: state.profiles.map((p) => p.id === profile.id ? { ...p, is_blocked: isBlocking } : p) });
+      toast({ title: profile.is_blocked ? t('admin.toasts.userUnblocked') : t('admin.toasts.userBlocked'), variant: profile.is_blocked ? t("auto.default") : t("auto.destructive") });
     }
   };
 
   const updateVerificationStatus = async (sellerId: string, status: 'approved' | 'rejected', feedback?: string) => {
-    const { error } = await supabase
-      .from("sellers")
-      .update({ 
-        verification_status: status,
-        admin_feedback: feedback || null
-      })
-      .eq("id", sellerId);
-      
+    const { error } = await supabase.
+    from("sellers").
+    update({
+      verification_status: status,
+      admin_feedback: feedback || null
+    }).
+    eq("id", sellerId);
+
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Seller ${status === 'approved' ? 'approved' : 'rejected'}` });
+      toast({ title: `Seller ${status === 'approved' ? t("auto.approved") : t("auto.rejected")}` });
       fetchGlobalStats();
     }
   };
 
-  const filteredSellers = useMemo(() => state.sellers.filter(s => 
-    (s.store_name?.toLowerCase().includes(state.search.toLowerCase()) || 
-     s.store_slug?.toLowerCase().includes(state.search.toLowerCase()))
+  const filteredSellers = useMemo(() => state.sellers.filter((s) =>
+  s.store_name?.toLowerCase().includes(state.search.toLowerCase()) ||
+  s.store_slug?.toLowerCase().includes(state.search.toLowerCase())
   ), [state.sellers, state.search]);
 
-  const pendingVerifications = useMemo(() => state.sellers.filter(s => s.verification_status === 'pending'), [state.sellers]);
+  const pendingVerifications = useMemo(() => state.sellers.filter((s) => s.verification_status === 'pending'), [state.sellers]);
 
-  const filteredUsers = useMemo(() => state.profiles.filter(p => 
-    p.email?.toLowerCase().includes(state.userSearch.toLowerCase())
+  const filteredUsers = useMemo(() => state.profiles.filter((p) =>
+  p.email?.toLowerCase().includes(state.userSearch.toLowerCase())
   ), [state.profiles, state.userSearch]);
 
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader t={t} signOut={signOut} />
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {state.selectedSeller ? (
-          <SellerDetails 
-            seller={state.selectedSeller} 
-            products={state.sellerProducts} 
-            orders={state.sellerOrders} 
-            onBack={() => dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller: null, products: [], orders: [] } })}
-            onDeleteProduct={deleteProduct}
-            onToggleStatus={toggleSellerStatus}
-            onVerify={updateVerificationStatus}
-            t={t}
-          />
-        ) : (
-          <>
+        {state.selectedSeller ?
+        <SellerDetails
+          seller={state.selectedSeller}
+          products={state.sellerProducts}
+          orders={state.sellerOrders}
+          onBack={() => dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller: null, products: [], orders: [] } })}
+          onDeleteProduct={deleteProduct}
+          onToggleStatus={toggleSellerStatus}
+          onVerify={updateVerificationStatus}
+          t={t} /> :
+
+
+        <>
             <GlobalStats profiles={state.profiles} sellers={state.sellers} products={state.totalProducts} orders={state.totalOrders} t={t} />
-            <Tabs defaultValue="sellers" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 max-w-xl bg-muted/50 p-1">
-                <TabsTrigger value="sellers">{t('admin.sellers')}</TabsTrigger>
-                <TabsTrigger value="verifications">Verifications {pendingVerifications.length > 0 && <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center bg-primary text-white rounded-full">{pendingVerifications.length}</Badge>}</TabsTrigger>
-                <TabsTrigger value="users">{t('admin.users')}</TabsTrigger>
-                <TabsTrigger value="feedback">{t('admin.feedback')} ({state.feedback.length})</TabsTrigger>
-              </TabsList>
-              <TabsContent value="sellers">
-                <SellersTab sellers={filteredSellers} search={state.search} onSearch={(v) => dispatch({ type: 'SET_SEARCH', payload: v })} onSelect={fetchSellerDetails} t={t} />
-              </TabsContent>
-              <TabsContent value="verifications">
+            <div className="w-full pb-16 sm:pb-0">
+              {activeTab === 'sellers' && (
+                <SellersTab sellers={filteredSellers} search={state.search} onSearch={(v: string) => dispatch({ type: 'SET_SEARCH', payload: v })} onSelect={fetchSellerDetails} t={t} />
+              )}
+              {activeTab === 'verifications' && (
                 <VerificationsTab sellers={pendingVerifications} onSelect={fetchSellerDetails} t={t} />
-              </TabsContent>
-              <TabsContent value="users">
-                <UsersTab users={filteredUsers} search={state.userSearch} onSearch={(v) => dispatch({ type: 'SET_USER_SEARCH', payload: v })} onToggleBlock={toggleUserBlock} t={t} />
-              </TabsContent>
-              <TabsContent value="feedback">
+              )}
+              {activeTab === 'users' && (
+                <UsersTab users={filteredUsers} search={state.userSearch} onSearch={(v: string) => dispatch({ type: 'SET_USER_SEARCH', payload: v })} onToggleBlock={toggleUserBlock} t={t} />
+              )}
+              {activeTab === 'feedback' && (
                 <FeedbackTab feedback={state.feedback} onUpdateStatus={updateFeedbackStatus} onDelete={deleteFeedback} t={t} />
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
-function AdminHeader({ t, signOut }: { t: any, signOut: () => void }) {
+function AdminHeader({ t, signOut }: {t: any;signOut: () => void;}) {
   return (
     <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -357,27 +357,27 @@ function AdminHeader({ t, signOut }: { t: any, signOut: () => void }) {
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="size-4 mr-2" />{t('common.signOut')}</Button>
         </div>
       </div>
-    </header>
-  );
+    </header>);
+
 }
 
 function GlobalStats({ profiles, sellers, products, orders, t }: any) {
   const stats = [
-    { label: t('admin.users'), value: profiles.length, icon: Users },
-    { label: t('admin.sellers'), value: sellers.length, icon: Store },
-    { label: t('admin.products'), value: products, icon: Package },
-    { label: t('admin.orders'), value: orders, icon: ShoppingBag },
-  ];
+  { label: t('admin.users'), value: profiles.length, icon: Users },
+  { label: t('admin.sellers'), value: sellers.length, icon: Store },
+  { label: t('admin.products'), value: products, icon: Package },
+  { label: t('admin.orders'), value: orders, icon: ShoppingBag }];
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {stats.map((s) => (
-        <Card key={s.label} className="border-border/50 shadow-surface">
+      {stats.map((s) =>
+      <Card key={s.label} className="border-border/50 shadow-surface">
           <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2"><s.icon className="size-3.5" /> {s.label}</CardTitle></CardHeader>
           <CardContent className="p-4 pt-0"><p className="text-2xl font-bold text-foreground">{s.value}</p></CardContent>
         </Card>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 function SellersTab({ sellers, search, onSearch, onSelect, t }: any) {
@@ -388,42 +388,42 @@ function SellersTab({ sellers, search, onSearch, onSelect, t }: any) {
         <Input placeholder={t('admin.searchStores')} value={search} onChange={(e) => onSearch(e.target.value)} className="pl-10" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sellers.map((seller: Seller) => (
-          <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group" onClick={() => onSelect(seller)}>
+        {sellers.map((seller: Seller) =>
+        <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group" onClick={() => onSelect(seller)}>
             <CardHeader className="p-5 flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`size-10 rounded-xl flex items-center justify-center ${seller.verification_status === 'approved' ? 'bg-green-100 text-green-600' : seller.verification_status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                <div className={`size-10 rounded-xl flex items-center justify-center ${seller.verification_status === 'approved' ? t("auto.bg_green_100_text_green_600") : seller.verification_status === 'rejected' ? t("auto.bg_red_100_text_red_600") : t("auto.bg_amber_100_text_amber_600")}`}>
                   {seller.verification_status === 'approved' ? <ShieldCheck className="size-5" /> : seller.verification_status === 'rejected' ? <ShieldAlert className="size-5" /> : <Clock className="size-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-lg group-hover:text-primary transition-colors">{seller.store_name}</CardTitle>
-                    {seller.status === 'blocked' && <Badge variant="destructive" className="text-[8px] uppercase h-4">Blocked</Badge>}
+                    {seller.status === 'blocked' && <Badge variant="destructive" className="text-[8px] uppercase h-4">{t("auto.blocked")}</Badge>}
                   </div>
-                  <CardDescription className="text-xs mt-1">/store/{seller.store_slug}</CardDescription>
+                  <CardDescription className="text-xs mt-1">{t("auto.store")}{seller.store_slug}</CardDescription>
                 </div>
               </div>
               <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
             </CardHeader>
           </Card>
-        ))}
+        )}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function VerificationsTab({ sellers, onSelect, t }: any) {
   return (
     <div className="space-y-4 mt-4">
-      {sellers.length === 0 ? (
-        <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
+      {sellers.length === 0 ?
+      <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
           <ShieldCheck className="size-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No pending verification requests</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sellers.map((seller: Seller) => (
-            <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group border-l-4 border-l-amber-500" onClick={() => onSelect(seller)}>
+          <p className="text-muted-foreground">{t("auto.no_pending_verification_reques")}</p>
+        </div> :
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {sellers.map((seller: Seller) =>
+        <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group border-l-4 border-l-amber-500" onClick={() => onSelect(seller)}>
               <CardHeader className="p-5 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
@@ -432,18 +432,18 @@ function VerificationsTab({ sellers, onSelect, t }: any) {
                   <div>
                     <CardTitle className="text-lg group-hover:text-primary transition-colors">{seller.store_name}</CardTitle>
                     <CardDescription className="text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="size-3" /> Pending Review
-                    </CardDescription>
+                      <AlertCircle className="size-3" />{t("auto.pending_review")}
+                </CardDescription>
                   </div>
                 </div>
                 <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
               </CardHeader>
             </Card>
-          ))}
+        )}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 function UsersTab({ users, search, onSearch, onToggleBlock, t }: any) {
@@ -466,43 +466,43 @@ function UsersTab({ users, search, onSearch, onToggleBlock, t }: any) {
               </tr>
             </thead>
             <tbody>
-              {users.map((profile: Profile) => (
-                <tr key={profile.id} className="border-b border-border/30 hover:bg-muted/30">
+              {users.map((profile: Profile) =>
+              <tr key={profile.id} className="border-b border-border/30 hover:bg-muted/30">
                   <td className="py-3 px-4 font-medium">{profile.email}</td>
                   <td className="py-3 px-4"><Badge variant="secondary" className="text-[10px] uppercase">{profile.role}</Badge></td>
                   <td className="py-3 px-4">
-                    {profile.is_blocked ? (
-                      <Badge variant="destructive" className="text-[10px] flex items-center gap-1 w-fit"><ShieldAlert className="size-3" /> BLOCKED</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px] flex items-center gap-1 w-fit text-green-600 border-green-600/30 bg-green-500/5"><ShieldCheck className="size-3" /> ACTIVE</Badge>
-                    )}
+                    {profile.is_blocked ?
+                  <Badge variant="destructive" className="text-[10px] flex items-center gap-1 w-fit"><ShieldAlert className="size-3" />{t("auto.blocked_858")}</Badge> :
+
+                  <Badge variant="outline" className="text-[10px] flex items-center gap-1 w-fit text-green-600 border-green-600/30 bg-green-500/5"><ShieldCheck className="size-3" />{t("auto.active_736")}</Badge>
+                  }
                   </td>
                   <td className="py-3 px-4 text-muted-foreground" suppressHydrationWarning>{new Date(profile.created_at).toLocaleDateString()}</td>
                   <td className="py-3 px-4 text-right">
-                    {profile.role !== 'admin' && (
-                      <Button variant="ghost" size="sm" onClick={() => onToggleBlock(profile)} className={profile.is_blocked ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-destructive hover:text-destructive hover:bg-destructive/10"}>
+                    {profile.role !== 'admin' &&
+                  <Button variant="ghost" size="sm" onClick={() => onToggleBlock(profile)} className={profile.is_blocked ? t("auto.text_green_600_hover_text_gree") : t("auto.text_destructive_hover_text_de")}>
                         {profile.is_blocked ? <ShieldCheck className="size-4" /> : <UserX className="size-4" />}
                       </Button>
-                    )}
+                  }
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </Card>
-    </div>
-  );
+    </div>);
+
 }
 
 function FeedbackTab({ feedback, onUpdateStatus, onDelete, t }: any) {
   return (
     <div className="grid grid-cols-1 gap-4 mt-6">
-      {feedback.map((item: Feedback) => (
-        <Card key={item.id} className="border-border/50 shadow-surface overflow-hidden">
+      {feedback.map((item: Feedback) =>
+      <Card key={item.id} className="border-border/50 shadow-surface overflow-hidden">
           <CardHeader className="p-4 bg-muted/20 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${ item.status === 'open' ? 'bg-amber-100 text-amber-600' : item.status === 'resolved' ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground' }`}>
+              <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${item.status === 'open' ? t("auto.bg_amber_100_text_amber_600") : item.status === 'resolved' ? t("auto.bg_green_100_text_green_600") : t("auto.bg_muted_text_muted_foreground")}`}>
                 <MessageSquare className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -515,10 +515,10 @@ function FeedbackTab({ feedback, onUpdateStatus, onDelete, t }: any) {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <select value={item.status} onChange={(e) => onUpdateStatus(item.id, e.target.value, item.admin_response)} className="text-[10px] bg-background border border-border/50 rounded px-2 py-1 outline-none">
-                <option value="open">Open</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
+                <option value={t("auto.open")}>{t("auto.open_327")}</option><option value={t("auto.in_progress")}>{t("auto.in_progress_67")}</option><option value={t("auto.resolved")}>{t("auto.resolved_441")}</option><option value={t("auto.closed")}>{t("auto.closed_463")}</option>
               </select>
-              <Badge variant={item.status === 'open' ? "destructive" : item.status === 'resolved' ? "default" : "outline"} className="text-[8px] uppercase">{t(`orders.status.${item.status}` as never)}</Badge>
-              <Button variant="ghost" size="sm" onClick={() => onDelete(item.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8 p-0" title="Delete feedback"><Trash2 className="size-4" /></Button>
+              <Badge variant={item.status === 'open' ? t("auto.destructive") : item.status === 'resolved' ? t("auto.default") : t("auto.outline")} className="text-[8px] uppercase">{t(`orders.status.${item.status}` as never)}</Badge>
+              <Button variant="ghost" size="sm" onClick={() => onDelete(item.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8 p-0" title={t("auto.delete_feedback")}><Trash2 className="size-4" /></Button>
             </div>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
@@ -529,15 +529,15 @@ function FeedbackTab({ feedback, onUpdateStatus, onDelete, t }: any) {
             </div>
           </CardContent>
         </Card>
-      ))}
-      {feedback.length === 0 && (
-        <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
+      )}
+      {feedback.length === 0 &&
+      <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
           <MessageSquare className="size-10 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-muted-foreground">{t('admin.noFeedbackReceived')}</p>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onToggleStatus, onVerify, t }: any) {
@@ -549,11 +549,11 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
 
   const handleUpdateLimit = async () => {
     setUpdatingLimit(true);
-    const { error } = await supabase
-      .from("sellers")
-      .update({ ai_daily_limit: parseInt(newAiLimit) })
-      .eq("id", seller.id);
-    
+    const { error } = await supabase.
+    from("sellers").
+    update({ ai_daily_limit: parseInt(newAiLimit) }).
+    eq("id", seller.id);
+
     setUpdatingLimit(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -572,51 +572,51 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
             <div>
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-semibold text-foreground">{seller.store_name}</h2>
-                <Badge variant={seller.status === 'active' ? "default" : "destructive"} className="uppercase text-[10px]">{seller.status}</Badge>
-                <Badge variant={seller.verification_status === 'approved' ? "default" : seller.verification_status === 'rejected' ? "destructive" : "outline"} className="uppercase text-[10px]">
+                <Badge variant={seller.status === 'active' ? t("auto.default") : t("auto.destructive")} className="uppercase text-[10px]">{seller.status}</Badge>
+                <Badge variant={seller.verification_status === 'approved' ? t("auto.default") : seller.verification_status === 'rejected' ? t("auto.destructive") : t("auto.outline")} className="uppercase text-[10px]">
                   {seller.verification_status}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Store className="size-3.5" /> /store/{seller.store_slug}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Store className="size-3.5" />{t("auto.store")}{seller.store_slug}</p>
               <p className="text-sm text-muted-foreground flex items-center gap-2"><ShoppingBag className="size-3.5" /> {seller.location || "No location"}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => window.open(`/store/${seller.store_slug}`, '_blank')}><ExternalLink className="size-4 mr-2" /> {t('admin.viewPublicStore')}</Button>
-              <Button variant={seller.status === 'active' ? "destructive" : "default"} size="sm" onClick={() => onToggleStatus(seller)}>
+              <Button variant={seller.status === 'active' ? t("auto.destructive") : t("auto.default")} size="sm" onClick={() => onToggleStatus(seller)}>
                 {seller.status === 'active' ? <><Ban className="size-4 mr-2" /> {t('admin.blockStore')}</> : <><ShieldCheck className="size-4 mr-2" /> {t('admin.unblockStore')}</>}
               </Button>
             </div>
           </div>
 
-          <Tabs defaultValue="inventory" className="w-full">
+          <Tabs defaultValue={t("auto.inventory")} className="w-full">
             <TabsList className="grid w-full grid-cols-2 max-w-md bg-muted/50 p-1">
-              <TabsTrigger value="inventory">{t('admin.inventory')} ({products.length})</TabsTrigger>
-              <TabsTrigger value="orders">{t('admin.orders')} ({orders.length})</TabsTrigger>
+              <TabsTrigger value={t("auto.inventory")}>{t('admin.inventory')} ({products.length})</TabsTrigger>
+              <TabsTrigger value={t("auto.orders")}>{t('admin.orders')} ({orders.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="inventory" className="mt-6">
+            <TabsContent value={t("auto.inventory")} className="mt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {products.map((product: Product) => (
-                  <Card key={product.id} className="overflow-hidden border-border/50 shadow-surface group">
+                {products.map((product: Product) =>
+                <Card key={product.id} className="overflow-hidden border-border/50 shadow-surface group">
                     <div className="aspect-square relative overflow-hidden bg-muted">
                       {product.image_url ? <img src={product.image_url} alt={product.title} className="size-full object-cover transition-transform group-hover:scale-105" /> : <div className="size-full flex items-center justify-center text-muted-foreground"><Package className="size-8" /></div>}
                       <Badge className="absolute top-2 right-2 bg-black/60 backdrop-blur-md">₹{product.price}</Badge>
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-foreground truncate">{product.title}</h3>
-                      <div className="flex items-center justify-between mt-2"><Badge variant="outline" className="text-[10px]">{product.category}</Badge><span className="text-xs text-muted-foreground">Stock: {product.stock}</span></div>
+                      <div className="flex items-center justify-between mt-2"><Badge variant="outline" className="text-[10px]">{product.category}</Badge><span className="text-xs text-muted-foreground">{t("auto.stock_11")}{product.stock}</span></div>
                       <Button variant="ghost" size="sm" onClick={() => onDeleteProduct(product.id)} className="w-full mt-4 text-destructive hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20"><Trash2 className="size-3.5 mr-2" /> {t('product.delete')}</Button>
                     </CardContent>
                   </Card>
-                ))}
+                )}
               </div>
             </TabsContent>
-            <TabsContent value="orders" className="mt-6">
+            <TabsContent value={t("auto.orders")} className="mt-6">
               <Card className="border-border/50 shadow-surface overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-muted-foreground">
-                        <th className="text-left py-3 px-4 font-medium">{t('admin.orders')} ID</th>
+                        <th className="text-left py-3 px-4 font-medium">{t('admin.orders')}{t("auto.id")}</th>
                         <th className="text-left py-3 px-4 font-medium">{t('orders.customer')}</th>
                         <th className="text-left py-3 px-4 font-medium">{t('admin.products')}</th>
                         <th className="text-left py-3 px-4 font-medium">{t('admin.status')}</th>
@@ -624,8 +624,8 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.map((order: Order) => (
-                        <tr key={order.id} className="border-b border-border/30 hover:bg-muted/30">
+                      {orders.map((order: Order) =>
+                      <tr key={order.id} className="border-b border-border/30 hover:bg-muted/30">
                           <td className="py-3 px-4 font-mono text-[10px]">{order.id.slice(0, 8)}...</td>
                           <td className="py-3 px-4">
                             <div className="font-medium">{order.buyer_name}</div>
@@ -640,7 +640,7 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
                           </td>
                           <td className="py-3 px-4 text-muted-foreground" suppressHydrationWarning>{new Date(order.created_at).toLocaleDateString()}</td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -651,108 +651,108 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
 
         <div className="space-y-6">
           <Card className="border-border/50 shadow-surface">
-            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" /> AI Usage Limits</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" />{t("auto.ai_usage_limits")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">Daily AI Credits</label>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("auto.daily_ai_credits")}</label>
                 <div className="flex gap-2 mt-1">
-                  <Input 
-                    type="number" 
-                    value={newAiLimit} 
+                  <Input
+                    type="number"
+                    value={newAiLimit}
                     onChange={(e) => setNewAiLimit(e.target.value)}
-                    className="h-9 text-sm"
-                  />
+                    className="h-9 text-sm" />
+                  
                   <Button size="sm" onClick={handleUpdateLimit} disabled={updatingLimit || newAiLimit === seller.ai_daily_limit?.toString()}>
-                    {updatingLimit ? <Loader2 className="size-3 animate-spin" /> : "Update"}
+                    {updatingLimit ? <Loader2 className="size-3 animate-spin" /> : t("auto.update")}
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 italic">
-                  Standard limit is 25 per day. Increasing this allows the seller to digitize more products using AI.
+                <p className="text-[10px] text-muted-foreground mt-2 italic">{t("auto.standard_limit_is_25_per_day_i")}
+
                 </p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-surface">
-            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Verification Details</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="size-4 text-primary" />{t("auto.verification_details")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">GSTIN</label>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("auto.gstin_384")}</label>
                 <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-1 border border-border/30">{seller.gstin || "Not provided"}</p>
               </div>
               <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">Business Name</label>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("auto.business_name")}</label>
                 <p className="text-sm font-medium p-2 bg-muted/50 rounded mt-1 border border-border/30">{seller.registered_business_name || "Not provided"}</p>
               </div>
               <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">Status</label>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("orders.status")}</label>
                 <div className="mt-1">
-                  <Badge variant={seller.verification_status === 'approved' ? "default" : seller.verification_status === 'rejected' ? "destructive" : "outline"} className="uppercase text-[10px]">
+                  <Badge variant={seller.verification_status === 'approved' ? t("auto.default") : seller.verification_status === 'rejected' ? t("auto.destructive") : t("auto.outline")} className="uppercase text-[10px]">
                     {seller.verification_status}
                   </Badge>
                 </div>
               </div>
 
-              {seller.verification_documents && seller.verification_documents.length > 0 && (
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Documents & Shop Photos</label>
+              {seller.verification_documents && seller.verification_documents.length > 0 &&
+              <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("auto.documents_shop_photos")}</label>
                   <div className="grid grid-cols-1 gap-2 mt-2">
-                    {seller.verification_documents.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors text-xs">
+                    {seller.verification_documents.map((url, i) =>
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors text-xs">
                         <FileText className="size-4 text-primary" />
-                        <span className="truncate flex-1">Verification Item {i + 1}</span>
+                        <span className="truncate flex-1">{t("auto.verification_item")}{i + 1}</span>
                         <ExternalLink className="size-3 text-muted-foreground" />
                       </a>
-                    ))}
+                  )}
                   </div>
                 </div>
-              )}
+              }
 
-              {seller.verification_status === 'pending' && (
-                <div className="pt-4 space-y-3 border-t border-border/30">
-                  {!isRejecting ? (
-                    <div className="flex flex-col gap-2">
+              {seller.verification_status === 'pending' &&
+              <div className="pt-4 space-y-3 border-t border-border/30">
+                  {!isRejecting ?
+                <div className="flex flex-col gap-2">
                       <Button onClick={() => onVerify(seller.id, 'approved')} className="w-full bg-green-600 hover:bg-green-700">
-                        <CheckCircle2 className="size-4 mr-2" /> Approve Seller
-                      </Button>
+                        <CheckCircle2 className="size-4 mr-2" />{t("auto.approve_seller")}
+                  </Button>
                       <Button onClick={() => setIsRejecting(true)} variant="outline" className="w-full text-destructive hover:bg-destructive/5 border-destructive/20">
-                        <XCircle className="size-4 mr-2" /> Reject Seller
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                      <label className="text-[10px] uppercase font-bold text-destructive">Rejection Reason</label>
-                      <textarea 
-                        value={rejectFeedback} 
-                        onChange={(e) => setRejectFeedback(e.target.value)}
-                        placeholder="Explain why the verification was rejected..."
-                        className="w-full min-h-[100px] text-xs p-3 rounded-lg border border-destructive/30 bg-destructive/5 focus:outline-none focus:ring-1 focus:ring-destructive"
-                      />
+                        <XCircle className="size-4 mr-2" />{t("auto.reject_seller")}
+                  </Button>
+                    </div> :
+
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-[10px] uppercase font-bold text-destructive">{t("auto.rejection_reason")}</label>
+                      <textarea
+                    value={rejectFeedback}
+                    onChange={(e) => setRejectFeedback(e.target.value)}
+                    placeholder={t("auto.explain_why_the_verification_w")}
+                    className="w-full min-h-[100px] text-xs p-3 rounded-lg border border-destructive/30 bg-destructive/5 focus:outline-none focus:ring-1 focus:ring-destructive" />
+                  
                       <div className="flex gap-2">
-                        <Button onClick={() => { onVerify(seller.id, 'rejected', rejectFeedback); setIsRejecting(false); }} disabled={!rejectFeedback.trim()} className="flex-1 bg-destructive hover:bg-destructive/90">Confirm Reject</Button>
-                        <Button onClick={() => setIsRejecting(false)} variant="ghost" className="flex-1">Cancel</Button>
+                        <Button onClick={() => {onVerify(seller.id, 'rejected', rejectFeedback);setIsRejecting(false);}} disabled={!rejectFeedback.trim()} className="flex-1 bg-destructive hover:bg-destructive/90">{t("auto.confirm_reject")}</Button>
+                        <Button onClick={() => setIsRejecting(false)} variant="ghost" className="flex-1">{t("auto.cancel")}</Button>
                       </div>
                     </div>
-                  )}
+                }
                 </div>
-              )}
+              }
 
-              {seller.verification_status === 'rejected' && seller.admin_feedback && (
-                <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/20">
-                  <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Previous Rejection Feedback</p>
+              {seller.verification_status === 'rejected' && seller.admin_feedback &&
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/20">
+                  <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">{t("auto.previous_rejection_feedback")}</p>
                   <p className="text-xs text-red-700 dark:text-red-300 mt-1 italic">"{seller.admin_feedback}"</p>
                 </div>
-              )}
+              }
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
-function AdminResponseInput({ initialValue, onSave }: { initialValue: string, onSave: (val: string) => Promise<void> }) {
-  const { t } = useLanguage();
+function AdminResponseInput({ initialValue, onSave }: {initialValue: string;onSave: (val: string) => Promise<void>;}) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(initialValue);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -770,11 +770,10 @@ function AdminResponseInput({ initialValue, onSave }: { initialValue: string, on
 
   return (
     <div className="flex gap-2">
-      <Input placeholder="Write a response to the user..." value={value} onChange={(e) => setValue(e.target.value)} className="text-xs h-8" disabled={isSaving} />
+      <Input placeholder={t("auto.write_a_response_to_the_user")} value={value} onChange={(e) => setValue(e.target.value)} className="text-xs h-8" disabled={isSaving} />
       <Button size="sm" variant="outline" className="h-8 text-[10px]" disabled={value === initialValue || isSaving} onClick={handleSave}>
         {isSaving ? t('common.saving') : t('common.save')}
       </Button>
-    </div>
-  );
-}
+    </div>);
 
+}

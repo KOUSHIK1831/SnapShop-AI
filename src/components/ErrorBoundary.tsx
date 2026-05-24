@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import { useTranslation } from "react-i18next";import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 
@@ -14,7 +14,7 @@ interface State {
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null,
+    error: null
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -39,25 +39,25 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="size-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="size-8 text-destructive" />
             </div>
-            <h1 className="text-2xl font-semibold text-foreground mb-2">Something went wrong</h1>
-            <p className="text-muted-foreground mb-8">
-              We encountered an unexpected error. Please try refreshing the page.
+            <h1 className="text-2xl font-semibold text-foreground mb-2">{t("auto.something_went_wrong")}</h1>
+            <p className="text-muted-foreground mb-8">{t("auto.we_encountered_an_unexpected_e")}
+
             </p>
-            {process.env.NODE_ENV === "development" && (
-              <pre className="text-left bg-secondary p-4 rounded-lg overflow-auto max-h-40 text-xs mb-8">
+            {process.env.NODE_ENV === "development" &&
+            <pre className="text-left bg-secondary p-4 rounded-lg overflow-auto max-h-40 text-xs mb-8">
                 {this.state.error?.toString()}
               </pre>
-            )}
+            }
             <Button
               onClick={this.handleReset}
-              className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
-            >
-              <RefreshCcw className="size-4 mr-2" />
-              Refresh Application
+              className="w-full bg-gradient-brand hover:opacity-90 transition-opacity">
+              
+              <RefreshCcw className="size-4 mr-2" />{t("auto.refresh_application")}
+
             </Button>
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     return this.props.children;

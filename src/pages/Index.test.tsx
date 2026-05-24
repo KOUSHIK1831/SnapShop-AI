@@ -24,10 +24,6 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
-
 describe("Index page", () => {
   it("redirects authenticated users to the dashboard", async () => {
     authState.user = { id: "user-1", role: "seller" };
@@ -46,8 +42,8 @@ describe("Index page", () => {
 
     render(<Index />);
 
-    fireEvent.click(screen.getByRole("button", { name: "auth.signIn" }));
-    fireEvent.click(screen.getByRole("button", { name: "landing.hero.cta" }));
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start selling online/i }));
 
     expect(navigateMock).toHaveBeenCalledWith("/auth");
   });

@@ -113,9 +113,9 @@ You already have everything on your local machine. The `supabase/migrations/` fo
 | Voice-to-Catalog (image + audio) | Future Scope / Advanced AI Features |
 | Dynamic AI product localization (title/desc in Hindi/Telugu) | Future Scope / Localization |
 | pgvector / Semantic Search | Future Scope / Advanced Features |
-| Capacitor mobile app | Future Scope / Deployment |
-| Payment gateway | Future Scope / Business |
-| CI/CD pipeline | Future Scope / DevOps |
+- [x] **Capacitor mobile app** — Added Capacitor support, Android platform, and native back-button handling (double-tap to exit).
+- [ ] **Payment gateway** — Future Scope / Business
+- [ ] **CI/CD pipeline** — Future Scope / DevOps
 
 ---
 

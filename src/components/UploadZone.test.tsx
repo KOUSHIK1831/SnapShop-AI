@@ -25,9 +25,6 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: toastMock }),
 }));
 
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     storage: {

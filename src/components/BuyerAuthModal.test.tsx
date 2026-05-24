@@ -3,25 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import BuyerAuthModal from "./BuyerAuthModal";
 
-const { sendOtpMock, verifyOtpMock, signUpMock } = vi.hoisted(() => ({
-  sendOtpMock: vi.fn(),
-  verifyOtpMock: vi.fn(() => ({ error: null })),
-  signUpMock: vi.fn(),
+const { signInPasswordMock, signUpMock } = vi.hoisted(() => ({
+  signInPasswordMock: vi.fn(() => ({ error: null })),
+  signUpMock: vi.fn(() => ({ error: null })),
 }));
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
     signIn: {
-      sendOtp: sendOtpMock,
-      verifyOtp: verifyOtpMock,
+      password: signInPasswordMock,
     },
     signUp: signUpMock,
   }),
-}));
-
-
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
 }));
 
 describe("BuyerAuthModal", () => {
@@ -39,40 +32,39 @@ describe("BuyerAuthModal", () => {
       <BuyerAuthModal isOpen onClose={vi.fn()} onSuccess={onSuccess} storeName="Test Store" />,
     );
 
-    // Step 1: Send OTP
-    fireEvent.change(screen.getByPlaceholderText("Enter 10-digit phone"), {
-      target: { value: "9876543210" },
+    fireEvent.change(screen.getByPlaceholderText(/name@example.com/i), {
+      target: { value: "test@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Send OTP" }));
+    fireEvent.change(screen.getByPlaceholderText(/min. 6 characters/i), {
+      target: { value: "password123" },
+    });
+    
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/OTP sent to/i)).toBeInTheDocument();
-      expect(screen.getByText(/\+91 9876543210/)).toBeInTheDocument();
-    });
-
-
-    // Step 2: Verify OTP
-    fireEvent.change(screen.getByPlaceholderText("Enter 6-digit OTP"), {
-      target: { value: "123456" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Verify & Place Order/i }));
-
-    await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalledWith("9876543210");
+      expect(signInPasswordMock).toHaveBeenCalledWith("test@example.com", "password123");
+      expect(onSuccess).toHaveBeenCalled();
     });
   });
 
-  it("shows auth errors and supports switching to sign up", async () => {
+  it("shows auth errors", async () => {
+    signInPasswordMock.mockResolvedValueOnce({ error: { message: "Invalid credentials" } } as any);
+    
     render(
       <BuyerAuthModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />,
     );
 
-    // Should show error for invalid phone
-    fireEvent.change(screen.getByPlaceholderText("Enter 10-digit phone"), {
-      target: { value: "123" },
+    fireEvent.change(screen.getByPlaceholderText(/name@example.com/i), {
+      target: { value: "test@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Send OTP" }));
+    fireEvent.change(screen.getByPlaceholderText(/min. 6 characters/i), {
+      target: { value: "wrong" },
+    });
+    
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(screen.getByText(/Please enter a valid 10-digit phone number/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+    });
   });
 });

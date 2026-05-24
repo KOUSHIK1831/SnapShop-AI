@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import Dashboard from "./Dashboard";
@@ -80,12 +81,9 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => navigateMock,
+    MemoryRouter: actual.MemoryRouter,
   };
 });
-
-vi.mock("@/i18n/LanguageContext", () => ({
-  useLanguage: () => ({ t: (key: string) => key }),
-}));
 
 describe("Dashboard page", () => {
   it("shows the store setup flow when no seller exists", async () => {
@@ -93,7 +91,11 @@ describe("Dashboard page", () => {
     sellerState.products = [];
     sellerState.createSeller.mockResolvedValue({ error: null });
 
-    render(<Dashboard />);
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Complete setup" }));
 
@@ -113,17 +115,21 @@ describe("Dashboard page", () => {
       { id: "product-1", title: "Kurta", price: 999, seller_id: "seller-1" },
     ];
 
-    render(<Dashboard />);
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "dashboard.copyLink" }));
+    fireEvent.click(screen.getByRole("button", { name: /copy store link/i }));
     expect(clipboardWriteTextMock).toHaveBeenCalledWith(
       `${window.location.origin}/store/ravi-boutique`,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /dashboard.tabs.upload/i }));
+    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
     expect(screen.getByText("UploadZone seller-1")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /dashboard.tabs.settings/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /store settings/i })[0]);
     expect(screen.getByText("StoreSettings")).toBeInTheDocument();
   });
 });
