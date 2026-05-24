@@ -12,7 +12,7 @@ interface BuyerAuthModalProps {
   storeName?: string;
 }
 
-type ModalMode = 'login' | 'signup';
+type ModalMode = 'login' | 'signup' | 'otp';
 
 interface BuyerAuthState {
   mode: ModalMode;
@@ -20,6 +20,7 @@ interface BuyerAuthState {
   password: string;
   name: string;
   phone: string;
+  otp: string;
   showPassword: boolean;
   submitting: boolean;
   error: string;
@@ -39,6 +40,7 @@ const initialState: BuyerAuthState = {
   password: '',
   name: '',
   phone: '',
+  otp: '',
   showPassword: false,
   submitting: false,
   error: '',
@@ -46,7 +48,7 @@ const initialState: BuyerAuthState = {
 
 function reducer(state: BuyerAuthState, action: BuyerAuthAction): BuyerAuthState {
   switch (action.type) {
-    case 'SET_MODE': return { ...initialState, mode: action.payload };
+    case 'SET_MODE': return { ...initialState, mode: action.payload, email: state.email, name: state.name, phone: state.phone, password: state.password };
     case 'SET_FIELD': return { ...state, ...action.payload };
     case 'TOGGLE_PASSWORD': return { ...state, showPassword: !state.showPassword };
     case 'SET_SUBMITTING': return { ...state, submitting: action.payload };
@@ -58,7 +60,7 @@ function reducer(state: BuyerAuthState, action: BuyerAuthAction): BuyerAuthState
 
 export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }: BuyerAuthModalProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, verifyOtp } = useAuth();
   const { t } = useLanguage();
 
   if (!isOpen) return null;
@@ -89,17 +91,34 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: '' });
     const { error } = await signUp(state.phone, state.name, state.email, state.password, true);
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
+    
     if (error) {
-      dispatch({ type: 'SET_SUBMITTING', payload: false });
       dispatch({ type: 'SET_ERROR', payload: error.message });
       return;
     }
-    // Auto login after signup
-    const { error: loginErr } = await signIn.password(state.email, state.password);
+    
+    // Switch to OTP mode
+    dispatch({ type: 'SET_MODE', payload: 'otp' });
+  };
+
+  const handleVerifyOtp = async () => {
+    if (state.otp.length !== 6) {
+      dispatch({ type: 'SET_ERROR', payload: 'Please enter 6-digit OTP' });
+      return;
+    }
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: '' });
+    
+    const { error } = await verifyOtp({ 
+      email: state.email, 
+      token: state.otp, 
+      type: 'signup' 
+    });
+    
     dispatch({ type: 'SET_SUBMITTING', payload: false });
-    if (loginErr) {
-      dispatch({ type: 'SET_ERROR', payload: 'Account created! Please sign in.' });
-      dispatch({ type: 'SET_MODE', payload: 'login' });
+    if (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
     } else {
       onSuccess(state.phone);
     }
@@ -127,28 +146,30 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
         </div>
 
         {/* Mode toggle */}
-        <div className="flex border-b border-border/50">
-          <button
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'login' })}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-              state.mode === 'login'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <LogIn className="size-3.5" /> Sign In
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-              state.mode === 'signup'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <UserPlus className="size-3.5" /> Create Account
-          </button>
-        </div>
+        {state.mode !== 'otp' && (
+          <div className="flex border-b border-border/50">
+            <button
+              onClick={() => dispatch({ type: 'SET_MODE', payload: 'login' })}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                state.mode === 'login'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <LogIn className="size-3.5" /> Sign In
+            </button>
+            <button
+              onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                state.mode === 'signup'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <UserPlus className="size-3.5" /> Create Account
+            </button>
+          </div>
+        )}
 
         <div className="p-6 space-y-4">
           {state.error && (
@@ -179,44 +200,78 @@ export default function BuyerAuthModal({ isOpen, onClose, onSuccess, storeName }
             </>
           )}
 
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="email"
-              placeholder="Email address"
-              value={state.email}
-              onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { email: e.target.value } })}
-              className="pl-10"
-              autoComplete="email"
-            />
-          </div>
+          {state.mode !== 'otp' ? (
+            <>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={state.email}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { email: e.target.value } })}
+                  className="pl-10"
+                  autoComplete="email"
+                />
+              </div>
 
-          <div className="relative">
-            <Input
-              type={state.showPassword ? 'text' : 'password'}
-              placeholder={state.mode === 'signup' ? 'Create password (min 6 chars)' : 'Password'}
-              value={state.password}
-              onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value } })}
-              className="pr-10"
-              autoComplete={state.mode === 'signup' ? 'new-password' : 'current-password'}
-              onKeyDown={(e) => { if (e.key === 'Enter') state.mode === 'login' ? handleLogin() : handleSignup(); }}
-            />
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              {state.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </button>
-          </div>
+              <div className="relative">
+                <Input
+                  type={state.showPassword ? 'text' : 'password'}
+                  placeholder={state.mode === 'signup' ? 'Create password (min 6 chars)' : 'Password'}
+                  value={state.password}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { password: e.target.value } })}
+                  className="pr-10"
+                  autoComplete={state.mode === 'signup' ? 'new-password' : 'current-password'}
+                  onKeyDown={(e) => { 
+                    if (e.key === 'Enter') {
+                      if (state.mode === 'login') handleLogin();
+                      else handleSignup();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {state.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium">Verify your email</p>
+                <p className="text-xs text-muted-foreground">Enter 6-digit code sent to {state.email}</p>
+              </div>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="0 0 0 0 0 0"
+                value={state.otp}
+                onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { otp: e.target.value.replace(/\D/g, '').slice(0, 6) } })}
+                className="text-center text-2xl tracking-widest font-bold h-12"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyOtp(); }}
+              />
+              <button 
+                onClick={() => dispatch({ type: 'SET_MODE', payload: 'signup' })}
+                className="text-xs text-primary hover:underline block mx-auto"
+              >
+                Back to signup
+              </button>
+            </div>
+          )}
 
           <Button
-            onClick={state.mode === 'login' ? handleLogin : handleSignup}
+            onClick={state.mode === 'login' ? handleLogin : state.mode === 'signup' ? handleSignup : handleVerifyOtp}
             disabled={state.submitting}
             className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
           >
             {state.submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {state.mode === 'login' ? 'Sign In & Place Order' : 'Create Account & Place Order'}
+            {state.mode === 'login' ? 'Sign In & Place Order' : state.mode === 'signup' ? 'Create Account' : 'Verify & Continue'}
           </Button>
         </div>
       </div>

@@ -28,6 +28,8 @@ export default function StoreSettings({ seller, onUpdate }: StoreSettingsProps) 
     mapsUrl: seller.maps_url || '',
     bannerUrl: seller.banner_url || '',
     themeColor: seller.theme_color || '#8B5CF6',
+    gstin: seller.gstin || '',
+    registeredBusinessName: seller.registered_business_name || '',
   });
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,6 +66,8 @@ export default function StoreSettings({ seller, onUpdate }: StoreSettingsProps) 
       maps_url: formData.mapsUrl,
       banner_url: formData.bannerUrl,
       theme_color: formData.themeColor,
+      gstin: formData.gstin,
+      registered_business_name: formData.registeredBusinessName,
     });
     setSaving(false);
     if (result?.error) {
@@ -278,6 +282,30 @@ export default function StoreSettings({ seller, onUpdate }: StoreSettingsProps) 
                 value={formData.storeNumber}
                 onChange={(e) => setFormData(prev => ({ ...prev, storeNumber: e.target.value }))}
                 placeholder="Shop #12, Block A"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="gstin" className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Hash className="size-3.5" /> GSTIN
+              </label>
+              <Input
+                id="gstin"
+                value={formData.gstin}
+                onChange={(e) => setFormData(prev => ({ ...prev, gstin: e.target.value }))}
+                placeholder="22AAAAA0000A1Z5"
+                disabled={seller.verification_status === 'approved'}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="registeredBusinessName" className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <FileText className="size-3.5" /> Legal Business Name
+              </label>
+              <Input
+                id="registeredBusinessName"
+                value={formData.registeredBusinessName}
+                onChange={(e) => setFormData(prev => ({ ...prev, registeredBusinessName: e.target.value }))}
+                placeholder="Ravi Retail Pvt Ltd"
+                disabled={seller.verification_status === 'approved'}
               />
             </div>
           </div>

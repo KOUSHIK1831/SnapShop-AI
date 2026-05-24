@@ -1,5 +1,5 @@
-import { useEffect, useReducer } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useReducer, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 import { NetworkStrengthIndicator } from '@/components/NetworkStrengthIndicator';
 
-type Mode = 'login' | 'signup' | 'forgot';
+type Mode = 'login' | 'signup' | 'forgot' | 'otp-signup' | 'otp-recovery';
 interface AuthState {
   mode: Mode;
   showPassword: {
@@ -22,6 +22,7 @@ interface AuthState {
   submitting: boolean;
   forgotEmail: string;
   forgotSent: boolean;
+  otpValue: string;
   form: {
     phone: string;
     loginEmail: string;
@@ -39,6 +40,7 @@ type AuthAction =
   | { type: 'SET_SUBMITTING'; payload: boolean }
   | { type: 'SET_FORGOT_EMAIL'; payload: string }
   | { type: 'SET_FORGOT_SENT'; payload: boolean }
+  | { type: 'SET_OTP_VALUE'; payload: string }
   | { type: 'UPDATE_FORM'; payload: Partial<AuthState['form']> }
   | { type: 'RESET_FORM' };
 
@@ -48,6 +50,7 @@ const initialState: AuthState = {
   submitting: false,
   forgotEmail: '',
   forgotSent: false,
+  otpValue: '',
   form: {
     phone: '',
     loginEmail: '',
@@ -69,6 +72,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case 'SET_SUBMITTING': return { ...state, submitting: action.payload };
     case 'SET_FORGOT_EMAIL': return { ...state, forgotEmail: action.payload };
     case 'SET_FORGOT_SENT': return { ...state, forgotSent: action.payload };
+    case 'SET_OTP_VALUE': return { ...state, otpValue: action.payload };
     case 'UPDATE_FORM': return { ...state, form: { ...state.form, ...action.payload } };
     case 'RESET_FORM': return { ...initialState, mode: state.mode };
     default: return state;
@@ -77,12 +81,28 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
 export default function Auth() {
   const [state, dispatch] = useReducer(authReducer, initialState);
-  const { signIn, signUp, user, loading, resetPassword } = useAuth();
+  const { signIn, signUp, user, loading, resetPassword, verifyOtp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const { mode, showPassword, submitting, forgotEmail, forgotSent, form } = state;
+  const { mode, showPassword, submitting, forgotEmail, forgotSent, otpValue, form } = state;
+
+  const returnTo = searchParams.get('returnTo');
+  const initialRole = searchParams.get('role') as 'seller' | 'buyer' | null;
+
+  useEffect(() => {
+    if (initialRole && (initialRole === 'seller' || initialRole === 'buyer')) {
+      dispatch({ type: 'UPDATE_FORM', payload: { signupRole: initialRole } });
+    }
+    // Restore pending OTP email if user refreshed during verification
+    const pendingEmail = sessionStorage.getItem('apnabazar_pending_otp_email');
+    if (pendingEmail) {
+      dispatch({ type: 'UPDATE_FORM', payload: { signupEmail: pendingEmail } });
+      dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+    }
+  }, [initialRole]);
 
   useEffect(() => {
     // Check for blocked user alert
@@ -100,11 +120,24 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (user.role === 'seller') navigate('/dashboard');
-      else if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'buyer') navigate('/buyer');
+      if (!user.email_confirmed) {
+        // Stay on Auth page, maybe switch to OTP mode if not already
+        if (mode !== 'otp-signup' && mode !== 'otp-recovery') {
+          dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+          dispatch({ type: 'UPDATE_FORM', payload: { signupEmail: user.email || '' } });
+        }
+        return;
+      }
+
+      if (returnTo) {
+        navigate(returnTo);
+      } else {
+        if (user.role === 'seller') navigate('/dashboard');
+        else if (user.role === 'admin') navigate('/admin');
+        else if (user.role === 'buyer') navigate('/buyer');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, returnTo, mode]);
 
   const handlePasswordLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -125,7 +158,10 @@ export default function Auth() {
       toast({ title: 'Success', description: 'Logged in successfully' });
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       const role = profile?.role || session.user.user_metadata?.role || 'seller';
-      if (role === 'buyer') navigate('/buyer');
+      
+      if (returnTo) {
+        navigate(returnTo);
+      } else if (role === 'buyer') navigate('/buyer');
       else if (role === 'admin') navigate('/admin');
       else navigate('/dashboard');
     }
@@ -145,17 +181,11 @@ export default function Auth() {
     try {
       const { error } = await signUp(form.phone, form.signupName, form.signupEmail, form.signupPassword, form.signupRole === 'buyer');
       if (error) throw error;
-      const { error: loginErr } = await signIn.password(form.signupEmail, form.signupPassword);
-      if (loginErr) {
-        toast({ title: 'Account Created', description: 'Account created! Please sign in with your credentials.' });
-        dispatch({ type: 'SET_MODE', payload: 'login' });
-        dispatch({ type: 'UPDATE_FORM', payload: { loginEmail: form.signupEmail, loginPassword: '' } });
-      } else {
-        toast({ title: 'Account Created', description: 'Welcome to ApnaBazar!' });
-        // Navigate directly based on chosen role — no need to wait for useEffect
-        if (form.signupRole === 'buyer') navigate('/buyer');
-        else navigate('/dashboard');
-      }
+      
+      // Persist email so OTP screen survives a page refresh
+      sessionStorage.setItem('apnabazar_pending_otp_email', form.signupEmail);
+      toast({ title: 'Verification Required', description: 'Please check your email for the 6-digit verification code.' });
+      dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create account', variant: 'destructive' });
     }
@@ -174,7 +204,39 @@ export default function Auth() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      // resetPasswordForEmail sends a magic link, not an OTP — show the "check email" confirmation
       dispatch({ type: 'SET_FORGOT_SENT', payload: true });
+    }
+  };
+
+  const handleVerifyOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (otpValue.length !== 6) {
+      toast({ title: 'Error', description: 'Please enter a 6-digit OTP code', variant: 'destructive' });
+      return;
+    }
+
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
+    const email = mode === 'otp-signup' ? form.signupEmail : forgotEmail;
+    const type = mode === 'otp-signup' ? 'signup' : 'recovery';
+    
+    const { error } = await verifyOtp({ email, token: otpValue, type });
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      sessionStorage.removeItem('apnabazar_pending_otp_email');
+      toast({ title: 'Success', description: 'Verification successful!' });
+      if (type === 'signup') {
+        const role = form.signupRole;
+        if (returnTo) navigate(returnTo);
+        else if (role === 'buyer') navigate('/buyer');
+        else navigate('/dashboard');
+      } else {
+        // Established session via recovery OTP, now go to reset page to set new password
+        navigate('/reset-password');
+      }
     }
   };
 
@@ -207,7 +269,7 @@ export default function Auth() {
                 handlers={{ handleCreateAccount, formatPhone }}
                 t={t}
               />
-            ) : (
+            ) : mode === 'forgot' ? (
               <ForgotForm
                 email={forgotEmail}
                 sent={forgotSent}
@@ -215,6 +277,16 @@ export default function Auth() {
                 onEmailChange={(v) => dispatch({ type: 'SET_FORGOT_EMAIL', payload: v })}
                 onSubmit={handleForgotPassword}
                 onBack={() => { dispatch({ type: 'SET_MODE', payload: 'login' }); dispatch({ type: 'SET_FORGOT_SENT', payload: false }); }}
+              />
+            ) : (
+              <OtpForm 
+                value={otpValue}
+                email={mode === 'otp-signup' ? form.signupEmail : forgotEmail}
+                submitting={submitting}
+                onChange={(v) => dispatch({ type: 'SET_OTP_VALUE', payload: v })}
+                onSubmit={handleVerifyOtp}
+                onResend={mode === 'otp-signup' ? handleCreateAccount : handleForgotPassword}
+                onBack={() => dispatch({ type: 'SET_MODE', payload: mode === 'otp-signup' ? 'signup' : 'forgot' })}
               />
             )}
           </CardContent>
@@ -473,6 +545,82 @@ function SignupRoleButton({ role, currentRole, dispatch }: { role: 'seller' | 'b
         </div>
       )}
     </button>
+  );
+}
+
+function OtpForm({ value, email, submitting, onChange, onSubmit, onResend, onBack }: {
+  value: string; email: string; submitting: boolean;
+  onChange: (v: string) => void;
+  onSubmit: (e?: React.FormEvent) => void;
+  onResend: (e?: React.FormEvent) => void;
+  onBack: () => void;
+}) {
+  const [cooldown, setCooldown] = useState(60);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleResend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cooldown > 0) return;
+    onResend(e);
+    setCooldown(60);
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4 py-2">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+          <KeyRound className="size-5 text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Verify your email</p>
+          <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to {email}</p>
+        </div>
+      </div>
+      
+      <div className="relative">
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
+          placeholder="0 0 0 0 0 0"
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          className="text-center text-2xl tracking-[0.5em] font-bold h-14"
+          autoFocus
+        />
+      </div>
+
+      <Button type="submit" disabled={submitting || value.length !== 6} className="w-full h-11 bg-gradient-brand hover:opacity-90 transition-opacity">
+        {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+        Verify & Continue
+      </Button>
+
+      <div className="flex flex-col items-center gap-2">
+        <button 
+          type="button" 
+          onClick={handleResend} 
+          disabled={cooldown > 0 || submitting}
+          className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline font-medium"
+        >
+          {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend Code'}
+        </button>
+        <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+          <ArrowLeft className="size-3.5" /> Back
+        </button>
+      </div>
+
+      <div className="text-center">
+        <p className="text-[10px] text-muted-foreground italic">
+          If you don't see the email, please check your spam folder.
+        </p>
+      </div>
+    </form>
   );
 }
 

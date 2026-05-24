@@ -3,12 +3,11 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Seller, Product } from '@/hooks/useSeller';
 import { useAuth } from '@/hooks/useAuth';
-import BuyerAuthModal from '@/components/BuyerAuthModal';
 import OrderConfirmation, { DeliveryAddress } from '@/components/OrderConfirmation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, MapPin, Phone, Hash, ShoppingBag, MessageCircle, ExternalLink, Ban } from 'lucide-react';
+import { Store, MapPin, Phone, Hash, ShoppingBag, MessageCircle, ExternalLink, Ban, ShieldCheck, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -24,11 +23,12 @@ function StorefrontContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
   const [showOrderConfirm, setShowOrderConfirm] = useState(false);
   const [orderedProduct, setOrderedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -63,6 +63,22 @@ function StorefrontContent() {
     }
     load();
   }, [slug]);
+
+  // Check for pending order after returning from auth
+  useEffect(() => {
+    if (!loading && user && products.length > 0) {
+      const pendingProductId = sessionStorage.getItem('pending_order_product_id');
+      if (pendingProductId) {
+        const product = products.find(p => p.id === pendingProductId);
+        if (product) {
+          setPendingProduct(product);
+          setShowOrderConfirm(true);
+          sessionStorage.removeItem('pending_order_product_id');
+          toast({ title: 'Welcome back!', description: 'Please complete your order details.' });
+        }
+      }
+    }
+  }, [loading, user, products, toast]);
 
   useEffect(() => {
     if (seller) {
@@ -103,8 +119,8 @@ function StorefrontContent() {
       return;
     }
     if (!user) {
-      setPendingProduct(product);
-      setShowAuth(true);
+      sessionStorage.setItem('pending_order_product_id', product.id);
+      navigate(`/auth?returnTo=${encodeURIComponent(window.location.pathname)}&role=buyer`);
       return;
     }
     await placeOrder(product);
@@ -125,7 +141,7 @@ function StorefrontContent() {
     setShowOrderConfirm(true);
   };
 
-  const handlePlaceOrderWithAddress = async (address: DeliveryAddress) => {
+  const handlePlaceOrderWithAddress = async (address: DeliveryAddress, payMethod: 'cod' | 'online') => {
     const product = pendingProduct;
     if (!product) return;
     const currentUser = user;
@@ -134,13 +150,29 @@ function StorefrontContent() {
       toast({ title: 'Order failed', description: 'Please sign in to place an order.', variant: 'destructive' });
       return;
     }
+    
     try {
+      // Simulation of Online Payment Gateway
+      let gatewayId = null;
+      let payStatus: 'pending' | 'paid' = 'pending';
+      
+      if (payMethod === 'online') {
+        // Here you would normally call your Supabase Edge Function to initiate Stripe/Razorpay
+        // toast({ title: 'Redirecting...', description: 'Taking you to secure payment gateway' });
+        // await new Promise(resolve => setTimeout(resolve, 2000));
+        gatewayId = `pay_${Math.random().toString(36).slice(2, 11)}`;
+        payStatus = 'paid'; // In a real app, this would be updated via webhook
+      }
+
       const { error } = await supabase.from('orders').insert({
         buyer_id: uid,
         seller_id: product.seller_id,
         product_id: product.id,
         quantity: 1,
         status: 'pending',
+        pay_method: payMethod,
+        pay_status: payStatus,
+        gateway_payment_id: gatewayId,
         buyer_name: address.name || currentUser?.name || currentUser?.email?.split('@')[0] || 'Buyer',
         buyer_phone: address.phone || currentUser?.phone || '',
         delivery_address: address,
@@ -151,8 +183,8 @@ function StorefrontContent() {
         return;
       }
       setOrderedProduct(product);
-      trackEvent('order_placed', { productId: product.id, productTitle: product.title, price: product.price });
-      toast({ title: t('storefront.orderPlaced'), description: t('storefront.orderSent') });
+      trackEvent('order_placed', { productId: product.id, productTitle: product.title, price: product.price, payMethod });
+      toast({ title: t('storefront.orderPlaced'), description: payMethod === 'online' ? 'Payment successful! Order sent.' : t('storefront.orderSent') });
     } catch (err) {
       console.error(err);
       toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
@@ -212,7 +244,36 @@ function StorefrontContent() {
             {t('storefront.storeBlockedDesc')}
           </p>
           <div className="pt-8">
-            <Button variant="outline" onClick={() => window.location.href = '/'} className="w-full h-12 text-base rounded-xl border-border/50"> Back to Home </Button> </div> </div> </div> ); } return ( <div className="min-h-screen bg-background" style={seller?.theme_color ? {'--theme-color': seller.theme_color } as React.CSSProperties : undefined}> {/* Store Header */} <header className="relative overflow-hidden"> {seller?.banner_url ? ( <div className="absolute inset-0"> <img src={seller.banner_url} alt="" className="w-full h-full object-cover" /> <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/40" /> </div> ) : ( <> <div className="absolute inset-0" style={{ backgroundColor: seller?.theme_color ||'#8B5CF6', opacity: 0.9 }} /> <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" /> </> )} <div className="relative max-w-5xl mx-auto px-6 py-12 text-white"> <div className="flex items-center gap-3 mb-4 animate-fade-in"> <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"> <Store className="w-6 h-6" /> </div> <div> <h1 className="text-3xl font-semibold tracking-tight">{seller?.store_name}</h1> {seller?.location && ( <p className="text-sm opacity-80 flex items-center gap-1 mt-0.5"> <MapPin className="w-3.5 h-3.5" /> {seller.location} {seller.store_number && <span> · {seller.store_number}</span>} </p> )} </div> </div> <div className="absolute top-6 right-6"> <div className="flex items-center gap-2"> <ThemeToggle /> <LanguageSwitcher variant="compact" /> </div> </div> {seller?.store_description && ( <p className="text-white/80 max-w-xl mb-4 animate-slide-up">{seller.store_description}</p> )} <div className="flex flex-wrap gap-2 animate-slide-up"> {(seller?.contact_number || seller?.phone) && ( <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm" onClick={handleSellerContact} > <Phone className="w-3.5 h-3.5 mr-1.5" /> {seller.contact_number || seller.phone} </Button> )} {seller?.store_number && ( <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-md text-sm backdrop-blur-sm"> <Hash className="w-3.5 h-3.5" /> {seller.store_number} </div> )} </div> </div> </header> {/* Maps */} {seller?.maps_url && ( <div className="max-w-5xl mx-auto px-6 -mt-4 relative z-10 mb-8"> <div className="rounded-xl overflow-hidden border border-border/50 shadow-surface-lg"> <iframe src={seller.maps_url} width="100%" height="200" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Store Location" /> </div> </div> )} {/* Category Filters */} {categories.length > 0 && ( <div className="max-w-5xl mx-auto px-6 py-4"> <div className="flex flex-wrap gap-2"> <button onClick={() => setSelectedCategory(null)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${ !selectedCategory ?'bg-primary text-white shadow-surface'
+            <Button variant="outline" onClick={() => window.location.href = '/'} className="w-full h-12 text-base rounded-xl border-border/50"> Back to Home </Button> </div> </div> </div> ); } return ( <div className="min-h-screen bg-background" style={seller?.theme_color ? {'--theme-color': seller.theme_color } as React.CSSProperties : undefined}> {/* Store Header */} <header className="relative overflow-hidden"> {seller?.banner_url ? ( <div className="absolute inset-0"> <img src={seller.banner_url} alt="" className="w-full h-full object-cover" /> <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/40" /> </div> ) : ( <> <div className="absolute inset-0" style={{ backgroundColor: seller?.theme_color ||'#8B5CF6', opacity: 0.9 }} /> <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" /> </> )} <div className="relative max-w-5xl mx-auto px-6 py-12 text-white"> <div className="flex items-center gap-3 mb-4 animate-fade-in"> <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"> <Store className="w-6 h-6" /> </div> <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-semibold tracking-tight">{seller?.store_name}</h1>
+                  {seller?.verification_status === 'approved' && (
+                    <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm flex items-center gap-1 h-6 text-[10px] uppercase font-bold px-2">
+                      <ShieldCheck className="size-3 text-green-400" /> Verified
+                    </Badge>
+                  )}
+                </div>
+                {seller?.location && (
+                  <p className="text-sm opacity-80 flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5" /> {seller.location}
+                    {seller.store_number && <span> · {seller.store_number}</span>}
+                  </p>
+                )}
+                {seller?.verification_status === 'approved' && (
+                  <div className="flex flex-col gap-0.5 mt-2 opacity-70">
+                    {seller.registered_business_name && (
+                      <p className="text-[10px] font-medium flex items-center gap-1 uppercase">
+                        <FileText className="size-2.5" /> {seller.registered_business_name}
+                      </p>
+                    )}
+                    {seller.gstin && (
+                      <p className="text-[10px] font-medium flex items-center gap-1 uppercase tracking-wider">
+                        <Hash className="size-2.5" /> GST: {seller.gstin}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div> </div> <div className="absolute top-6 right-6"> <div className="flex items-center gap-2"> <ThemeToggle /> <LanguageSwitcher variant="compact" /> </div> </div> {seller?.store_description && ( <p className="text-white/80 max-w-xl mb-4 animate-slide-up">{seller.store_description}</p> )} <div className="flex flex-wrap gap-2 animate-slide-up"> {(seller?.contact_number || seller?.phone) && ( <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm" onClick={handleSellerContact} > <Phone className="w-3.5 h-3.5 mr-1.5" /> {seller.contact_number || seller.phone} </Button> )} {seller?.store_number && ( <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-md text-sm backdrop-blur-sm"> <Hash className="w-3.5 h-3.5" /> {seller.store_number} </div> )} </div> </div> </header> {/* Maps */} {seller?.maps_url && ( <div className="max-w-5xl mx-auto px-6 -mt-4 relative z-10 mb-8"> <div className="rounded-xl overflow-hidden border border-border/50 shadow-surface-lg"> <iframe src={seller.maps_url} width="100%" height="200" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Store Location" /> </div> </div> )} {/* Category Filters */} {categories.length > 0 && ( <div className="max-w-5xl mx-auto px-6 py-4"> <div className="flex flex-wrap gap-2"> <button onClick={() => setSelectedCategory(null)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${ !selectedCategory ?'bg-primary text-white shadow-surface'
                   : 'bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -272,13 +333,6 @@ function StorefrontContent() {
         </div>
         <p className="text-[11px] text-muted-foreground">{t('storefront.empowering')}</p>
       </footer>
-
-      <BuyerAuthModal
-        isOpen={showAuth}
-        onClose={() => { setShowAuth(false); setPendingProduct(null); }}
-        onSuccess={handleAuthSuccess}
-        storeName={seller?.store_name || undefined}
-      />
 
       <OrderConfirmation
         isOpen={showOrderConfirm}

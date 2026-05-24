@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Store, MapPin, Search, ExternalLink, Share2, LogOut,
   ShoppingBag, Phone, Package, Clock, CheckCircle2,
-  XCircle, ChevronRight, MessageCircle, User,
+  XCircle, ChevronRight, MessageCircle, User, Truck, 
+  CreditCard, Banknote, Calendar
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -30,9 +31,16 @@ interface ShopListing {
 
 interface BuyerOrder {
   id: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'confirmed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled';
+  pay_method: 'cod' | 'online';
+  pay_status: 'pending' | 'paid' | 'failed' | 'refunded';
   quantity: number;
   created_at: string;
+  del_type?: 'courier' | 'self_delivery';
+  tracking_provider?: string;
+  tracking_number?: string;
+  delivery_person_name?: string;
+  delivery_person_phone?: string;
   product: { title: string; price: number; image_url: string | null } | null;
   seller: { store_name: string | null; store_slug: string | null; contact_number: string | null; phone: string | null } | null;
 }
@@ -40,10 +48,14 @@ interface BuyerOrder {
 type Tab = 'shops' | 'orders';
 
 const STATUS_CONFIG = {
-  pending:   { label: 'Pending',   icon: Clock,         class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
-  confirmed: { label: 'Confirmed', icon: CheckCircle2,  class: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' },
-  completed: { label: 'Completed', icon: CheckCircle2,  class: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' },
-  cancelled: { label: 'Cancelled', icon: XCircle,       class: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' },
+  pending:          { label: 'Pending',          icon: Clock,         class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+  accepted:         { label: 'Accepted',         icon: CheckCircle2,  class: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' },
+  confirmed:        { label: 'Confirmed',        icon: CheckCircle2,  class: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' },
+  shipped:          { label: 'Shipped',          icon: Truck,         class: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400' },
+  out_for_delivery: { label: 'Out for Delivery', icon: Package,       class: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' },
+  delivered:        { label: 'Delivered',        icon: CheckCircle2,  class: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' },
+  completed:        { label: 'Completed',        icon: CheckCircle2,  class: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' },
+  cancelled:        { label: 'Cancelled',        icon: XCircle,       class: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' },
 };
 
 export default function BuyerDashboard() {
@@ -102,7 +114,9 @@ export default function BuyerDashboard() {
       const { data } = await supabase
         .from('orders')
         .select(`
-          id, status, quantity, created_at,
+          id, status, pay_method, pay_status, quantity, created_at,
+          del_type, tracking_provider, tracking_number,
+          delivery_person_name, delivery_person_phone,
           product:products(title, price, image_url),
           seller:sellers(store_name, store_slug, contact_number, phone)
         `)
@@ -434,14 +448,14 @@ function OrderCard({ order, onVisitStore }: { order: BuyerOrder; onVisitStore: (
   const contact = order.seller?.contact_number || order.seller?.phone;
 
   return (
-    <div className="bg-card border border-border/50 rounded-xl p-4 flex gap-4 items-start shadow-sm">
+    <div className="bg-card border border-border/50 rounded-xl p-4 flex gap-4 items-start shadow-sm group hover:shadow-md transition-all duration-300">
       {/* Product image or placeholder */}
-      <div className="size-16 rounded-lg bg-muted overflow-hidden shrink-0">
+      <div className="size-20 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/50">
         {order.product?.image_url ? (
-          <img src={order.product.image_url} alt={order.product.title} className="w-full h-full object-cover" />
+          <img src={order.product.image_url} alt={order.product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <ShoppingBag className="size-6 text-muted-foreground" />
+            <ShoppingBag className="size-8 text-muted-foreground/30" />
           </div>
         )}
       </div>
@@ -456,36 +470,103 @@ function OrderCard({ order, onVisitStore }: { order: BuyerOrder; onVisitStore: (
             <StatusIcon className="size-3" />
             {cfg.label}
           </span>
-        </div>
+          </div>
 
-        <p className="text-xs text-muted-foreground mb-1">
-          {order.seller?.store_name || 'Store'} · Qty: {order.quantity}
-        </p>
+          <div className="flex flex-wrap gap-2 mb-1">
+          <p className="text-xs text-muted-foreground">
+            {order.seller?.store_name || 'Store'} · Qty: {order.quantity}
+          </p>
+          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-current/10 ${
+            order.pay_status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+          }`}>
+            {order.pay_method === 'online' ? <CreditCard className="size-2.5" /> : <Banknote className="size-2.5" />}
+            {order.pay_method === 'cod' ? 'COD' : 'Online'}: {order.pay_status}
+          </span>
+          </div>
+
 
         <p className="text-sm font-bold text-primary mb-2">
           ₹{order.product?.price ?? '—'}
         </p>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[11px] text-muted-foreground">
+        <div className="flex gap-2 mb-3">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8 text-xs flex-1 border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
+            onClick={() => navigate(`/track-order/${order.id}`)}
+          >
+            <Truck className="size-3.5 mr-1.5" /> Track Order
+          </Button>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="h-8 text-xs flex-1"
+            onClick={onVisitStore}
+          >
+            Visit Store
+          </Button>
+        </div>
+
+        {/* Tracking Details (Brief) */}
+        {(order.status === 'shipped' || order.status === 'out_for_delivery' || order.status === 'delivered') && (
+          <div className="mb-3 p-2.5 bg-muted/50 rounded-lg border border-border/50 space-y-1.5">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tracking Information</p>
+            {order.del_type === 'courier' ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
+                    <Truck className="size-3.5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-foreground">{order.tracking_provider}</p>
+                    <p className="text-[10px] text-muted-foreground">ID: {order.tracking_number}</p>
+                  </div>
+                </div>
+                {order.tracking_provider?.toLowerCase().includes('fedex') && (
+                  <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={() => window.open(`https://www.fedex.com/fedextrack/?trknbr=${order.tracking_number}`, '_blank')}>
+                    Track <ExternalLink className="size-3 ml-1" />
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
+                    <User className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-foreground">{order.delivery_person_name}</p>
+                    <p className="text-[10px] text-muted-foreground">{order.delivery_person_phone}</p>
+                  </div>
+                </div>
+                {order.delivery_person_phone && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-[10px] px-2 text-green-600"
+                    onClick={() => window.open(`tel:${order.delivery_person_phone}`, '_self')}
+                  >
+                    Call <Phone className="size-3 ml-1" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-border/30">
+          <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+            <Calendar className="size-3" />
             {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
-
-          {order.seller?.store_slug && (
-            <button
-              onClick={onVisitStore}
-              className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-            >
-              View Store <ChevronRight className="size-3" />
-            </button>
-          )}
 
           {contact && (
             <a
               href={`https://wa.me/${contact.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I placed an order for "${order.product?.title}" on ApnaBazar. Order status: ${order.status}.`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-green-600 hover:underline flex items-center gap-0.5"
+              className="text-[10px] text-green-600 hover:underline font-medium flex items-center gap-0.5"
             >
               <MessageCircle className="size-3" /> WhatsApp Seller
             </a>

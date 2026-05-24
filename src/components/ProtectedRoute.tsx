@@ -1,3 +1,4 @@
+import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,6 +19,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+
+  if (!user.email_confirmed) return <Navigate to="/auth" replace />;
 
   if (requiredRole && user.role !== requiredRole) {
     if (user.role === 'admin') return <Navigate to="/admin" replace />;

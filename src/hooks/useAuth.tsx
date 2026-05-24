@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { EmailOtpType, MobileOtpType } from '@supabase/supabase-js';
 
 const CREDENTIALS_KEY = 'apnabazar_credentials';
 const PHONE_EMAIL_MAP_KEY = 'apnabazar_phone_email_map';
@@ -15,6 +16,7 @@ interface AuthUser {
   phone?: string;
   role?: string;
   is_blocked?: boolean;
+  email_confirmed?: boolean;
 }
 
 interface AuthContextType {
@@ -26,6 +28,7 @@ interface AuthContextType {
     verifyOtp: (phone: string, otp: string) => Promise<{ error: Error | null }>;
     password: (identifier: string, password: string) => Promise<{ error: Error | null }>;
   };
+  verifyOtp: (params: { email?: string; phone?: string; token: string; type: EmailOtpType | MobileOtpType }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
@@ -88,6 +91,63 @@ function normalizePhone(phone: string) {
   const digits = phone.replace(/\D/g, '');
   if (!digits) return phone;
   return digits.startsWith('91') && digits.length === 12 ? `+${digits}` : `+91${digits}`;
+}
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_KEY = 'apnabazar_auth_rate_limit';
+
+function getRateLimitData(): Record<string, { count: number, lockedUntil: number | null }> {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRateLimitData(data: Record<string, any>) {
+  try {
+    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data));
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function checkLockout(identifier: string): { isLocked: boolean, remainingMs: number } {
+  const data = getRateLimitData();
+  const entry = data[identifier];
+  if (!entry || !entry.lockedUntil) return { isLocked: false, remainingMs: 0 };
+
+  const now = Date.now();
+  if (now >= entry.lockedUntil) {
+    // Lockout expired
+    delete data[identifier];
+    saveRateLimitData(data);
+    return { isLocked: false, remainingMs: 0 };
+  }
+
+  return { isLocked: true, remainingMs: entry.lockedUntil - now };
+}
+
+function recordFailure(identifier: string) {
+  const data = getRateLimitData();
+  const entry = data[identifier] || { count: 0, lockedUntil: null };
+  entry.count += 1;
+  
+  if (entry.count >= MAX_FAILED_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+  }
+  
+  data[identifier] = entry;
+  saveRateLimitData(data);
+  return entry;
+}
+
+function recordSuccess(identifier: string) {
+  const data = getRateLimitData();
+  delete data[identifier];
+  saveRateLimitData(data);
 }
 
 function normalizePasswordLoginError(error: Error) {
@@ -194,6 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               phone: meta.phone || meta.phone_number || '',
               role,
               is_blocked,
+              email_confirmed: !!session.user.email_confirmed_at,
             },
             loading: false,
           },
@@ -266,6 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileSubscription) profileSubscription.unsubscribe();
     };
   }, []);
+
   const signUp = async (phone: string, name: string, email: string, password: string, isBuyer = false) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -287,21 +349,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       storePhoneEmail(phone, email);
       storeCredentials(email, password);
 
-      // Ensure a session exists before profile upsert — RLS requires auth.uid()
-      if (!data.session) {
-        await ensureSupabaseSession(email, password);
-      }
-
-      if (data.user) {
+      // If email confirmation is off, a session is returned immediately.
+      // If it's on, data.session will be null.
+      if (data.session && data.user) {
         try {
-          const { error: upsertErr } = await supabase.from('profiles').upsert({
+          await supabase.from('profiles').upsert({
             id: data.user.id,
             email,
             role: isBuyer ? 'buyer' : 'seller',
           }, { onConflict: 'id' });
-          if (upsertErr) {
-            console.warn('[Auth] Profile upsert warning (non-fatal):', upsertErr.message);
-          }
         } catch (profileErr) {
           console.warn('[Auth] Profile upsert exception (non-fatal):', profileErr);
         }
@@ -322,18 +378,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const verifyOtp = async (phone: string, otp: string) => {
+  const genericVerifyOtp = async (params: { email?: string; phone?: string; token: string; type: EmailOtpType | MobileOtpType }) => {
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: normalizePhone(phone),
-        token: otp,
-        type: 'sms',
-      });
+      const verifyParams: any = {
+        token: params.token,
+        type: params.type,
+      };
+      if (params.email) verifyParams.email = params.email;
+      if (params.phone) verifyParams.phone = normalizePhone(params.phone);
+
+      const { data, error } = await supabase.auth.verifyOtp(verifyParams);
       if (error) return { error: new Error(error.message) };
 
-      // Store phone→email mapping if session has an email
-      if (data.session?.user?.email) {
-        storePhoneEmail(phone, data.session.user.email);
+      if (data.session?.user?.email && params.phone) {
+        storePhoneEmail(params.phone, data.session.user.email);
+      }
+
+      // If this was a signup verification, ensure profile exists
+      if (params.type === 'signup' && data.user) {
+        const meta = data.user.user_metadata || {};
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: data.user.email || params.email,
+          role: meta.role || 'seller',
+        }, { onConflict: 'id' }).maybeSingle();
       }
 
       return { error: null };
@@ -344,11 +412,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const passwordLogin = async (identifier: string, password: string) => {
     try {
-      const email = identifier.includes('@')
-        ? identifier.trim().toLowerCase()
-        : getEmailForPhone(identifier) || `${identifier.replace(/\D/g, '')}@apnabazar.app`;
+      const cleanIdentifier = identifier.trim().toLowerCase();
+      
+      // Check rate limit
+      const { isLocked, remainingMs } = checkLockout(cleanIdentifier);
+      if (isLocked) {
+        const minutes = Math.ceil(remainingMs / 60000);
+        return { error: new Error(`Too many failed attempts. Please try again in ${minutes} minute${minutes !== 1 ? 's' : ''} for security reasons.`) };
+      }
+
+      const email = cleanIdentifier.includes('@')
+        ? cleanIdentifier
+        : getEmailForPhone(cleanIdentifier) || `${cleanIdentifier.replace(/\D/g, '')}@apnabazar.app`;
+      
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: normalizePasswordLoginError(error) };
+      
+      if (error) {
+        recordFailure(cleanIdentifier);
+        return { error: normalizePasswordLoginError(error) };
+      }
 
       if (data.user) {
         const { data: profile } = await supabase.from('profiles').select('is_blocked, role').eq('id', data.user.id).single();
@@ -365,6 +447,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      recordSuccess(cleanIdentifier);
       storeCredentials(email, password);
       return { error: null };
     } catch (err) {
@@ -405,7 +488,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: state.user,
         loading: state.loading,
         signUp,
-        signIn: { sendOtp, verifyOtp, password: passwordLogin },
+        signIn: { 
+          sendOtp, 
+          verifyOtp: (phone: string, otp: string) => genericVerifyOtp({ phone, token: otp, type: 'sms' }), 
+          password: passwordLogin 
+        },
+        verifyOtp: genericVerifyOtp,
         signOut,
         resetPassword,
         updatePassword,

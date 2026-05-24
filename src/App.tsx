@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Storefront from "./pages/Storefront";
 import BuyerDashboard from "./pages/BuyerDashboard";
+import TrackOrder from "./pages/TrackOrder";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
                   <Route path="/store/:slug" element={<Storefront />} />
                   <Route path="/buyer" element={<ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>} />
+                  <Route path="/track-order/:orderId" element={<ProtectedRoute requiredRole="buyer"><TrackOrder /></ProtectedRoute>} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

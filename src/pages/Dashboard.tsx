@@ -23,6 +23,8 @@ import {
   ShoppingBag, 
   ClipboardList, 
   HelpCircle,
+  Ban,
+  Clock,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +48,7 @@ export default function Dashboard() {
     orders,
     loading,
     createSeller,
+    submitForVerification,
     fetchProducts,
     fetchOrders,
     updateSellerProfile,
@@ -120,6 +123,7 @@ export default function Dashboard() {
         navigate={navigate} 
       />
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
+        <VerificationStatusBanner seller={seller} onSubmit={submitForVerification} />
         <DashboardStats productsCount={products.length} seller={seller} t={t} />
         <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} orders={orders} t={t} />
         <div className="animate-fade-in">
@@ -280,4 +284,84 @@ function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
       </div>
     </>
   );
+}
+
+function VerificationStatusBanner({ seller, onSubmit }: { seller: any, onSubmit: any }) {
+  const [showResubmit, setShowResubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  if (seller.verification_status === 'approved') return null;
+
+  if (seller.verification_status === 'pending') {
+    return (
+      <div className="mb-6 bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 flex items-start gap-4">
+        <div className="size-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+          <Clock className="size-5 text-amber-600" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400">Store Verification Pending</h3>
+          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+            Our admins are reviewing your business details. You can still manage your products, but your store might have limited visibility until approved.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (seller.verification_status === 'rejected') {
+    const lastSubmitted = seller.last_submitted_at ? new Date(seller.last_submitted_at) : null;
+    const now = new Date();
+    const hoursDiff = lastSubmitted ? (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60) : 24;
+    const canResubmit = hoursDiff >= 24;
+    const hoursLeft = Math.ceil(24 - hoursDiff);
+
+    return (
+      <div className="mb-6 bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-2xl p-4 space-y-4">
+        <div className="flex items-start gap-4">
+          <div className="size-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <Ban className="size-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-red-900 dark:text-red-400">Verification Rejected</h3>
+            <p className="text-xs text-red-700 dark:text-red-500 mt-1">
+              Reason: <span className="font-semibold italic">"{seller.admin_feedback || 'Documentation incomplete'}"</span>
+            </p>
+            {!canResubmit && (
+              <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
+                <Clock className="size-3" /> You can resubmit in {hoursLeft} hours.
+              </p>
+            )}
+          </div>
+          {canResubmit && !showResubmit && (
+            <Button size="sm" onClick={() => setShowResubmit(true)} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
+              Update & Resubmit
+            </Button>
+          )}
+        </div>
+
+        {showResubmit && (
+          <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
+            <StoreSetup onComplete={async (data) => {
+              setIsSubmitting(true);
+              const { error } = await onSubmit({
+                gstin: data.gstin,
+                registered_business_name: data.registered_business_name,
+                documents: data.verification_documents
+              });
+              setIsSubmitting(false);
+              if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+              else {
+                toast({ title: "Resubmitted!", description: "Your details have been sent for re-verification." });
+                setShowResubmit(false);
+              }
+            }} />
+            <Button variant="ghost" size="sm" onClick={() => setShowResubmit(false)} className="w-full mt-2" disabled={isSubmitting}>Cancel</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }

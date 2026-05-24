@@ -1,7 +1,9 @@
-import { useReducer } from 'react';
+import React, { useReducer, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, Phone, MessageCircle, MapPin, ChevronRight, Loader2, X } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CheckCircle2, Phone, MessageCircle, MapPin, ChevronRight, Loader2, X, CreditCard, Banknote } from 'lucide-react';
 
 export interface DeliveryAddress {
   name: string;
@@ -20,15 +22,16 @@ interface OrderConfirmationProps {
   discountPercent?: number;
   sellerName?: string;
   sellerContact?: string;
-  onConfirm: (address: DeliveryAddress) => Promise<void>;
+  onConfirm: (address: DeliveryAddress, payMethod: 'cod' | 'online') => Promise<void>;
 }
 
-type Step = 'address' | 'success';
+type Step = 'address' | 'payment' | 'success';
 
 interface State {
   step: Step;
   submitting: boolean;
   address: DeliveryAddress;
+  payMethod: 'cod' | 'online';
   errors: Partial<DeliveryAddress>;
 }
 
@@ -36,6 +39,7 @@ type Action =
   | { type: 'SET_FIELD'; field: keyof DeliveryAddress; value: string }
   | { type: 'SET_ERRORS'; errors: Partial<DeliveryAddress> }
   | { type: 'SET_SUBMITTING'; value: boolean }
+  | { type: 'SET_PAY_METHOD'; method: 'cod' | 'online' }
   | { type: 'SET_STEP'; step: Step };
 
 const emptyAddress: DeliveryAddress = { name: '', phone: '', line1: '', city: '', state: '', pincode: '' };
@@ -45,6 +49,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_FIELD': return { ...state, address: { ...state.address, [action.field]: action.value }, errors: { ...state.errors, [action.field]: '' } };
     case 'SET_ERRORS': return { ...state, errors: action.errors };
     case 'SET_SUBMITTING': return { ...state, submitting: action.value };
+    case 'SET_PAY_METHOD': return { ...state, payMethod: action.method };
     case 'SET_STEP': return { ...state, step: action.step };
     default: return state;
   }
@@ -69,6 +74,7 @@ export default function OrderConfirmation({
     step: 'address',
     submitting: false,
     address: emptyAddress,
+    payMethod: 'cod',
     errors: {},
   });
 
@@ -78,14 +84,18 @@ export default function OrderConfirmation({
     ? Math.round(productPrice * (1 - discountPercent / 100))
     : productPrice;
 
-  const handleSubmit = async () => {
+  const handleAddressSubmit = async () => {
     const errors = validate(state.address);
     if (Object.keys(errors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors });
       return;
     }
+    dispatch({ type: 'SET_STEP', step: 'payment' });
+  };
+
+  const handleFinalConfirm = async () => {
     dispatch({ type: 'SET_SUBMITTING', value: true });
-    await onConfirm(state.address);
+    await onConfirm(state.address, state.payMethod);
     dispatch({ type: 'SET_SUBMITTING', value: false });
     dispatch({ type: 'SET_STEP', step: 'success' });
   };
@@ -114,10 +124,10 @@ export default function OrderConfirmation({
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 shrink-0">
           <div>
             <h2 className="font-semibold text-foreground">
-              {state.step === 'address' ? 'Delivery Address' : 'Order Placed!'}
+              {state.step === 'address' ? 'Delivery Address' : state.step === 'payment' ? 'Payment Method' : 'Order Placed!'}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {state.step === 'address' ? productTitle : 'Your order has been sent to the seller'}
+              {state.step === 'address' ? productTitle : state.step === 'payment' ? 'Choose how you want to pay' : 'Your order has been sent to the seller'}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -162,12 +172,79 @@ export default function OrderConfirmation({
             </div>
 
             <div className="px-5 py-4 border-t border-border/50 shrink-0">
-              <Button onClick={handleSubmit} disabled={state.submitting} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-11">
-                {state.submitting
-                  ? <Loader2 className="size-4 mr-2 animate-spin" />
-                  : <ChevronRight className="size-4 mr-2" />}
-                Place Order · ₹{finalPrice}
+              <Button onClick={handleAddressSubmit} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-11 font-bold text-base">
+                Proceed to Payment
+                <ChevronRight className="size-4 ml-2" />
               </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 2 — Payment */}
+        {state.step === 'payment' && (
+          <>
+            <div className="overflow-y-auto flex-1 px-5 py-6 space-y-6">
+              <RadioGroup 
+                value={state.payMethod} 
+                onValueChange={(v) => dispatch({ type: 'SET_PAY_METHOD', method: v as 'cod' | 'online' })}
+                className="grid grid-cols-1 gap-4"
+              >
+                <div className="relative">
+                  <RadioGroupItem value="cod" id="pay-cod" className="peer sr-only" />
+                  <Label
+                    htmlFor="pay-cod"
+                    className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary"
+                  >
+                    <div className="size-10 bg-muted rounded-full flex items-center justify-center shrink-0 peer-data-[state=checked]:bg-primary/10">
+                      <Banknote className="size-5 text-muted-foreground peer-data-[state=checked]:text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">Cash on Delivery</p>
+                      <p className="text-xs text-muted-foreground">Pay when your order arrives</p>
+                    </div>
+                    <div className="size-5 rounded-full border-2 border-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary flex items-center justify-center">
+                      <div className="size-2 rounded-full bg-white" />
+                    </div>
+                  </Label>
+                </div>
+
+                <div className="relative">
+                  <RadioGroupItem value="online" id="pay-online" className="peer sr-only" />
+                  <Label
+                    htmlFor="pay-online"
+                    className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary"
+                  >
+                    <div className="size-10 bg-muted rounded-full flex items-center justify-center shrink-0 peer-data-[state=checked]:bg-primary/10">
+                      <CreditCard className="size-5 text-muted-foreground peer-data-[state=checked]:text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">Online Payment</p>
+                      <p className="text-xs text-muted-foreground">GPay, PhonePe, UPI or Cards</p>
+                    </div>
+                    <div className="size-5 rounded-full border-2 border-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary flex items-center justify-center">
+                      <div className="size-2 rounded-full bg-white" />
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-700 dark:text-amber-400">
+                {state.payMethod === 'cod' 
+                  ? "Please keep cash ready for the exact amount. The delivery person will collect it upon arrival."
+                  : "You will be redirected to a secure payment page. No card or bank details are required inside this app."}
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-border/50 shrink-0 space-y-3">
+              <Button onClick={handleFinalConfirm} disabled={state.submitting} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg shadow-lg shadow-primary/20">
+                {state.submitting
+                  ? <Loader2 className="size-5 mr-2 animate-spin" />
+                  : <CheckCircle2 className="size-5 mr-2" />}
+                Confirm Order · ₹{finalPrice}
+              </Button>
+              <button onClick={() => dispatch({ type: 'SET_STEP', step: 'address' })} className="w-full text-xs text-muted-foreground hover:text-foreground font-medium py-1">
+                Edit delivery address
+              </button>
             </div>
           </>
         )}

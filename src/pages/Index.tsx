@@ -13,6 +13,26 @@ export default function Index() {
   const { t } = useLanguage();
 
   useEffect(() => {
+    // Supabase may redirect to the root URL with recovery tokens or errors in the hash
+    // when the /reset-password path isn't in the allowlist. Catch it here and redirect.
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const type = params.get('type');
+      const errorCode = params.get('error_code');
+      const accessToken = params.get('access_token');
+      if (type === 'recovery' && accessToken) {
+        navigate('/reset-password' + window.location.hash, { replace: true });
+        return;
+      }
+      if (errorCode) {
+        navigate('/reset-password' + window.location.hash, { replace: true });
+        return;
+      }
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     if (!loading && user) {
       if (user.role === 'seller') navigate('/dashboard');
       else if (user.role === 'admin') navigate('/admin');

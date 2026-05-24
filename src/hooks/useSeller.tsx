@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { PostgrestError } from '@supabase/supabase-js';
 
 interface Seller {
   id: string;
@@ -16,6 +17,13 @@ interface Seller {
   maps_url: string | null;
   banner_url: string | null;
   theme_color: string | null;
+  status: string | null;
+  verification_status: 'pending' | 'approved' | 'rejected';
+  verification_documents: string[] | null;
+  admin_feedback: string | null;
+  last_submitted_at: string | null;
+  gstin: string | null;
+  registered_business_name: string | null;
   created_at: string;
 }
 
@@ -44,18 +52,26 @@ interface FileRecord {
   created_at: string;
 }
 
-interface Order {
+export interface Order {
   id: string;
   buyer_id: string;
   seller_id: string;
   product_id: string;
   quantity: number;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'confirmed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled';
+  pay_method: 'cod' | 'online';
+  pay_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  gateway_payment_id?: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
   created_at: string;
   confirmed_at?: string;
   completed_at?: string;
+  del_type?: 'courier' | 'self_delivery';
+  tracking_provider?: string;
+  tracking_number?: string;
+  delivery_person_name?: string;
+  delivery_person_phone?: string;
   delivery_address?: { name: string; phone: string; line1: string; city: string; state: string; pincode: string } | null;
   product?: Product;
 }
@@ -134,10 +150,23 @@ export function useSeller() {
     dispatch({ type: 'SET_DATA', payload: { orders: data || [] } });
   }, [state.seller]);
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
-    const updates: Record<string, string> = { status };
-    if (status === 'confirmed') updates.confirmed_at = new Date().toISOString();
-    if (status === 'completed') updates.completed_at = new Date().toISOString();
+  const updateOrderStatus = async (
+    orderId: string, 
+    status: Order['status'], 
+    trackingInfo?: Partial<Pick<Order, 'del_type' | 'tracking_provider' | 'tracking_number' | 'delivery_person_name' | 'delivery_person_phone'>>,
+    paymentInfo?: Partial<Pick<Order, 'pay_status' | 'gateway_payment_id'>>
+  ): Promise<{ error: PostgrestError | Error | null }> => {
+    const updates: Partial<Order> = { status };
+    if (status === 'confirmed' || status === 'accepted') updates.confirmed_at = new Date().toISOString();
+    if (status === 'completed' || status === 'delivered') updates.completed_at = new Date().toISOString();
+
+    if (trackingInfo) {
+      Object.assign(updates, trackingInfo);
+    }
+
+    if (paymentInfo) {
+      Object.assign(updates, paymentInfo);
+    }
 
     const { error } = await supabase
       .from('orders')
@@ -167,6 +196,11 @@ export function useSeller() {
       maps_url: data.maps_url,
       banner_url: data.banner_url,
       theme_color: data.theme_color,
+      gstin: data.gstin,
+      registered_business_name: data.registered_business_name,
+      verification_documents: data.verification_documents,
+      last_submitted_at: data.last_submitted_at,
+      verification_status: data.verification_status || 'pending',
     };
 
     try {
@@ -201,6 +235,39 @@ export function useSeller() {
       console.error('createSeller unexpected error', err);
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
+  };
+
+  const submitForVerification = async (data: {
+    gstin: string;
+    registered_business_name: string;
+    documents: string[];
+  }) => {
+    if (!state.seller) return { error: new Error('No seller profile found') };
+
+    // Check rate limit (24 hours)
+    if (state.seller.last_submitted_at) {
+      const lastSubmitted = new Date(state.seller.last_submitted_at);
+      const now = new Date();
+      const hoursDiff = (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60);
+      if (hoursDiff < 24) {
+        const timeLeft = Math.ceil(24 - hoursDiff);
+        return { error: new Error(`Rate limit: Please wait ${timeLeft} hours before resubmitting.`) };
+      }
+    }
+
+    const { error } = await supabase
+      .from('sellers')
+      .update({
+        gstin: data.gstin,
+        registered_business_name: data.registered_business_name,
+        verification_documents: data.documents,
+        verification_status: 'pending',
+        last_submitted_at: new Date().toISOString(),
+      })
+      .eq('id', state.seller.id);
+
+    if (!error) await fetchSeller();
+    return { error };
   };
 
   const updateSellerProfile = async (updates: Partial<Seller>) => {
@@ -266,6 +333,7 @@ export function useSeller() {
     fetchFiles,
     fetchOrders,
     createSeller,
+    submitForVerification,
     updateSellerProfile,
     updateProduct,
     deleteProduct,

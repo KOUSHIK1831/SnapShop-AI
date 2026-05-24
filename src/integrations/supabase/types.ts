@@ -94,6 +94,38 @@ export type Database = {
           },
         ]
       }
+      order_tracking_logs: {
+        Row: {
+          id: string
+          order_id: string
+          status: string
+          description: string | null
+          changed_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          status: string
+          description?: string | null
+          changed_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          status?: string
+          description?: string | null
+          changed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tracking_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           buyer_id: string | null
@@ -108,6 +140,14 @@ export type Database = {
           quantity: number
           seller_id: string
           status: string | null
+          del_type: Database["public"]["Enums"]["delivery_type"] | null
+          tracking_provider: string | null
+          tracking_number: string | null
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          pay_method: Database["public"]["Enums"]["payment_method"] | null
+          pay_status: Database["public"]["Enums"]["payment_status"] | null
+          gateway_payment_id: string | null
         }
         Insert: {
           buyer_id?: string | null
@@ -122,6 +162,14 @@ export type Database = {
           quantity?: number
           seller_id: string
           status?: string | null
+          del_type?: Database["public"]["Enums"]["delivery_type"] | null
+          tracking_provider?: string | null
+          tracking_number?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          pay_method?: Database["public"]["Enums"]["payment_method"] | null
+          pay_status?: Database["public"]["Enums"]["payment_status"] | null
+          gateway_payment_id?: string | null
         }
         Update: {
           buyer_id?: string | null
@@ -136,6 +184,14 @@ export type Database = {
           quantity?: number
           seller_id?: string
           status?: string | null
+          del_type?: Database["public"]["Enums"]["delivery_type"] | null
+          tracking_provider?: string | null
+          tracking_number?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          pay_method?: Database["public"]["Enums"]["payment_method"] | null
+          pay_status?: Database["public"]["Enums"]["payment_status"] | null
+          gateway_payment_id?: string | null
         }
         Relationships: [
           {
@@ -275,7 +331,7 @@ export type Database = {
         Update: {
           banner_url?: string | null
           contact_number?: string | null
-          created_at?: string
+          created_at?: string | null
           full_name?: string | null
           id?: string
           location?: string | null
@@ -299,7 +355,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      delivery_type: "courier" | "self_delivery"
+      payment_method: "cod" | "online"
+      payment_status: "pending" | "paid" | "failed" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -423,4 +481,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-

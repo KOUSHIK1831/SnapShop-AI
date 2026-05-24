@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -52,32 +52,55 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Supabase puts the recovery token in the URL hash — onAuthStateChange fires with RECOVERY event
+    // Parse tokens from URL hash (Supabase puts them there for recovery links)
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    const errorCode = params.get('error_code');
+
+    if (errorCode) {
+      dispatch({ type: 'SET_PAGE', payload: 'invalid' });
+      return;
+    }
+
+    // If recovery tokens are in the hash, exchange them for a session
+    if (accessToken && refreshToken && type === 'recovery') {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) {
+            dispatch({ type: 'SET_PAGE', payload: 'invalid' });
+          } else {
+            // Clear the hash from the URL
+            window.history.replaceState(null, '', window.location.pathname);
+            dispatch({ type: 'SET_PAGE', payload: 'form' });
+          }
+        });
+      return;
+    }
+
+    // Listen for PASSWORD_RECOVERY event (OTP-based recovery flow)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         dispatch({ type: 'SET_PAGE', payload: 'form' });
       }
     });
 
-    // Also check if there's already a session (user clicked link, session restored)
+    // Check if session already exists (came from OTP verify flow)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         dispatch({ type: 'SET_PAGE', payload: 'form' });
-      } else {
-        // Give onAuthStateChange a moment to fire
-        setTimeout(() => {
-          dispatch((prev: any) => prev.page === 'loading' ? { ...prev, page: 'invalid' } : prev);
-        }, 2000);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fallback: mark invalid after 3s if still loading
+  // Fallback: mark invalid after 4s if still loading
   useEffect(() => {
     if (state.page !== 'loading') return;
-    const t = setTimeout(() => dispatch({ type: 'SET_PAGE', payload: 'invalid' }), 3000);
+    const t = setTimeout(() => dispatch({ type: 'SET_PAGE', payload: 'invalid' }), 4000);
     return () => clearTimeout(t);
   }, [state.page]);
 

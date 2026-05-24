@@ -22,7 +22,11 @@ import {
   Ban,
   UserX,
   MessageSquare,
-  Clock
+  Clock,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Input } from "@/components/ui/input";
@@ -57,6 +61,11 @@ interface Seller {
   store_slug: string;
   location: string;
   status: string;
+  verification_status: 'pending' | 'approved' | 'rejected';
+  verification_documents: string[] | null;
+  admin_feedback: string | null;
+  gstin: string | null;
+  registered_business_name: string | null;
   created_at: string;
 }
 
@@ -259,10 +268,29 @@ export default function Admin() {
     }
   };
 
+  const updateVerificationStatus = async (sellerId: string, status: 'approved' | 'rejected', feedback?: string) => {
+    const { error } = await supabase
+      .from("sellers")
+      .update({ 
+        verification_status: status,
+        admin_feedback: feedback || null
+      })
+      .eq("id", sellerId);
+      
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Seller ${status === 'approved' ? 'approved' : 'rejected'}` });
+      fetchGlobalStats();
+    }
+  };
+
   const filteredSellers = useMemo(() => state.sellers.filter(s => 
     (s.store_name?.toLowerCase().includes(state.search.toLowerCase()) || 
      s.store_slug?.toLowerCase().includes(state.search.toLowerCase()))
   ), [state.sellers, state.search]);
+
+  const pendingVerifications = useMemo(() => state.sellers.filter(s => s.verification_status === 'pending'), [state.sellers]);
 
   const filteredUsers = useMemo(() => state.profiles.filter(p => 
     p.email?.toLowerCase().includes(state.userSearch.toLowerCase())
@@ -280,19 +308,24 @@ export default function Admin() {
             onBack={() => dispatch({ type: 'SET_SELECTED_SELLER', payload: { seller: null, products: [], orders: [] } })}
             onDeleteProduct={deleteProduct}
             onToggleStatus={toggleSellerStatus}
+            onVerify={updateVerificationStatus}
             t={t}
           />
         ) : (
           <>
             <GlobalStats profiles={state.profiles} sellers={state.sellers} products={state.totalProducts} orders={state.totalOrders} t={t} />
             <Tabs defaultValue="sellers" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 max-w-md bg-muted/50 p-1">
+              <TabsList className="grid w-full grid-cols-4 max-w-xl bg-muted/50 p-1">
                 <TabsTrigger value="sellers">{t('admin.sellers')}</TabsTrigger>
+                <TabsTrigger value="verifications">Verifications {pendingVerifications.length > 0 && <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center bg-primary text-white rounded-full">{pendingVerifications.length}</Badge>}</TabsTrigger>
                 <TabsTrigger value="users">{t('admin.users')}</TabsTrigger>
                 <TabsTrigger value="feedback">{t('admin.feedback')} ({state.feedback.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="sellers">
                 <SellersTab sellers={filteredSellers} search={state.search} onSearch={(v) => dispatch({ type: 'SET_SEARCH', payload: v })} onSelect={fetchSellerDetails} t={t} />
+              </TabsContent>
+              <TabsContent value="verifications">
+                <VerificationsTab sellers={pendingVerifications} onSelect={fetchSellerDetails} t={t} />
               </TabsContent>
               <TabsContent value="users">
                 <UsersTab users={filteredUsers} search={state.userSearch} onSearch={(v) => dispatch({ type: 'SET_USER_SEARCH', payload: v })} onToggleBlock={toggleUserBlock} t={t} />
@@ -357,18 +390,57 @@ function SellersTab({ sellers, search, onSearch, onSelect, t }: any) {
         {sellers.map((seller: Seller) => (
           <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group" onClick={() => onSelect(seller)}>
             <CardHeader className="p-5 flex flex-row items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors">{seller.store_name}</CardTitle>
-                  {seller.status === 'blocked' && <Badge variant="destructive" className="text-[8px] uppercase h-4">Blocked</Badge>}
+              <div className="flex items-center gap-3">
+                <div className={`size-10 rounded-xl flex items-center justify-center ${seller.verification_status === 'approved' ? 'bg-green-100 text-green-600' : seller.verification_status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                  {seller.verification_status === 'approved' ? <ShieldCheck className="size-5" /> : seller.verification_status === 'rejected' ? <ShieldAlert className="size-5" /> : <Clock className="size-5" />}
                 </div>
-                <CardDescription className="text-xs mt-1">/store/{seller.store_slug}</CardDescription>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{seller.store_name}</CardTitle>
+                    {seller.status === 'blocked' && <Badge variant="destructive" className="text-[8px] uppercase h-4">Blocked</Badge>}
+                  </div>
+                  <CardDescription className="text-xs mt-1">/store/{seller.store_slug}</CardDescription>
+                </div>
               </div>
               <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
             </CardHeader>
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+function VerificationsTab({ sellers, onSelect, t }: any) {
+  return (
+    <div className="space-y-4 mt-4">
+      {sellers.length === 0 ? (
+        <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
+          <ShieldCheck className="size-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No pending verification requests</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {sellers.map((seller: Seller) => (
+            <Card key={seller.id} className="border-border/50 shadow-surface hover:shadow-surface-lg transition-all cursor-pointer group border-l-4 border-l-amber-500" onClick={() => onSelect(seller)}>
+              <CardHeader className="p-5 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <Clock className="size-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{seller.store_name}</CardTitle>
+                    <CardDescription className="text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="size-3" /> Pending Review
+                    </CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -467,92 +539,172 @@ function FeedbackTab({ feedback, onUpdateStatus, onDelete, t }: any) {
   );
 }
 
-function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onToggleStatus, t }: any) {
+function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onToggleStatus, onVerify, t }: any) {
+  const [rejectFeedback, setRejectFeedback] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Button variant="ghost" size="sm" onClick={onBack} className="mb-2"><ArrowLeft className="size-4 mr-2" /> {t('admin.backToOverview')}</Button>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/30 p-6 rounded-2xl border border-border/50">
-        <div>
-          <div className="flex items-center gap-3"><h2 className="text-2xl font-semibold text-foreground">{seller.store_name}</h2><Badge variant={seller.status === 'active' ? "default" : "destructive"} className="uppercase text-[10px]">{seller.status}</Badge></div>
-          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Store className="size-3.5" /> /store/{seller.store_slug}</p>
-          <p className="text-sm text-muted-foreground flex items-center gap-2"><ShoppingBag className="size-3.5" /> {seller.location || "No location"}</p>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/30 p-6 rounded-2xl border border-border/50">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-semibold text-foreground">{seller.store_name}</h2>
+                <Badge variant={seller.status === 'active' ? "default" : "destructive"} className="uppercase text-[10px]">{seller.status}</Badge>
+                <Badge variant={seller.verification_status === 'approved' ? "default" : seller.verification_status === 'rejected' ? "destructive" : "outline"} className="uppercase text-[10px]">
+                  {seller.verification_status}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Store className="size-3.5" /> /store/{seller.store_slug}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-2"><ShoppingBag className="size-3.5" /> {seller.location || "No location"}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.open(`/store/${seller.store_slug}`, '_blank')}><ExternalLink className="size-4 mr-2" /> {t('admin.viewPublicStore')}</Button>
+              <Button variant={seller.status === 'active' ? "destructive" : "default"} size="sm" onClick={() => onToggleStatus(seller)}>
+                {seller.status === 'active' ? <><Ban className="size-4 mr-2" /> {t('admin.blockStore')}</> : <><ShieldCheck className="size-4 mr-2" /> {t('admin.unblockStore')}</>}
+              </Button>
+            </div>
+          </div>
+
+          <Tabs defaultValue="inventory" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-md bg-muted/50 p-1">
+              <TabsTrigger value="inventory">{t('admin.inventory')} ({products.length})</TabsTrigger>
+              <TabsTrigger value="orders">{t('admin.orders')} ({orders.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="inventory" className="mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {products.map((product: Product) => (
+                  <Card key={product.id} className="overflow-hidden border-border/50 shadow-surface group">
+                    <div className="aspect-square relative overflow-hidden bg-muted">
+                      {product.image_url ? <img src={product.image_url} alt={product.title} className="size-full object-cover transition-transform group-hover:scale-105" /> : <div className="size-full flex items-center justify-center text-muted-foreground"><Package className="size-8" /></div>}
+                      <Badge className="absolute top-2 right-2 bg-black/60 backdrop-blur-md">₹{product.price}</Badge>
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-foreground truncate">{product.title}</h3>
+                      <div className="flex items-center justify-between mt-2"><Badge variant="outline" className="text-[10px]">{product.category}</Badge><span className="text-xs text-muted-foreground">Stock: {product.stock}</span></div>
+                      <Button variant="ghost" size="sm" onClick={() => onDeleteProduct(product.id)} className="w-full mt-4 text-destructive hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20"><Trash2 className="size-3.5 mr-2" /> {t('product.delete')}</Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="orders" className="mt-6">
+              <Card className="border-border/50 shadow-surface overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr className="text-muted-foreground">
+                        <th className="text-left py-3 px-4 font-medium">{t('admin.orders')} ID</th>
+                        <th className="text-left py-3 px-4 font-medium">{t('orders.customer')}</th>
+                        <th className="text-left py-3 px-4 font-medium">{t('admin.products')}</th>
+                        <th className="text-left py-3 px-4 font-medium">{t('admin.status')}</th>
+                        <th className="text-left py-3 px-4 font-medium">{t('admin.joined')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order: Order) => (
+                        <tr key={order.id} className="border-b border-border/30 hover:bg-muted/30">
+                          <td className="py-3 px-4 font-mono text-[10px]">{order.id.slice(0, 8)}...</td>
+                          <td className="py-3 px-4">
+                            <div className="font-medium">{order.buyer_name}</div>
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Clock className="size-3" />
+                              <span suppressHydrationWarning>{new Date(order.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">{order.product?.title || t('dashboard.noProducts')}</td>
+                          <td className="py-3 px-4">
+                            <Badge variant="outline" className="text-[10px] uppercase mb-1 block w-fit">{order.status}</Badge>
+                          </td>
+                          <td className="py-3 px-4 text-muted-foreground" suppressHydrationWarning>{new Date(order.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.open(`/store/${seller.store_slug}`, '_blank')}><ExternalLink className="size-4 mr-2" /> {t('admin.viewPublicStore')}</Button>
-          <Button variant={seller.status === 'active' ? "destructive" : "default"} size="sm" onClick={() => onToggleStatus(seller)}>
-            {seller.status === 'active' ? <><Ban className="size-4 mr-2" /> {t('admin.blockStore')}</> : <><ShieldCheck className="size-4 mr-2" /> {t('admin.unblockStore')}</>}
-          </Button>
+
+        <div className="space-y-6">
+          <Card className="border-border/50 shadow-surface">
+            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Verification Details</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">GSTIN</label>
+                <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-1 border border-border/30">{seller.gstin || "Not provided"}</p>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Business Name</label>
+                <p className="text-sm font-medium p-2 bg-muted/50 rounded mt-1 border border-border/30">{seller.registered_business_name || "Not provided"}</p>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Status</label>
+                <div className="mt-1">
+                  <Badge variant={seller.verification_status === 'approved' ? "default" : seller.verification_status === 'rejected' ? "destructive" : "outline"} className="uppercase text-[10px]">
+                    {seller.verification_status}
+                  </Badge>
+                </div>
+              </div>
+
+              {seller.verification_documents && seller.verification_documents.length > 0 && (
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Documents & Shop Photos</label>
+                  <div className="grid grid-cols-1 gap-2 mt-2">
+                    {seller.verification_documents.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors text-xs">
+                        <FileText className="size-4 text-primary" />
+                        <span className="truncate flex-1">Verification Item {i + 1}</span>
+                        <ExternalLink className="size-3 text-muted-foreground" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {seller.verification_status === 'pending' && (
+                <div className="pt-4 space-y-3 border-t border-border/30">
+                  {!isRejecting ? (
+                    <div className="flex flex-col gap-2">
+                      <Button onClick={() => onVerify(seller.id, 'approved')} className="w-full bg-green-600 hover:bg-green-700">
+                        <CheckCircle2 className="size-4 mr-2" /> Approve Seller
+                      </Button>
+                      <Button onClick={() => setIsRejecting(true)} variant="outline" className="w-full text-destructive hover:bg-destructive/5 border-destructive/20">
+                        <XCircle className="size-4 mr-2" /> Reject Seller
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-[10px] uppercase font-bold text-destructive">Rejection Reason</label>
+                      <textarea 
+                        value={rejectFeedback} 
+                        onChange={(e) => setRejectFeedback(e.target.value)}
+                        placeholder="Explain why the verification was rejected..."
+                        className="w-full min-h-[100px] text-xs p-3 rounded-lg border border-destructive/30 bg-destructive/5 focus:outline-none focus:ring-1 focus:ring-destructive"
+                      />
+                      <div className="flex gap-2">
+                        <Button onClick={() => { onVerify(seller.id, 'rejected', rejectFeedback); setIsRejecting(false); }} disabled={!rejectFeedback.trim()} className="flex-1 bg-destructive hover:bg-destructive/90">Confirm Reject</Button>
+                        <Button onClick={() => setIsRejecting(false)} variant="ghost" className="flex-1">Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {seller.verification_status === 'rejected' && seller.admin_feedback && (
+                <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/20">
+                  <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Previous Rejection Feedback</p>
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-1 italic">"{seller.admin_feedback}"</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-      <Tabs defaultValue="inventory" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md bg-muted/50 p-1">
-          <TabsTrigger value="inventory">{t('admin.inventory')} ({products.length})</TabsTrigger>
-          <TabsTrigger value="orders">{t('admin.orders')} ({orders.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="inventory" className="mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product: Product) => (
-              <Card key={product.id} className="overflow-hidden border-border/50 shadow-surface group">
-                <div className="aspect-square relative overflow-hidden bg-muted">
-                  {product.image_url ? <img src={product.image_url} alt={product.title} className="size-full object-cover transition-transform group-hover:scale-105" /> : <div className="size-full flex items-center justify-center text-muted-foreground"><Package className="size-8" /></div>}
-                  <Badge className="absolute top-2 right-2 bg-black/60 backdrop-blur-md">₹{product.price}</Badge>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-foreground truncate">{product.title}</h3>
-                  <div className="flex items-center justify-between mt-2"><Badge variant="outline" className="text-[10px]">{product.category}</Badge><span className="text-xs text-muted-foreground">Stock: {product.stock}</span></div>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteProduct(product.id)} className="w-full mt-4 text-destructive hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20"><Trash2 className="size-3.5 mr-2" /> {t('product.delete')}</Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="orders" className="mt-6">
-          <Card className="border-border/50 shadow-surface overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr className="text-muted-foreground">
-                    <th className="text-left py-3 px-4 font-medium">{t('admin.orders')} ID</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('orders.customer')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('admin.products')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('admin.status')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('admin.joined')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order: Order) => (
-                    <tr key={order.id} className="border-b border-border/30 hover:bg-muted/30">
-                      <td className="py-3 px-4 font-mono text-[10px]">{order.id.slice(0, 8)}...</td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium">{order.buyer_name}</div>
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Clock className="size-3" />
-                          <span suppressHydrationWarning>{new Date(order.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{order.product?.title || t('dashboard.noProducts')}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="text-[10px] uppercase mb-1 block w-fit">{order.status}</Badge>
-                        {order.confirmed_at && (
-                          <div className="text-[9px] text-blue-600 flex items-center gap-1">
-                            <ShieldCheck className="size-2.5" /> {t('orders.confirmedOn')}: <span suppressHydrationWarning>{new Date(order.confirmed_at).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        {order.completed_at && (
-                          <div className="text-[9px] text-green-600 flex items-center gap-1">
-                            <ShieldCheck className="size-2.5" /> {t('orders.completedOn')}: <span suppressHydrationWarning>{new Date(order.completed_at).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground" suppressHydrationWarning>{new Date(order.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
