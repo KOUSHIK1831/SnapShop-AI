@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+set -e
+
+# Run formatting on staged files
+npx lint-staged
+
+# Check for untranslated i18n strings
+npm run i18n:check
+
+# Run linting
+npm run lint
+
+# Run type check
+npm run type-check
+
+# Run tests to ensure they pass before committing
+npm run test

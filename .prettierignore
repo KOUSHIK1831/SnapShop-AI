@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+coverage
+android
+public/telugu_sub_districts.geojson
+*.min.js
+*.min.css
+.DS_Store
+.env*
+*.lock
+cf
+node_modules
+.git
