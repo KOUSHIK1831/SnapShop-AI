@@ -21,7 +21,6 @@ interface AuthState {
   };
   submitting: boolean;
   forgotEmail: string;
-  forgotSent: boolean;
   otpValue: string;
   form: {
     phone: string;
@@ -39,7 +38,6 @@ type AuthAction =
   | { type: 'TOGGLE_PASSWORD'; payload: 'login' | 'signup' }
   | { type: 'SET_SUBMITTING'; payload: boolean }
   | { type: 'SET_FORGOT_EMAIL'; payload: string }
-  | { type: 'SET_FORGOT_SENT'; payload: boolean }
   | { type: 'SET_OTP_VALUE'; payload: string }
   | { type: 'UPDATE_FORM'; payload: Partial<AuthState['form']> }
   | { type: 'RESET_FORM' };
@@ -49,7 +47,6 @@ const initialState: AuthState = {
   showPassword: { login: false, signup: false },
   submitting: false,
   forgotEmail: '',
-  forgotSent: false,
   otpValue: '',
   form: {
     phone: '',
@@ -71,7 +68,6 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     };
     case 'SET_SUBMITTING': return { ...state, submitting: action.payload };
     case 'SET_FORGOT_EMAIL': return { ...state, forgotEmail: action.payload };
-    case 'SET_FORGOT_SENT': return { ...state, forgotSent: action.payload };
     case 'SET_OTP_VALUE': return { ...state, otpValue: action.payload };
     case 'UPDATE_FORM': return { ...state, form: { ...state.form, ...action.payload } };
     case 'RESET_FORM': return { ...initialState, mode: state.mode };
@@ -87,7 +83,7 @@ export default function Auth() {
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const { mode, showPassword, submitting, forgotEmail, forgotSent, otpValue, form } = state;
+  const { mode, showPassword, submitting, forgotEmail, otpValue, form } = state;
 
   const returnTo = searchParams.get('returnTo');
   const initialRole = searchParams.get('role') as 'seller' | 'buyer' | null;
@@ -98,9 +94,14 @@ export default function Auth() {
     }
     // Restore pending OTP email if user refreshed during verification
     const pendingEmail = sessionStorage.getItem('apnabazar_pending_otp_email');
+    const pendingRecoveryEmail = sessionStorage.getItem('apnabazar_pending_recovery_email');
+    
     if (pendingEmail) {
       dispatch({ type: 'UPDATE_FORM', payload: { signupEmail: pendingEmail } });
       dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+    } else if (pendingRecoveryEmail) {
+      dispatch({ type: 'SET_FORGOT_EMAIL', payload: pendingRecoveryEmail });
+      dispatch({ type: 'SET_MODE', payload: 'otp-recovery' });
     }
   }, [initialRole]);
 
@@ -204,8 +205,9 @@ export default function Auth() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      // resetPasswordForEmail sends a magic link, not an OTP — show the "check email" confirmation
-      dispatch({ type: 'SET_FORGOT_SENT', payload: true });
+      sessionStorage.setItem('apnabazar_pending_recovery_email', forgotEmail);
+      toast({ title: 'OTP Sent', description: 'Please check your email for the 6-digit reset code.' });
+      dispatch({ type: 'SET_MODE', payload: 'otp-recovery' });
     }
   };
 
@@ -227,6 +229,7 @@ export default function Auth() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       sessionStorage.removeItem('apnabazar_pending_otp_email');
+      sessionStorage.removeItem('apnabazar_pending_recovery_email');
       toast({ title: 'Success', description: 'Verification successful!' });
       if (type === 'signup') {
         const role = form.signupRole;
@@ -272,11 +275,10 @@ export default function Auth() {
             ) : mode === 'forgot' ? (
               <ForgotForm
                 email={forgotEmail}
-                sent={forgotSent}
                 submitting={submitting}
                 onEmailChange={(v) => dispatch({ type: 'SET_FORGOT_EMAIL', payload: v })}
                 onSubmit={handleForgotPassword}
-                onBack={() => { dispatch({ type: 'SET_MODE', payload: 'login' }); dispatch({ type: 'SET_FORGOT_SENT', payload: false }); }}
+                onBack={() => { dispatch({ type: 'SET_MODE', payload: 'login' }); }}
               />
             ) : (
               <OtpForm 
@@ -462,32 +464,12 @@ function SignupForm({ state, dispatch, handlers, t }: { state: AuthState, dispat
   );
 }
 
-function ForgotForm({ email, sent, submitting, onEmailChange, onSubmit, onBack }: {
-  email: string; sent: boolean; submitting: boolean;
+function ForgotForm({ email, submitting, onEmailChange, onSubmit, onBack }: {
+  email: string; submitting: boolean;
   onEmailChange: (v: string) => void;
   onSubmit: (e?: React.FormEvent) => void;
   onBack: () => void;
 }) {
-  if (sent) {
-    return (
-      <div className="py-4 text-center space-y-4">
-        <div className="mx-auto size-14 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="size-7 text-green-600" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground">Check your email</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            We sent a password reset link to <span className="font-medium text-foreground">{email}</span>
-          </p>
-        </div>
-        <p className="text-xs text-muted-foreground">Didn't receive it? Check your spam folder or try again.</p>
-        <button type="button" onClick={onBack} className="text-sm text-primary hover:underline font-medium flex items-center gap-1 mx-auto">
-          <ArrowLeft className="size-3.5" /> Back to Sign In
-        </button>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={onSubmit} className="space-y-4 py-2">
       <div className="flex items-center gap-2 mb-2">
@@ -496,7 +478,7 @@ function ForgotForm({ email, sent, submitting, onEmailChange, onSubmit, onBack }
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">Reset your password</p>
-          <p className="text-xs text-muted-foreground">We'll send a reset link to your email</p>
+          <p className="text-xs text-muted-foreground">We'll send a 6-digit reset code to your email</p>
         </div>
       </div>
       <div className="relative">
@@ -513,7 +495,7 @@ function ForgotForm({ email, sent, submitting, onEmailChange, onSubmit, onBack }
       </div>
       <Button type="submit" disabled={submitting || !email.trim()} className="w-full">
         {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-        Send Reset Link
+        Send Reset Code
       </Button>
       <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto transition-colors">
         <ArrowLeft className="size-3.5" /> Back to Sign In

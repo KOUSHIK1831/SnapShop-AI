@@ -16,6 +16,7 @@ interface AIProduct {
   tags: string[];
   size?: string;
   discount_percent?: number;
+  digitization_failed?: boolean;
 }
 
 interface PendingReview {
@@ -27,6 +28,8 @@ interface PendingReview {
 interface UploadZoneProps {
   sellerId: string;
   onComplete: () => void;
+  usageToday: number;
+  dailyLimit: number;
 }
 
 type ProcessingStep = 'idle' | 'uploading' | 'processing' | 'review' | 'complete' | 'error';
@@ -79,11 +82,13 @@ function uploadReducer(state: UploadState, action: UploadAction): UploadState {
   }
 }
 
-export default function UploadZone({ sellerId, onComplete }: UploadZoneProps) {
+export default function UploadZone({ sellerId, onComplete, usageToday, dailyLimit }: UploadZoneProps) {
   const [state, dispatch] = useReducer(uploadReducer, initialUploadState);
   const { step, dragOver, fileCount, processedCount, currentFileName, overridePrice, pendingReviews, approvedCount } = state;
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const remaining = Math.max(0, dailyLimit - usageToday);
 
   const handleApproveReview = useCallback(async (product: AIProduct, imageUrl: string, fileId: string) => {
     const { error } = await supabase.from('products').insert({
@@ -126,6 +131,15 @@ export default function UploadZone({ sellerId, onComplete }: UploadZoneProps) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
 
+    if (files.length > remaining) {
+      toast({ 
+        title: 'Limit reached', 
+        description: `You only have ${remaining} AI digitization credits left for today. Please upload fewer files or contact admin.`, 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     // File size check
     for (const file of files) {
       if (file.size > 5 * 1024 * 1024) {
@@ -163,15 +177,51 @@ export default function UploadZone({ sellerId, onComplete }: UploadZoneProps) {
         try {
           dispatch({ type: 'UPDATE_PROGRESS', payload: { processed: i, currentFile: fileInfo.fileName } });
           const { data, error: invokeError } = await supabase.functions.invoke('digitize', { body: { imageUrl: fileInfo.fileUrl, sellerId } });
-          if (invokeError || !data?.product) throw new Error('AI Error');
+          
+          if (invokeError) {
+            console.error('Edge Function Error:', invokeError);
+            if (invokeError.message?.includes('limit-exceeded') || String(invokeError).includes('limit-exceeded')) {
+              toast({ title: 'Limit Reached', description: 'Your daily AI digitization limit has been reached.', variant: 'destructive' });
+              dispatch({ type: 'SET_STEP', payload: 'error' });
+              return null;
+            }
+          }
+
+          if (invokeError || !data?.product) {
+            console.warn('AI Digitization failed for:', fileInfo.fileName, invokeError);
+            return {
+              product: {
+                title: fileInfo.fileName.split('.')[0],
+                description: '',
+                price: priceOverride ?? 0,
+                category: 'Uncategorized',
+                tags: [],
+                digitization_failed: true,
+              },
+              imageUrl: fileInfo.fileUrl,
+              fileId: fileInfo.fileId,
+            };
+          }
+
           return {
             product: { ...data.product, price: priceOverride ?? data.product.price ?? 0 },
             imageUrl: fileInfo.fileUrl,
             fileId: fileInfo.fileId,
           };
         } catch (err) { 
-          console.error(err);
-          return null;
+          console.error('Digitization error:', err);
+          return {
+            product: {
+              title: fileInfo.fileName.split('.')[0],
+              description: '',
+              price: priceOverride ?? 0,
+              category: 'Uncategorized',
+              tags: [],
+              digitization_failed: true,
+            },
+            imageUrl: fileInfo.fileUrl,
+            fileId: fileInfo.fileId,
+          };
         }
       }));
 
@@ -189,13 +239,46 @@ export default function UploadZone({ sellerId, onComplete }: UploadZoneProps) {
 
   return (
     <div className="space-y-4">
+      <UsageIndicator used={usageToday} limit={dailyLimit} />
       <PriceOverride value={overridePrice} onChange={(v) => dispatch({ type: 'SET_OVERRIDE_PRICE', payload: v })} t={t} />
       <DropZone 
         dragOver={dragOver} 
         onDragOver={(v) => dispatch({ type: 'SET_DRAG_OVER', payload: v })} 
         onFiles={processFiles} 
         t={t} 
+        disabled={remaining <= 0}
       />
+    </div>
+  );
+}
+
+function UsageIndicator({ used, limit }: { used: number, limit: number }) {
+  const percent = Math.min(100, (used / limit) * 100);
+  const remaining = Math.max(0, limit - used);
+  
+  return (
+    <div className="bg-card border border-border/50 rounded-xl p-4 shadow-surface animate-fade-in">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="size-8 bg-primary/10 rounded-lg flex items-center justify-center">
+            <CheckCircle2 className={`size-4 ${remaining > 0 ? 'text-primary' : 'text-destructive'}`} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">AI Digitization Credits</h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Daily Allowance</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-foreground tabular-nums">{remaining} / {limit}</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Credits Left Today</p>
+        </div>
+      </div>
+      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+        <div 
+          className={`h-full rounded-full transition-all duration-1000 ${percent > 90 ? 'bg-destructive' : percent > 70 ? 'bg-amber-500' : 'bg-primary'}`} 
+          style={{ width: `${percent}%` }} 
+        />
+      </div>
     </div>
   );
 }
@@ -265,21 +348,25 @@ function PriceOverride({ value, onChange, t }: any) {
   );
 }
 
-function DropZone({ dragOver, onDragOver, onFiles, t }: any) {
+function DropZone({ dragOver, onDragOver, onFiles, t, disabled }: any) {
   return (
     <div
-      onDragOver={(e) => { e.preventDefault(); onDragOver(true); }}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) onDragOver(true); }}
       onDragLeave={() => onDragOver(false)}
-      onDrop={(e) => { e.preventDefault(); onDragOver(false); if (e.dataTransfer.files) onFiles(e.dataTransfer.files); }}
-      className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center bg-card shadow-surface transition-all duration-200 cursor-pointer ${ dragOver ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-border/50 hover:border-border' }`}
+      onDrop={(e) => { e.preventDefault(); onDragOver(false); if (e.dataTransfer.files && !disabled) onFiles(e.dataTransfer.files); }}
+      className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center bg-card shadow-surface transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed border-border/50 bg-muted/30' : 'cursor-pointer'} ${ dragOver && !disabled ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-border/50 hover:border-border' }`}
     >
-      <div className="size-14 bg-primary/10 rounded-full flex items-center justify-center mb-4"><Upload className="size-6 text-primary" /></div>
-      <h3 className="font-semibold text-foreground mb-1">{t('upload.dragDrop')}</h3>
-      <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">{t('upload.supported').replace('—', ':')}</p>
-      <label htmlFor="file-upload" className="cursor-pointer">
-        <input id="file-upload" type="file" multiple accept="image/*" onChange={(e) => { if (e.target.files) onFiles(e.target.files); }} className="hidden" />
-        <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 bg-gradient-brand hover:opacity-90 transition-opacity">
-          {t('upload.orClick')}
+      <div className={`size-14 rounded-full flex items-center justify-center mb-4 ${disabled ? 'bg-muted' : 'bg-primary/10'}`}>
+        <Upload className={`size-6 ${disabled ? 'text-muted-foreground' : 'text-primary'}`} />
+      </div>
+      <h3 className="font-semibold text-foreground mb-1">{disabled ? 'Daily Limit Reached' : t('upload.dragDrop')}</h3>
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
+        {disabled ? 'Please come back tomorrow or contact support to increase your limit.' : t('upload.supported').replace('—', ':')}
+      </p>
+      <label htmlFor="file-upload" className={disabled ? 'pointer-events-none' : 'cursor-pointer'}>
+        <input id="file-upload" type="file" multiple accept="image/*" onChange={(e) => { if (e.target.files && !disabled) onFiles(e.target.files); }} className="hidden" />
+        <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 ${disabled ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90 bg-gradient-brand hover:opacity-90 transition-opacity'}`}>
+          {disabled ? 'Blocked' : t('upload.orClick')}
         </div>
       </label>
     </div>

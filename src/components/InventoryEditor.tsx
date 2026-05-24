@@ -13,7 +13,7 @@ interface InventoryEditorProps {
 }
 
 export default function InventoryEditor({ products, onUpdate, onDelete }: InventoryEditorProps) {
-  const [edits, setEdits] = useState<Record<string, { stock: string; low_stock_threshold: string }>>({});
+  const [edits, setEdits] = useState<Record<string, { stock: string }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
@@ -28,11 +28,10 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
   const getEdit = (product: Product) => {
     return edits[product.id] || {
       stock: String(product.stock ?? 0),
-      low_stock_threshold: String(product.low_stock_threshold ?? 5),
     };
   };
 
-  const setField = (id: string, field: 'stock' | 'low_stock_threshold', value: string) => {
+  const setField = (id: string, field: 'stock', value: string) => {
     setEdits((prev) => ({
       ...prev,
       [id]: { ...(prev[id] || getEdit(products.find((p) => p.id === id)!)), [field]: value },
@@ -44,19 +43,14 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
     if (!edit) return;
 
     const stock = parseInt(edit.stock, 10);
-    const low_stock_threshold = parseInt(edit.low_stock_threshold, 10);
 
     if (isNaN(stock) || stock < 0) {
       toast({ title: 'Invalid stock value', variant: 'destructive' });
       return;
     }
-    if (isNaN(low_stock_threshold) || low_stock_threshold < 0) {
-      toast({ title: 'Invalid threshold value', variant: 'destructive' });
-      return;
-    }
 
     setSaving((prev) => ({ ...prev, [product.id]: true }));
-    await onUpdate(product.id, { stock, low_stock_threshold });
+    await onUpdate(product.id, { stock });
     setSaving((prev) => ({ ...prev, [product.id]: false }));
     toast({ title: 'Stock updated', description: `${product.title} stock set to ${stock}` });
   }, [edits, onUpdate, toast]);
@@ -81,9 +75,8 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
       const edit = edits[product.id];
       if (!edit) return [];
       const stock = parseInt(edit.stock, 10);
-      const low_stock_threshold = parseInt(edit.low_stock_threshold, 10);
-      if (!isNaN(stock) && !isNaN(low_stock_threshold) && stock >= 0 && low_stock_threshold >= 0) {
-        return [{ id: product.id, stock, low_stock_threshold }];
+      if (!isNaN(stock) && stock >= 0) {
+        return [{ id: product.id, stock }];
       }
       return [];
     });
@@ -92,7 +85,7 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
 
     await Promise.all(productsToUpdate.map(async (p) => {
       setSaving((prev) => ({ ...prev, [p.id]: true }));
-      await onUpdate(p.id, { stock: p.stock, low_stock_threshold: p.low_stock_threshold });
+      await onUpdate(p.id, { stock: p.stock });
       setSaving((prev) => ({ ...prev, [p.id]: false }));
     }));
 
@@ -141,7 +134,6 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Stock</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Low Stock Threshold</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"></th>
               </tr>
             </thead>
@@ -183,15 +175,6 @@ export default function InventoryEditor({ products, onUpdate, onDelete }: Invent
                           <span className="text-[10px] font-semibold text-red-500 uppercase">Out</span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Input
-                        type="number"
-                        value={edit.low_stock_threshold}
-                        onChange={(e) => setField(product.id, 'low_stock_threshold', e.target.value)}
-                        className="w-20 h-9 text-sm"
-                        min="0"
-                      />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

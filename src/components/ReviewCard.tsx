@@ -14,6 +14,7 @@ interface AIProduct {
   tags: string[];
   size?: string;
   discount_percent?: number;
+  digitization_failed?: boolean;
   confidence?: {
     title: number;
     description: number;
@@ -34,7 +35,7 @@ interface ReviewCardProps {
 const CONFIDENCE_THRESHOLD = 0.7;
 
 export default function ReviewCard({ product, imageUrl, index, onApprove, onReject }: ReviewCardProps) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(product.digitization_failed || false);
   const [edited, setEdited] = useState<AIProduct>({ ...product });
   const { t } = useLanguage();
 
@@ -44,19 +45,34 @@ export default function ReviewCard({ product, imageUrl, index, onApprove, onReje
   };
 
   const isLowConfidence = (field: keyof NonNullable<AIProduct['confidence']>) => {
-    return product.confidence && (product.confidence[field] < CONFIDENCE_THRESHOLD);
+    return product.digitization_failed || (product.confidence && (product.confidence[field] < CONFIDENCE_THRESHOLD));
   };
 
   return (
-    <div className="border border-border/50 rounded-xl overflow-hidden bg-card shadow-surface animate-fade-in">
-      <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 border-b border-border/50">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Product {index + 1}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {product.title}
-        </span>
+    <div className={`border rounded-xl overflow-hidden bg-card shadow-surface animate-fade-in ${product.digitization_failed ? 'border-amber-500/50 ring-1 ring-amber-500/20' : 'border-border/50'}`}>
+      <div className={`flex items-center justify-between px-4 py-2 border-b border-border/50 ${product.digitization_failed ? 'bg-amber-500/10' : 'bg-muted/30'}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Product {index + 1}
+          </span>
+          <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+            {product.title}
+          </span>
+        </div>
+        {product.digitization_failed && (
+          <Badge className="bg-amber-500 text-white text-[9px] uppercase hover:bg-amber-600">AI Digitization Failed</Badge>
+        )}
       </div>
+      
+      {product.digitization_failed && (
+        <div className="px-4 py-2 bg-amber-50 dark:bg-amber-500/5 border-b border-amber-200/50 dark:border-amber-500/20 flex items-center gap-2">
+          <Edit3 className="size-3.5 text-amber-600" />
+          <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+            AI couldn't extract details from this image. Please manually enter the title, price, and description.
+          </p>
+        </div>
+      )}
+
       <div className="p-4 flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-32 h-32 rounded-lg overflow-hidden bg-secondary shrink-0">
           {imageUrl ? (

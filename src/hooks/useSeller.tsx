@@ -24,6 +24,7 @@ interface Seller {
   last_submitted_at: string | null;
   gstin: string | null;
   registered_business_name: string | null;
+  ai_daily_limit: number;
   created_at: string;
 }
 
@@ -81,6 +82,7 @@ type SellerState = {
   products: Product[];
   files: FileRecord[];
   orders: Order[];
+  ai_usage_today: number;
   loading: boolean;
 };
 
@@ -103,6 +105,7 @@ export function useSeller() {
     products: [],
     files: [],
     orders: [],
+    ai_usage_today: 0,
     loading: true,
   });
 
@@ -136,7 +139,13 @@ export function useSeller() {
       .select('*')
       .eq('seller_id', s.id)
       .order('created_at', { ascending: false });
-    dispatch({ type: 'SET_DATA', payload: { files: data || [] } });
+    
+    // Calculate usage today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const usageToday = (data || []).filter(f => new Date(f.created_at) >= startOfDay).length;
+
+    dispatch({ type: 'SET_DATA', payload: { files: data || [], ai_usage_today: usageToday } });
   }, [state.seller]);
 
   const fetchOrders = useCallback(async (currentSeller?: Seller) => {
@@ -311,12 +320,18 @@ export function useSeller() {
             supabase.from('files').select('*').eq('seller_id', s.id).order('created_at', { ascending: false }),
             supabase.from('orders').select('*, product:products(*)').eq('seller_id', s.id).order('created_at', { ascending: false })
           ]);
+          // Calculate usage today
+          const startOfDay = new Date();
+          startOfDay.setHours(0, 0, 0, 0);
+          const usageToday = (filesData.data || []).filter(f => new Date(f.created_at) >= startOfDay).length;
+
           dispatch({ 
             type: 'SET_DATA', 
             payload: { 
               products: productsData.data || [], 
               files: filesData.data || [], 
-              orders: ordersData.data || [] 
+              orders: ordersData.data || [],
+              ai_usage_today: usageToday
             } 
           });
         }

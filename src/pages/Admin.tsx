@@ -66,6 +66,7 @@ interface Seller {
   admin_feedback: string | null;
   gstin: string | null;
   registered_business_name: string | null;
+  ai_daily_limit: number;
   created_at: string;
 }
 
@@ -542,6 +543,24 @@ function FeedbackTab({ feedback, onUpdateStatus, onDelete, t }: any) {
 function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onToggleStatus, onVerify, t }: any) {
   const [rejectFeedback, setRejectFeedback] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
+  const [newAiLimit, setNewAiLimit] = useState(seller.ai_daily_limit?.toString() || "25");
+  const [updatingLimit, setUpdatingLimit] = useState(false);
+  const { toast } = useToast();
+
+  const handleUpdateLimit = async () => {
+    setUpdatingLimit(true);
+    const { error } = await supabase
+      .from("sellers")
+      .update({ ai_daily_limit: parseInt(newAiLimit) })
+      .eq("id", seller.id);
+    
+    setUpdatingLimit(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Limit updated successfully" });
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -631,6 +650,29 @@ function SellerDetails({ seller, products, orders, onBack, onDeleteProduct, onTo
         </div>
 
         <div className="space-y-6">
+          <Card className="border-border/50 shadow-surface">
+            <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" /> AI Usage Limits</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Daily AI Credits</label>
+                <div className="flex gap-2 mt-1">
+                  <Input 
+                    type="number" 
+                    value={newAiLimit} 
+                    onChange={(e) => setNewAiLimit(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                  <Button size="sm" onClick={handleUpdateLimit} disabled={updatingLimit || newAiLimit === seller.ai_daily_limit?.toString()}>
+                    {updatingLimit ? <Loader2 className="size-3 animate-spin" /> : "Update"}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2 italic">
+                  Standard limit is 25 per day. Increasing this allows the seller to digitize more products using AI.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-border/50 shadow-surface">
             <CardHeader><CardTitle className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Verification Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">

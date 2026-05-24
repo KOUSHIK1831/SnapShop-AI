@@ -172,7 +172,51 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Processing digitization for seller: ${sellerId}, image: ${imageUrl}, user: ${userId}`);
+    // ── AI Usage Limit Check ──
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
+
+    // 1. Fetch seller's daily limit
+    const { data: sellerData, error: sellerError } = await supabaseAdmin
+      .from("sellers")
+      .select("ai_daily_limit")
+      .eq("id", sellerId)
+      .single();
+
+    if (sellerError || !sellerData) {
+      console.error("Error fetching seller limit:", sellerError);
+      return new Response(JSON.stringify({ error: "Could not verify AI limits" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const dailyLimit = sellerData.ai_daily_limit ?? 25;
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    // 2. Count usage today
+    // We count rows in 'files' table for this seller created today
+    const { count, error: countError } = await supabaseAdmin
+      .from("files")
+      .select("*", { count: "exact", head: true })
+      .eq("seller_id", sellerId)
+      .gte("created_at", startOfDay.toISOString());
+
+    if (countError) {
+      console.error("Error counting AI usage:", countError);
+    } else if (count !== null && count >= dailyLimit) {
+      return new Response(JSON.stringify({ 
+        error: "limit-exceeded", 
+        message: `Daily AI digitization limit reached (${dailyLimit}). Please try again tomorrow or contact admin to increase your limit.` 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Processing digitization for seller: ${sellerId}, image: ${imageUrl}, user: ${userId} (Usage: ${count}/${dailyLimit})`);
 
     // ── Download image and convert to base64 ──
     const imageResponse = await fetch(imageUrl);

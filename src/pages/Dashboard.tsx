@@ -25,6 +25,7 @@ import {
   HelpCircle,
   Ban,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,7 @@ export default function Dashboard() {
     seller,
     products,
     orders,
+    ai_usage_today,
     loading,
     createSeller,
     submitForVerification,
@@ -60,9 +62,22 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const { startTour } = useWelcomeTour(setActiveTab);
 
+  const isApproved = seller?.verification_status === 'approved';
+
+  useEffect(() => {
+    if (seller && !isApproved && activeTab !== 'settings') {
+      setActiveTab('settings');
+      toast({ 
+        title: "Access Restricted", 
+        description: "Please complete your store setup and wait for admin approval to unlock all features.",
+        variant: "default"
+      });
+    }
+  }, [seller, isApproved, activeTab, toast]);
+
   useEffect(() => {
     let channel: any = null;
-    if (seller?.id) {
+    if (seller?.id && isApproved) {
       fetchProducts();
       channel = supabase.channel("orders-realtime")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `seller_id=eq.${seller.id}` }, () => {
@@ -124,14 +139,21 @@ export default function Dashboard() {
       />
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
         <VerificationStatusBanner seller={seller} onSubmit={submitForVerification} />
-        <DashboardStats productsCount={products.length} seller={seller} t={t} />
-        <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} orders={orders} t={t} />
+        <DashboardStats productsCount={products.length} seller={seller} t={t} isApproved={isApproved} />
+        <DashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} orders={orders} t={t} isApproved={isApproved} />
         <div className="animate-fade-in">
           {activeTab === 'products' && (
             <ProductsList products={products} t={t} onUpload={() => setActiveTab('upload')} onUpdate={updateProduct} onDelete={deleteProduct} />
           )}
           {activeTab === 'orders' && <Orders orders={orders} onUpdateStatus={updateOrderStatus} />}
-          {activeTab === 'upload' && <UploadZone sellerId={seller.id} onComplete={fetchProducts} />}
+          {activeTab === 'upload' && (
+            <UploadZone 
+              sellerId={seller.id} 
+              onComplete={fetchProducts} 
+              usageToday={ai_usage_today}
+              dailyLimit={seller.ai_daily_limit}
+            />
+          )}
           {activeTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
           {activeTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
         </div>
@@ -205,11 +227,16 @@ function DashboardHeader({ seller, t, signOut, startTour, copied, copyStoreLink,
   );
 }
 
-function DashboardStats({ productsCount, seller, t }: any) {
+function DashboardStats({ productsCount, seller, t, isApproved }: any) {
   return (
     <div id="tour-welcome" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
-      <StatCard icon={Package} value={productsCount} label={t('dashboard.totalProducts')} />
-      <StatCard icon={Upload} value={productsCount > 0 ? t('dashboard.active') : t('dashboard.ready')} label={t('dashboard.aiAgent')} color="green" />
+      <StatCard icon={Package} value={isApproved ? productsCount : "—"} label={t('dashboard.totalProducts')} />
+      <StatCard 
+        icon={isApproved ? Upload : Lock} 
+        value={!isApproved ? "Locked" : productsCount > 0 ? t('dashboard.active') : t('dashboard.ready')} 
+        label={t('dashboard.aiAgent')} 
+        color={!isApproved ? "amber" : "green"} 
+      />
       <StatCard icon={Store} value={`/store/${seller.store_slug}`} label={t('dashboard.storeUrl')} color="amber" truncate />
     </div>
   );
@@ -231,32 +258,43 @@ function StatCard({ icon: Icon, value, label, color, truncate }: any) {
   );
 }
 
-function DashboardTabs({ activeTab, setActiveTab, orders, t }: any) {
+function DashboardTabs({ activeTab, setActiveTab, orders, t, isApproved }: any) {
   const tabs = [
-    { id: 'products', label: t('dashboard.tabs.products'), icon: LayoutGrid },
-    { id: 'orders', label: t('dashboard.tabs.orders'), icon: ShoppingBag },
-    { id: 'upload', label: t('dashboard.tabs.upload'), icon: Upload },
-    { id: 'inventory', label: 'Inventory', icon: ClipboardList },
-    { id: 'settings', label: t('dashboard.tabs.settings'), icon: Settings },
+    { id: 'products', label: t('dashboard.tabs.products'), icon: LayoutGrid, protected: true },
+    { id: 'orders', label: t('dashboard.tabs.orders'), icon: ShoppingBag, protected: true },
+    { id: 'upload', label: t('dashboard.tabs.upload'), icon: Upload, protected: true },
+    { id: 'inventory', label: 'Inventory', icon: ClipboardList, protected: true },
+    { id: 'settings', label: t('dashboard.tabs.settings'), icon: Settings, protected: false },
   ];
   return (
     <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <div className="flex w-max gap-1 rounded-xl bg-muted/50 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            data-tour={tab.id}
-            onClick={() => setActiveTab(tab.id as Tab)}
-            className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${ activeTab === tab.id ? 'bg-card text-foreground shadow-surface' : 'text-muted-foreground hover:text-foreground' }`}
-          >
-            <tab.icon className="size-4" />{tab.label}
-            {tab.id === 'orders' && orders.filter((o: any) => o.status === 'pending').length > 0 && (
-              <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-                {orders.filter((o: any) => o.status === 'pending').length}
-              </span>
-            )}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isLocked = tab.protected && !isApproved;
+          return (
+            <button
+              key={tab.id}
+              data-tour={tab.id}
+              onClick={() => !isLocked && setActiveTab(tab.id as Tab)}
+              disabled={isLocked}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                activeTab === tab.id 
+                  ? 'bg-card text-foreground shadow-surface' 
+                  : isLocked 
+                    ? 'text-muted-foreground/40 cursor-not-allowed' 
+                    : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {isLocked ? <Lock className="size-3.5" /> : <tab.icon className="size-4" />}
+              {tab.label}
+              {!isLocked && tab.id === 'orders' && orders.filter((o: any) => o.status === 'pending').length > 0 && (
+                <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+                  {orders.filter((o: any) => o.status === 'pending').length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
