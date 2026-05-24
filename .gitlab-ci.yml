@@ -17,6 +17,7 @@ cache:
 image: node:22-alpine
 
 before_script:
+  - apk add --no-cache git
   - npm ci --cache .npm --prefer-offline
 
 # Fast check for linting and type safety
