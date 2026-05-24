@@ -18,11 +18,7 @@
           "min": 200,
           "max": 1000
         },
-        "tags": [
-          "cotton",
-          "casual",
-          "t-shirt"
-        ]
+        "tags": ["cotton", "casual", "t-shirt"]
       },
       "actual": {
         "title": "Men's Plain White Crew Neck T-Shirt",
@@ -53,24 +49,13 @@
           "min": 500,
           "max": 2500
         },
-        "tags": [
-          "denim",
-          "blue",
-          "casual",
-          "jeans"
-        ]
+        "tags": ["denim", "blue", "casual", "jeans"]
       },
       "actual": {
         "title": "Levi's Men's Classic Denim Jeans - Assorted Washes",
         "category": "Menswear",
         "price": 2999,
-        "tags": [
-          "jeans",
-          "denim",
-          "Levi's",
-          "men's fashion",
-          "casual"
-        ]
+        "tags": ["jeans", "denim", "Levi's", "men's fashion", "casual"]
       },
       "scores": {
         "categoryMatch": true,
@@ -89,12 +74,7 @@
           "min": 500,
           "max": 3000
         },
-        "tags": [
-          "summer",
-          "yellow",
-          "dress",
-          "fashion"
-        ]
+        "tags": ["summer", "yellow", "dress", "fashion"]
       },
       "actual": {
         "title": "Women's Vibrant Yellow Cropped Hoodie & Sweatpants Set",
@@ -125,23 +105,13 @@
           "min": 400,
           "max": 2000
         },
-        "tags": [
-          "formal",
-          "shirt",
-          "office"
-        ]
+        "tags": ["formal", "shirt", "office"]
       },
       "actual": {
         "title": "Women's Distressed Patchwork Denim Jeans",
         "category": "Womenswear",
         "price": 1899,
-        "tags": [
-          "denim",
-          "jeans",
-          "ripped",
-          "patchwork",
-          "casual"
-        ]
+        "tags": ["denim", "jeans", "ripped", "patchwork", "casual"]
       },
       "scores": {
         "categoryMatch": false,
@@ -160,11 +130,7 @@
           "min": 1000,
           "max": 5000
         },
-        "tags": [
-          "jacket",
-          "outerwear",
-          "casual"
-        ]
+        "tags": ["jacket", "outerwear", "casual"]
       },
       "actual": {
         "title": "Rust Brown Bomber Jacket",

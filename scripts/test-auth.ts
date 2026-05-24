@@ -16,17 +16,18 @@ async function test() {
       data: {
         name: 'Test User',
         phone: '+919999999999',
-        role: 'buyer'
-      }
-    }
+        role: 'buyer',
+      },
+    },
   });
   console.log('SignUp Data:', JSON.stringify(data, null, 2));
   console.log('SignUp Error:', error);
 
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password: 'password123'
-  });
+  const { data: signInData, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password: 'password123',
+    });
   console.log('SignIn Error:', signInError);
 }
 

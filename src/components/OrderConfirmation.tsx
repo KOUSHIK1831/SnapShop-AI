@@ -1,4 +1,5 @@
-import { useTranslation } from "react-i18next";import React, { useReducer, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import React, { useReducer, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +18,8 @@ import {
   ShieldCheck,
   ExternalLink,
   Copy,
-  Check } from
-'lucide-react';
+  Check,
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export interface DeliveryAddress {
@@ -43,7 +44,11 @@ interface OrderConfirmationProps {
   preferredPaymentMethod?: string;
   initialAddress?: Partial<DeliveryAddress>;
   selectedSize?: string | null;
-  onConfirm: (address: DeliveryAddress, payMethod: 'cod' | 'online', onlineType?: 'upi_qr' | 'razorpay') => Promise<void>;
+  onConfirm: (
+    address: DeliveryAddress,
+    payMethod: 'cod' | 'online',
+    onlineType?: 'upi_qr' | 'razorpay',
+  ) => Promise<void>;
 }
 
 type Step = 'address' | 'payment' | 'upi_qr' | 'success';
@@ -58,44 +63,75 @@ interface State {
 }
 
 type Action =
-{type: 'SET_FIELD';field: keyof DeliveryAddress;value: string;} |
-{type: 'SET_ERRORS';errors: Partial<DeliveryAddress>;} |
-{type: 'SET_SUBMITTING';value: boolean;} |
-{type: 'SET_PAY_METHOD';method: 'cod' | 'online';} |
-{type: 'SET_ONLINE_TYPE';value: 'upi_qr' | 'razorpay';} |
-{type: 'SET_STEP';step: Step;} |
-{type: 'RESET_ADDRESS';address: DeliveryAddress;};
+  | { type: 'SET_FIELD'; field: keyof DeliveryAddress; value: string }
+  | { type: 'SET_ERRORS'; errors: Partial<DeliveryAddress> }
+  | { type: 'SET_SUBMITTING'; value: boolean }
+  | { type: 'SET_PAY_METHOD'; method: 'cod' | 'online' }
+  | { type: 'SET_ONLINE_TYPE'; value: 'upi_qr' | 'razorpay' }
+  | { type: 'SET_STEP'; step: Step }
+  | { type: 'RESET_ADDRESS'; address: DeliveryAddress };
 
-const emptyAddress: DeliveryAddress = { name: '', phone: '', line1: '', city: '', state: '', pincode: '' };
+const emptyAddress: DeliveryAddress = {
+  name: '',
+  phone: '',
+  line1: '',
+  city: '',
+  state: '',
+  pincode: '',
+};
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'SET_FIELD':return { ...state, address: { ...state.address, [action.field]: action.value }, errors: { ...state.errors, [action.field]: '' } };
-    case 'SET_ERRORS':return { ...state, errors: action.errors };
-    case 'SET_SUBMITTING':return { ...state, submitting: action.value };
-    case 'SET_PAY_METHOD':return { ...state, payMethod: action.method };
-    case 'SET_ONLINE_TYPE':return { ...state, onlineType: action.value };
-    case 'SET_STEP':return { ...state, step: action.step };
-    case 'RESET_ADDRESS':return { ...state, address: action.address };
-    default:return state;
+    case 'SET_FIELD':
+      return {
+        ...state,
+        address: { ...state.address, [action.field]: action.value },
+        errors: { ...state.errors, [action.field]: '' },
+      };
+    case 'SET_ERRORS':
+      return { ...state, errors: action.errors };
+    case 'SET_SUBMITTING':
+      return { ...state, submitting: action.value };
+    case 'SET_PAY_METHOD':
+      return { ...state, payMethod: action.method };
+    case 'SET_ONLINE_TYPE':
+      return { ...state, onlineType: action.value };
+    case 'SET_STEP':
+      return { ...state, step: action.step };
+    case 'RESET_ADDRESS':
+      return { ...state, address: action.address };
+    default:
+      return state;
   }
 }
 
 function validate(address: DeliveryAddress): Partial<DeliveryAddress> {
   const errors: Partial<DeliveryAddress> = {};
   if (!address.name.trim()) errors.name = 'Full name is required';
-  if (!/^\d{10}$/.test(address.phone.replace(/\D/g, ''))) errors.phone = 'Enter a valid 10-digit phone';
+  if (!/^\d{10}$/.test(address.phone.replace(/\D/g, '')))
+    errors.phone = 'Enter a valid 10-digit phone';
   if (!address.line1.trim()) errors.line1 = 'Address is required';
   if (!address.city.trim()) errors.city = 'City is required';
   if (!address.state.trim()) errors.state = 'State is required';
-  if (!/^\d{6}$/.test(address.pincode)) errors.pincode = 'Enter a valid 6-digit pincode';
+  if (!/^\d{6}$/.test(address.pincode))
+    errors.pincode = 'Enter a valid 6-digit pincode';
   return errors;
 }
 
 export default function OrderConfirmation({
-  isOpen, onClose, productTitle, productPrice, discountPercent = 0,
-  sellerName, sellerContact, sellerUpiId, razorpayAccountId, preferredPaymentMethod = 'both',
-  initialAddress, selectedSize, onConfirm
+  isOpen,
+  onClose,
+  productTitle,
+  productPrice,
+  discountPercent = 0,
+  sellerName,
+  sellerContact,
+  sellerUpiId,
+  razorpayAccountId,
+  preferredPaymentMethod = 'both',
+  initialAddress,
+  selectedSize,
+  onConfirm,
 }: OrderConfirmationProps) {
   const { t } = useTranslation();
   const [state, dispatch] = useReducer(reducer, {
@@ -103,32 +139,42 @@ export default function OrderConfirmation({
     submitting: false,
     address: { ...emptyAddress, ...initialAddress },
     payMethod: 'cod',
-    onlineType: sellerUpiId && preferredPaymentMethod !== 'razorpay' ? 'upi_qr' : 'razorpay',
-    errors: {}
+    onlineType:
+      sellerUpiId && preferredPaymentMethod !== 'razorpay'
+        ? 'upi_qr'
+        : 'razorpay',
+    errors: {},
   });
 
   const [copied, setCopied] = useState(false);
 
   React.useEffect(() => {
     if (isOpen && initialAddress) {
-      dispatch({ type: 'RESET_ADDRESS', address: { ...emptyAddress, ...initialAddress } });
+      dispatch({
+        type: 'RESET_ADDRESS',
+        address: { ...emptyAddress, ...initialAddress },
+      });
       dispatch({ type: 'SET_STEP', step: 'address' });
       // Reset online type based on available seller options
-      const defaultOnline = sellerUpiId && preferredPaymentMethod !== 'razorpay' ? t("auto.upi_qr") : t("auto.razorpay");
+      const defaultOnline =
+        sellerUpiId && preferredPaymentMethod !== 'razorpay'
+          ? t('auto.upi_qr')
+          : t('auto.razorpay');
       dispatch({ type: 'SET_ONLINE_TYPE', value: defaultOnline });
     }
   }, [isOpen, initialAddress, sellerUpiId, preferredPaymentMethod]);
 
   if (!isOpen) return null;
 
-  const finalPrice = discountPercent > 0 ?
-  Math.round(productPrice * (1 - discountPercent / 100)) :
-  productPrice;
+  const finalPrice =
+    discountPercent > 0
+      ? Math.round(productPrice * (1 - discountPercent / 100))
+      : productPrice;
 
   // UPI Deep Link for Indian apps
-  const upiLink = sellerUpiId ?
-  `upi://pay?pa=${sellerUpiId}&pn=${encodeURIComponent(sellerName || 'Seller')}&am=${finalPrice}&cu=INR&tn=${encodeURIComponent(`Order: ${productTitle}`)}` :
-  '';
+  const upiLink = sellerUpiId
+    ? `upi://pay?pa=${sellerUpiId}&pn=${encodeURIComponent(sellerName || 'Seller')}&am=${finalPrice}&cu=INR&tn=${encodeURIComponent(`Order: ${productTitle}`)}`
+    : '';
 
   const handleAddressSubmit = async () => {
     const errors = validate(state.address);
@@ -162,64 +208,109 @@ export default function OrderConfirmation({
     }
   };
 
-  const field = (key: keyof DeliveryAddress, label: string, placeholder: string, type = 'text') =>
-  <div>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+  const field = (
+    key: keyof DeliveryAddress,
+    label: string,
+    placeholder: string,
+    type = 'text',
+  ) => (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
       <Input
-      type={type}
-      placeholder={placeholder}
-      value={state.address[key]}
-      onChange={(e) => dispatch({ type: 'SET_FIELD', field: key, value: e.target.value })}
-      className={state.errors[key] ? t("auto.border_destructive") : ''} />
-    
-      {state.errors[key] && <p className="text-xs text-destructive mt-0.5">{state.errors[key]}</p>}
-    </div>;
+        type={type}
+        placeholder={placeholder}
+        value={state.address[key]}
+        onChange={e =>
+          dispatch({ type: 'SET_FIELD', field: key, value: e.target.value })
+        }
+        className={state.errors[key] ? t('auto.border_destructive') : ''}
+      />
 
+      {state.errors[key] && (
+        <p className="text-xs text-destructive mt-0.5">{state.errors[key]}</p>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <button className="absolute inset-0 bg-black/60 backdrop-blur-sm border-none p-0 w-full h-full cursor-default" onClick={onClose} aria-label={t("order.close")} />
+      <button
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm border-none p-0 w-full h-full cursor-default"
+        onClick={onClose}
+        aria-label={t('order.close')}
+      />
 
-      <div className="relative w-full sm:max-w-md mx-0 sm:mx-4 bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border/50 animate-slide-up overflow-hidden max-h-[92vh] flex flex-col" role="dialog" aria-modal={t("auto.true")}>
-
+      <div
+        className="relative w-full sm:max-w-md mx-0 sm:mx-4 bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border/50 animate-slide-up overflow-hidden max-h-[92vh] flex flex-col"
+        role="dialog"
+        aria-modal={t('auto.true')}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 shrink-0">
           <div>
             <h2 className="font-semibold text-foreground">
-              {state.step === 'address' ? t("auto.delivery_address") : state.step === 'payment' ? t("auto.payment_method") : state.step === 'upi_qr' ? t("auto.scan_to_pay") : t("auto.order_placed")}
+              {state.step === 'address'
+                ? t('auto.delivery_address')
+                : state.step === 'payment'
+                  ? t('auto.payment_method')
+                  : state.step === 'upi_qr'
+                    ? t('auto.scan_to_pay')
+                    : t('auto.order_placed')}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {state.step === 'address' ? productTitle : state.step === 'payment' ? t("auto.choose_how_you_want_to_pay") : state.step === 'upi_qr' ? `Direct payment to ${sellerName}` : t("auto.your_order_has_been_sent_to_th")}
+              {state.step === 'address'
+                ? productTitle
+                : state.step === 'payment'
+                  ? t('auto.choose_how_you_want_to_pay')
+                  : state.step === 'upi_qr'
+                    ? `Direct payment to ${sellerName}`
+                    : t('auto.your_order_has_been_sent_to_th')}
             </p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             <X className="size-5" />
           </button>
         </div>
 
         {/* Step 1 — Address */}
-        {state.step === 'address' &&
-        <>
+        {state.step === 'address' && (
+          <>
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
               {/* Order summary strip */}
               <div className="bg-muted/40 rounded-xl p-3 flex items-center justify-between text-sm border border-border/50">
-                <span className="text-muted-foreground truncate mr-2">{productTitle}</span>
+                <span className="text-muted-foreground truncate mr-2">
+                  {productTitle}
+                </span>
                 <div className="shrink-0 text-right">
-                  {discountPercent > 0 ?
-                <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground line-through">₹{productPrice}</span>
-                      <span className="font-bold text-primary">₹{finalPrice}</span>
-                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">{discountPercent}{t("auto.off")}</span>
-                    </div> :
-
-                <span className="font-bold text-primary">₹{productPrice}</span>
-                }
+                  {discountPercent > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground line-through">
+                        ₹{productPrice}
+                      </span>
+                      <span className="font-bold text-primary">
+                        ₹{finalPrice}
+                      </span>
+                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                        {discountPercent}
+                        {t('auto.off')}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-primary">
+                      ₹{productPrice}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                 <MapPin className="size-3.5 shrink-0 text-primary" />
-                <span>{t("auto.where_should_we_deliver_this")}</span>
+                <span>{t('auto.where_should_we_deliver_this')}</span>
               </div>
 
               {field('name', 'Full Name', 'Enter your full name')}
@@ -234,221 +325,364 @@ export default function OrderConfirmation({
             </div>
 
             <div className="px-5 py-4 border-t border-border/50 shrink-0">
-              <Button onClick={handleAddressSubmit} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-11 font-bold text-base">{t("auto.proceed_to_payment")}
+              <Button
+                onClick={handleAddressSubmit}
+                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-11 font-bold text-base"
+              >
+                {t('auto.proceed_to_payment')}
 
-              <ChevronRight className="size-4 ml-2" />
+                <ChevronRight className="size-4 ml-2" />
               </Button>
             </div>
           </>
-        }
+        )}
 
         {/* Step 2 — Payment Selection */}
-        {state.step === 'payment' &&
-        <>
+        {state.step === 'payment' && (
+          <>
             <div className="overflow-y-auto flex-1 px-5 py-6 space-y-6">
               <RadioGroup
-              value={state.payMethod}
-              onValueChange={(v) => dispatch({ type: 'SET_PAY_METHOD', method: v as 'cod' | 'online' })}
-              className="grid grid-cols-1 gap-4">
-              
+                value={state.payMethod}
+                onValueChange={v =>
+                  dispatch({
+                    type: 'SET_PAY_METHOD',
+                    method: v as 'cod' | 'online',
+                  })
+                }
+                className="grid grid-cols-1 gap-4"
+              >
                 <div className="relative">
-                  <RadioGroupItem value={t("auto.cod")} id="pay-cod" className="peer sr-only" />
+                  <RadioGroupItem
+                    value={t('auto.cod')}
+                    id="pay-cod"
+                    className="peer sr-only"
+                  />
                   <Label
-                  htmlFor={t("auto.pay_cod")}
-                  className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary">
-                  
+                    htmlFor={t('auto.pay_cod')}
+                    className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary"
+                  >
                     <div className="size-10 bg-muted rounded-full flex items-center justify-center shrink-0 peer-data-[state=checked]:bg-primary/10">
                       <Banknote className="size-5 text-muted-foreground peer-data-[state=checked]:text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm">{t("auto.cash_on_delivery")}</p>
-                      <p className="text-xs text-muted-foreground">{t("auto.pay_when_your_order_arrives")}</p>
+                      <p className="font-semibold text-sm">
+                        {t('auto.cash_on_delivery')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('auto.pay_when_your_order_arrives')}
+                      </p>
                     </div>
                   </Label>
                 </div>
 
                 <div className="relative">
-                  <RadioGroupItem value={t("auto.online")} id="pay-online" className="peer sr-only" />
+                  <RadioGroupItem
+                    value={t('auto.online')}
+                    id="pay-online"
+                    className="peer sr-only"
+                  />
                   <Label
-                  htmlFor={t("auto.pay_online")}
-                  className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary">
-                  
+                    htmlFor={t('auto.pay_online')}
+                    className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all [&:has([data-state=checked])]:border-primary"
+                  >
                     <div className="size-10 bg-muted rounded-full flex items-center justify-center shrink-0 peer-data-[state=checked]:bg-primary/10">
                       <CreditCard className="size-5 text-muted-foreground peer-data-[state=checked]:text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm">{t("auto.online_payment")}</p>
-                      <p className="text-xs text-muted-foreground">{t("auto.upi_cards_or_qr_code")}</p>
+                      <p className="font-semibold text-sm">
+                        {t('auto.online_payment')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('auto.upi_cards_or_qr_code')}
+                      </p>
                     </div>
                   </Label>
                 </div>
               </RadioGroup>
 
-              {state.payMethod === 'online' &&
-            <div className="space-y-3 animate-fade-in">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider ml-1">{t("auto.choose_payment_method")}</p>
+              {state.payMethod === 'online' && (
+                <div className="space-y-3 animate-fade-in">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider ml-1">
+                    {t('auto.choose_payment_method')}
+                  </p>
                   <RadioGroup
-                value={state.onlineType}
-                onValueChange={(v) => dispatch({ type: 'SET_ONLINE_TYPE', value: v as 'upi_qr' | 'razorpay' })}
-                className="grid grid-cols-1 gap-3">
-                
-                    {sellerUpiId && (preferredPaymentMethod === 'upi' || preferredPaymentMethod === 'both') &&
-                <div className="relative">
-                        <RadioGroupItem value={t("auto.upi_qr")} id="opt-upi" className="peer sr-only" />
-                        <Label
-                    htmlFor={t("auto.opt_upi")}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/5 peer-data-[state=checked]:border-primary/50 peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all">
-                    
-                          <QrCode className="size-4 text-primary" />
-                          <div className="flex-1">
-                            <p className="font-medium text-xs">{t("auto.direct_shop_upi_zero_fees")}</p>
-                            <p className="text-[10px] text-muted-foreground">{t("auto.scan_qr_pay_directly_to_seller")}</p>
-                          </div>
-                        </Label>
-                      </div>
-                }
-                    {razorpayAccountId && (preferredPaymentMethod === 'razorpay' || preferredPaymentMethod === 'both') &&
-                <div className="relative">
-                        <RadioGroupItem value={t("auto.razorpay")} id="opt-rzp" className="peer sr-only" />
-                        <Label
-                    htmlFor={t("auto.opt_rzp")}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/5 peer-data-[state=checked]:border-primary/50 peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all">
-                    
-                          <ShieldCheck className="size-4 text-primary" />
-                          <div className="flex-1">
-                            <p className="font-medium text-xs">{t("auto.secure_online_payment")}</p>
-                            <p className="text-[10px] text-muted-foreground">{t("auto.cards_netbanking_auto_upi")}</p>
-                          </div>
-                        </Label>
-                      </div>
-                }
+                    value={state.onlineType}
+                    onValueChange={v =>
+                      dispatch({
+                        type: 'SET_ONLINE_TYPE',
+                        value: v as 'upi_qr' | 'razorpay',
+                      })
+                    }
+                    className="grid grid-cols-1 gap-3"
+                  >
+                    {sellerUpiId &&
+                      (preferredPaymentMethod === 'upi' ||
+                        preferredPaymentMethod === 'both') && (
+                        <div className="relative">
+                          <RadioGroupItem
+                            value={t('auto.upi_qr')}
+                            id="opt-upi"
+                            className="peer sr-only"
+                          />
+                          <Label
+                            htmlFor={t('auto.opt_upi')}
+                            className="flex items-center gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/5 peer-data-[state=checked]:border-primary/50 peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+                          >
+                            <QrCode className="size-4 text-primary" />
+                            <div className="flex-1">
+                              <p className="font-medium text-xs">
+                                {t('auto.direct_shop_upi_zero_fees')}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {t('auto.scan_qr_pay_directly_to_seller')}
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      )}
+                    {razorpayAccountId &&
+                      (preferredPaymentMethod === 'razorpay' ||
+                        preferredPaymentMethod === 'both') && (
+                        <div className="relative">
+                          <RadioGroupItem
+                            value={t('auto.razorpay')}
+                            id="opt-rzp"
+                            className="peer sr-only"
+                          />
+                          <Label
+                            htmlFor={t('auto.opt_rzp')}
+                            className="flex items-center gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/5 peer-data-[state=checked]:border-primary/50 peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+                          >
+                            <ShieldCheck className="size-4 text-primary" />
+                            <div className="flex-1">
+                              <p className="font-medium text-xs">
+                                {t('auto.secure_online_payment')}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {t('auto.cards_netbanking_auto_upi')}
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      )}
                   </RadioGroup>
                 </div>
-            }
+              )}
 
               <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-700 dark:text-amber-400">
-                {state.payMethod === 'cod' ? t("auto.please_keep_cash_ready_for_the") :
-
-              state.onlineType === 'upi_qr' ? t("auto.direct_payment_via_qr_code_mon") : t("auto.secure_payment_gateway_powered")
-
-              }
+                {state.payMethod === 'cod'
+                  ? t('auto.please_keep_cash_ready_for_the')
+                  : state.onlineType === 'upi_qr'
+                    ? t('auto.direct_payment_via_qr_code_mon')
+                    : t('auto.secure_payment_gateway_powered')}
               </div>
             </div>
 
             <div className="px-5 py-4 border-t border-border/50 shrink-0 space-y-3">
-              <Button onClick={handlePaymentSubmit} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg">
-                {state.payMethod === 'online' && state.onlineType === 'upi_qr' ? t("auto.view_qr_code") : t("auto.confirm_order")} · ₹{finalPrice}
+              <Button
+                onClick={handlePaymentSubmit}
+                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg"
+              >
+                {state.payMethod === 'online' && state.onlineType === 'upi_qr'
+                  ? t('auto.view_qr_code')
+                  : t('auto.confirm_order')}{' '}
+                · ₹{finalPrice}
               </Button>
-              <button onClick={() => dispatch({ type: 'SET_STEP', step: 'address' })} className="w-full text-xs text-muted-foreground hover:text-foreground font-medium py-1">{t("auto.edit_delivery_address")}
-
-            </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_STEP', step: 'address' })}
+                className="w-full text-xs text-muted-foreground hover:text-foreground font-medium py-1"
+              >
+                {t('auto.edit_delivery_address')}
+              </button>
             </div>
           </>
-        }
+        )}
 
         {/* Step 3 — UPI QR Display */}
-        {state.step === 'upi_qr' &&
-        <>
+        {state.step === 'upi_qr' && (
+          <>
             <div className="flex-1 px-5 py-6 flex flex-col items-center justify-center text-center space-y-6 overflow-y-auto">
               <div className="bg-white p-4 rounded-2xl shadow-xl border border-border/50">
-                <QRCodeSVG value={upiLink} size={200} level={t("auto.h")} includeMargin />
+                <QRCodeSVG
+                  value={upiLink}
+                  size={200}
+                  level={t('auto.h')}
+                  includeMargin
+                />
               </div>
-              
+
               <div className="space-y-1">
-                <p className="text-sm font-bold text-foreground">{t("auto.scan_to_pay_593")}{finalPrice}</p>
-                <p className="text-xs text-muted-foreground">{t("auto.use_gpay_phonepe_paytm_or_any")}</p>
+                <p className="text-sm font-bold text-foreground">
+                  {t('auto.scan_to_pay_593')}
+                  {finalPrice}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('auto.use_gpay_phonepe_paytm_or_any')}
+                </p>
               </div>
 
               <div className="w-full bg-muted/30 rounded-xl p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{t("auto.shop_upi_id")}</span>
-                  <button onClick={copyUpi} className="flex items-center gap-1.5 text-primary font-semibold hover:underline">
-                    {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  <span className="text-muted-foreground">
+                    {t('auto.shop_upi_id')}
+                  </span>
+                  <button
+                    onClick={copyUpi}
+                    className="flex items-center gap-1.5 text-primary font-semibold hover:underline"
+                  >
+                    {copied ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
                     {sellerUpiId}
                   </button>
                 </div>
               </div>
 
               <div className="text-left w-full space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("auto.instructions")}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {t('auto.instructions')}
+                </p>
                 <ul className="text-[11px] text-muted-foreground space-y-1.5">
-                  <li className="flex gap-2"><div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">1</div>{t("auto.scan_and_pay_from_your_mobile")}</li>
-                  <li className="flex gap-2"><div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">2</div>{t("auto.click_i_have_paid_below_after")}</li>
-                  <li className="flex gap-2"><div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">3</div>{t("auto.seller_will_verify_and_confirm")}</li>
+                  <li className="flex gap-2">
+                    <div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">
+                      1
+                    </div>
+                    {t('auto.scan_and_pay_from_your_mobile')}
+                  </li>
+                  <li className="flex gap-2">
+                    <div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">
+                      2
+                    </div>
+                    {t('auto.click_i_have_paid_below_after')}
+                  </li>
+                  <li className="flex gap-2">
+                    <div className="size-4 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">
+                      3
+                    </div>
+                    {t('auto.seller_will_verify_and_confirm')}
+                  </li>
                 </ul>
               </div>
             </div>
 
             <div className="px-5 py-4 border-t border-border/50 shrink-0 space-y-3">
-              <Button onClick={handleFinalConfirm} disabled={state.submitting} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg">
-                {state.submitting ? <Loader2 className="size-5 mr-2 animate-spin" /> : <CheckCircle2 className="size-5 mr-2" />}{t("auto.i_have_paid")}
-              {finalPrice}
+              <Button
+                onClick={handleFinalConfirm}
+                disabled={state.submitting}
+                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg"
+              >
+                {state.submitting ? (
+                  <Loader2 className="size-5 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="size-5 mr-2" />
+                )}
+                {t('auto.i_have_paid')}
+                {finalPrice}
               </Button>
-              <button onClick={() => dispatch({ type: 'SET_STEP', step: 'payment' })} className="w-full text-xs text-muted-foreground hover:text-foreground font-medium py-1">{t("auto.change_payment_method")}
-
-            </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_STEP', step: 'payment' })}
+                className="w-full text-xs text-muted-foreground hover:text-foreground font-medium py-1"
+              >
+                {t('auto.change_payment_method')}
+              </button>
             </div>
           </>
-        }
+        )}
 
         {/* Success View */}
-        {state.step === 'success' &&
-        <div className="px-5 py-8 text-center space-y-4">
+        {state.step === 'success' && (
+          <div className="px-5 py-8 text-center space-y-4">
             <div className="size-16 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="size-8 text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-lg">{t("order.title")}</h3>
+              <h3 className="font-semibold text-foreground text-lg">
+                {t('order.title')}
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {state.payMethod === 'online' && state.onlineType === 'upi_qr' ? t("auto.seller_will_verify_your_paymen") : t("auto.the_seller_will_confirm_your_o")
-
-              }
+                {state.payMethod === 'online' && state.onlineType === 'upi_qr'
+                  ? t('auto.seller_will_verify_your_paymen')
+                  : t('auto.the_seller_will_confirm_your_o')}
               </p>
             </div>
 
             <div className="bg-muted/40 rounded-xl p-4 text-left space-y-2 border border-border/50">
-              <Row label={t("orders.product")} value={productTitle} />
-              {selectedSize && <Row label={t("auto.size")} value={selectedSize} />}
-              <Row label={t("auto.amount")} value={`₹${finalPrice}${discountPercent > 0 ? ` (${discountPercent}% off)` : ''}`} />
-              <Row label={t("auto.paid_via")} value={state.payMethod === 'cod' ? t("auto.cash_on_delivery") : state.onlineType === 'upi_qr' ? t("auto.direct_upi") : t("auto.online_payment")} />
-              
+              <Row label={t('orders.product')} value={productTitle} />
+              {selectedSize && (
+                <Row label={t('auto.size')} value={selectedSize} />
+              )}
+              <Row
+                label={t('auto.amount')}
+                value={`₹${finalPrice}${discountPercent > 0 ? ` (${discountPercent}% off)` : ''}`}
+              />
+              <Row
+                label={t('auto.paid_via')}
+                value={
+                  state.payMethod === 'cod'
+                    ? t('auto.cash_on_delivery')
+                    : state.onlineType === 'upi_qr'
+                      ? t('auto.direct_upi')
+                      : t('auto.online_payment')
+                }
+              />
+
               <div className="border-t border-border/50 pt-2 mt-2">
-                <p className="text-xs text-muted-foreground mb-1">{t("auto.delivering_to")}</p>
-                <p className="text-sm font-medium text-foreground">{state.address.name}</p>
-                <p className="text-xs text-muted-foreground">{state.address.line1}, {state.address.city}, {state.address.state} – {state.address.pincode}</p>
-                <p className="text-xs text-muted-foreground">{state.address.phone}</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {t('auto.delivering_to')}
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {state.address.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {state.address.line1}, {state.address.city},{' '}
+                  {state.address.state} – {state.address.pincode}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {state.address.phone}
+                </p>
               </div>
             </div>
 
-            {sellerContact &&
-          <Button
-            variant="outline"
-            className="w-full bg-green-500/5 hover:bg-green-500/10 border-green-500/20 text-green-600 h-10"
-            onClick={() => {
-              const clean = sellerContact.replace(/\D/g, '');
-              const msg = `Hi ${sellerName || 'Seller'}, I just placed an order for "${productTitle}" on ApnaBazar! Paid via ${state.payMethod === 'cod' ? t("auto.cod_843") : t("auto.direct_upi")}. Delivering to ${state.address.line1}, ${state.address.city} – ${state.address.pincode}`;
-              window.open(`https://wa.me/${clean}/?text=${encodeURIComponent(msg)}`, '_blank');
-            }}>
-            
-                <MessageCircle className="size-4 mr-2" />{t("orders.whatsapp")}
-          </Button>
-          }
+            {sellerContact && (
+              <Button
+                variant="outline"
+                className="w-full bg-green-500/5 hover:bg-green-500/10 border-green-500/20 text-green-600 h-10"
+                onClick={() => {
+                  const clean = sellerContact.replace(/\D/g, '');
+                  const msg = `Hi ${sellerName || 'Seller'}, I just placed an order for "${productTitle}" on ApnaBazar! Paid via ${state.payMethod === 'cod' ? t('auto.cod_843') : t('auto.direct_upi')}. Delivering to ${state.address.line1}, ${state.address.city} – ${state.address.pincode}`;
+                  window.open(
+                    `https://wa.me/${clean}/?text=${encodeURIComponent(msg)}`,
+                    '_blank',
+                  );
+                }}
+              >
+                <MessageCircle className="size-4 mr-2" />
+                {t('orders.whatsapp')}
+              </Button>
+            )}
 
-            <Button onClick={onClose} className="w-full bg-gradient-brand hover:opacity-90 transition-opacity">{t("auto.continue_shopping")}
-
-          </Button>
+            <Button
+              onClick={onClose}
+              className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
+            >
+              {t('auto.continue_shopping')}
+            </Button>
           </div>
-        }
+        )}
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
-function Row({ label, value }: {label: string;value: string;}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground text-right max-w-[60%] truncate">{value}</span>
-    </div>);
-
+      <span className="font-medium text-foreground text-right max-w-[60%] truncate">
+        {value}
+      </span>
+    </div>
+  );
 }

@@ -5,7 +5,9 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error('Missing Supabase environment variables. Please check your .env file.');
+  console.error(
+    'Missing Supabase environment variables. Please check your .env.example file for the required keys.',
+  );
 }
 
 export const supabase = createClient<Database>(
@@ -16,6 +18,6 @@ export const supabase = createClient<Database>(
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
-    }
-  }
+    },
+  },
 );

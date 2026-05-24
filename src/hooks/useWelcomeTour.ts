@@ -23,7 +23,8 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           element: '#tour-welcome',
           popover: {
             title: 'Welcome to ApnaBazar!',
-            description: 'Let us show you around your seller dashboard. Everything you need to manage your store is right here.',
+            description:
+              'Let us show you around your seller dashboard. Everything you need to manage your store is right here.',
             side: 'center',
             align: 'center',
           },
@@ -32,40 +33,44 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           element: '[data-tour="products"]',
           popover: {
             title: 'Product Catalog',
-            description: 'Your primary view. Manage all your listed products, edit details, and track stock from here.',
+            description:
+              'Your primary view. Manage all your listed products, edit details, and track stock from here.',
             side: 'top',
           },
           onHighlighted: () => {
             setActiveTab?.('products');
-          }
+          },
         },
         {
           element: '[data-tour="tools"]',
           popover: {
             title: 'Store Management',
-            description: 'Your hub for daily operations. Process customer orders, upload new products with AI, and manage inventory.',
+            description:
+              'Your hub for daily operations. Process customer orders, upload new products with AI, and manage inventory.',
             side: 'top',
           },
           onHighlighted: () => {
             setActiveTab?.('tools');
-          }
+          },
         },
         {
           element: '[data-tour="profile"]',
           popover: {
             title: 'Store Profile',
-            description: 'View deep analytics, update your store settings, and manage your account details.',
+            description:
+              'View deep analytics, update your store settings, and manage your account details.',
             side: 'top',
           },
           onHighlighted: () => {
             setActiveTab?.('profile');
-          }
+          },
         },
         {
           element: '#tour-feedback',
           popover: {
             title: 'Share Feedback',
-            description: 'Have a suggestion or found a bug? Let us know! Your feedback helps us improve ApnaBazar.',
+            description:
+              'Have a suggestion or found a bug? Let us know! Your feedback helps us improve ApnaBazar.',
             side: 'bottom',
           },
         },
@@ -73,7 +78,8 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           element: '#tour-language',
           popover: {
             title: 'Language Preferences',
-            description: 'ApnaBazar is available in multiple languages. You can switch between English, Telugu, and Hindi at any time.',
+            description:
+              'ApnaBazar is available in multiple languages. You can switch between English, Telugu, and Hindi at any time.',
             side: 'bottom',
           },
         },

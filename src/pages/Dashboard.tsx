@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,8 +31,8 @@ import {
   BarChart3,
   Wrench,
   User,
-  ChevronRight} from
-'lucide-react';
+  ChevronRight,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -44,7 +44,12 @@ import { NetworkStrengthIndicator } from '@/components/NetworkStrengthIndicator'
 import { cn } from '@/lib/utils';
 
 export type Tab = 'products' | 'tools' | 'profile';
-export type SubTab = 'orders' | 'upload' | 'inventory' | 'analytics' | 'settings';
+export type SubTab =
+  | 'orders'
+  | 'upload'
+  | 'inventory'
+  | 'analytics'
+  | 'settings';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -74,7 +79,7 @@ export default function Dashboard() {
     updateSellerProfile,
     updateProduct,
     deleteProduct,
-    updateOrderStatus
+    updateOrderStatus,
   } = useSeller();
   const [copied, setCopied] = useState(false);
   const { startTour } = useWelcomeTour(setActiveTab);
@@ -85,9 +90,10 @@ export default function Dashboard() {
     if (seller && !isApproved && activeTab !== 'profile') {
       setSearchParams({ tab: 'profile', sub: 'settings' });
       toast({
-        title: "Access Restricted",
-        description: "Please complete your store setup and wait for admin approval to unlock all features.",
-        variant: "default"
+        title: 'Access Restricted',
+        description:
+          'Please complete your store setup and wait for admin approval to unlock all features.',
+        variant: 'default',
       });
     }
   }, [seller, isApproved, activeTab, toast]);
@@ -96,14 +102,29 @@ export default function Dashboard() {
     let channel: any = null;
     if (seller?.id && isApproved) {
       fetchProducts();
-      channel = supabase.channel("orders-realtime").
-      on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `seller_id=eq.${seller.id}` }, () => {
-        toast({ title: t('orders.newOrder'), description: t('orders.newOrderDesc') });
-        fetchOrders();
-      }).
-      subscribe();
+      channel = supabase
+        .channel('orders-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'orders',
+            filter: `seller_id=eq.${seller.id}`,
+          },
+          () => {
+            toast({
+              title: t('orders.newOrder'),
+              description: t('orders.newOrderDesc'),
+            });
+            fetchOrders();
+          },
+        )
+        .subscribe();
     }
-    return () => {if (channel) channel.unsubscribe();};
+    return () => {
+      if (channel) channel.unsubscribe();
+    };
   }, [seller?.id, toast, t, fetchProducts, fetchOrders]);
 
   useEffect(() => {
@@ -111,17 +132,30 @@ export default function Dashboard() {
   }, [user?.role, navigate]);
 
   useEffect(() => {
-    const lowStock = products.filter((p) => p.stock !== undefined && p.stock > 0 && p.stock <= (p.low_stock_threshold || 5));
+    const lowStock = products.filter(
+      p =>
+        p.stock !== undefined &&
+        p.stock > 0 &&
+        p.stock <= (p.low_stock_threshold || 5),
+    );
     if (lowStock.length > 0 && seller?.store_name) {
-      toast({ title: "Low Stock Alert", description: `${lowStock.length} product(s) running low on stock.` });
+      toast({
+        title: 'Low Stock Alert',
+        description: `${lowStock.length} product(s) running low on stock.`,
+      });
     }
   }, [products, seller?.store_name, toast]);
 
   const copyStoreLink = () => {
     if (seller?.store_slug) {
-      navigator.clipboard.writeText(`${window.location.origin}/store/${seller.store_slug}`);
+      navigator.clipboard.writeText(
+        `${window.location.origin}/store/${seller.store_slug}`,
+      );
       setCopied(true);
-      toast({ title: t('dashboard.copied'), description: t('settings.shareLink') });
+      toast({
+        title: t('dashboard.copied'),
+        description: t('settings.shareLink'),
+      });
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -132,14 +166,27 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6">
         <div className="max-w-6xl mx-auto">
-          <DashboardNav t={t} signOut={signOut} startTour={startTour} showHeaderOnly />
-          <StoreSetup onComplete={async (data) => {
-            const result = await createSeller(data);
-            if (result?.error) toast({ title: 'Error creating store', description: (result.error as any).message || String(result.error), variant: 'destructive' });
-          }} />
+          <DashboardNav
+            t={t}
+            signOut={signOut}
+            startTour={startTour}
+            showHeaderOnly
+          />
+          <StoreSetup
+            onComplete={async data => {
+              const result = await createSeller(data);
+              if (result?.error)
+                toast({
+                  title: 'Error creating store',
+                  description:
+                    (result.error as any).message || String(result.error),
+                  variant: 'destructive',
+                });
+            }}
+          />
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   return (
@@ -152,65 +199,97 @@ export default function Dashboard() {
         startTour={startTour}
         copied={copied}
         copyStoreLink={copyStoreLink}
-        navigate={navigate} />
-      
+        navigate={navigate}
+      />
+
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
-        <VerificationStatusBanner seller={seller} onSubmit={submitForVerification} />
-        
+        <VerificationStatusBanner
+          seller={seller}
+          onSubmit={submitForVerification}
+        />
+
         <div className="animate-fade-in">
-          {activeTab === 'products' &&
+          {activeTab === 'products' && (
             <>
-              <DashboardStats productsCount={products.length} seller={seller} t={t} isApproved={isApproved} />
-              <ProductsList products={products} t={t} onUpload={() => setSearchParams({ tab: 'tools', sub: 'upload' })} onUpdate={updateProduct} onDelete={deleteProduct} />
+              <DashboardStats
+                productsCount={products.length}
+                seller={seller}
+                t={t}
+                isApproved={isApproved}
+              />
+              <ProductsList
+                products={products}
+                t={t}
+                onUpload={() =>
+                  setSearchParams({ tab: 'tools', sub: 'upload' })
+                }
+                onUpdate={updateProduct}
+                onDelete={deleteProduct}
+              />
             </>
-          }
+          )}
 
           {activeTab === 'tools' && (
             <div className="space-y-6">
               {!subTab ? (
                 <>
-                  <h2 className="text-2xl font-bold text-foreground mb-6">Store Management</h2>
+                  <h2 className="text-2xl font-bold text-foreground mb-6">
+                    Store Management
+                  </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <ToolCard 
-                      icon={ShoppingBag} 
-                      label={t('dashboard.tabs.orders')} 
+                    <ToolCard
+                      icon={ShoppingBag}
+                      label={t('dashboard.tabs.orders')}
                       description="Manage and track customer orders"
-                      onClick={() => setSubTab('orders')} 
-                      color="green" 
+                      onClick={() => setSubTab('orders')}
+                      color="green"
                     />
-                    <ToolCard 
-                      icon={Upload} 
-                      label={t('dashboard.tabs.upload')} 
+                    <ToolCard
+                      icon={Upload}
+                      label={t('dashboard.tabs.upload')}
                       description="Digitize new products with AI"
-                      onClick={() => setSubTab('upload')} 
-                      color="blue" 
+                      onClick={() => setSubTab('upload')}
+                      color="blue"
                     />
-                    <ToolCard 
-                      icon={ClipboardList} 
-                      label="Inventory" 
+                    <ToolCard
+                      icon={ClipboardList}
+                      label="Inventory"
                       description="Quickly edit stock and prices"
-                      onClick={() => setSubTab('inventory')} 
-                      color="amber" 
+                      onClick={() => setSubTab('inventory')}
+                      color="amber"
                     />
                   </div>
                 </>
               ) : (
                 <div className="space-y-4">
-                  <button 
+                  <button
                     onClick={() => setSubTab(null)}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                   >
-                    <ChevronRight className="size-4 rotate-180" /> Back to Manage
+                    <ChevronRight className="size-4 rotate-180" /> Back to
+                    Manage
                   </button>
-                  {subTab === 'orders' && <Orders orders={orders} onUpdateStatus={updateOrderStatus} />}
-                  {subTab === 'upload' &&
+                  {subTab === 'orders' && (
+                    <Orders
+                      orders={orders}
+                      onUpdateStatus={updateOrderStatus}
+                    />
+                  )}
+                  {subTab === 'upload' && (
                     <UploadZone
                       sellerId={seller.id}
                       onComplete={fetchProducts}
                       usageToday={ai_usage_today}
-                      dailyLimit={seller.ai_daily_limit} />
-                  }
-                  {subTab === 'inventory' && <InventoryEditor products={products} onUpdate={updateProduct} onDelete={deleteProduct} />}
+                      dailyLimit={seller.ai_daily_limit}
+                    />
+                  )}
+                  {subTab === 'inventory' && (
+                    <InventoryEditor
+                      products={products}
+                      onUpdate={updateProduct}
+                      onDelete={deleteProduct}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -222,114 +301,231 @@ export default function Dashboard() {
                 <div className="size-24 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <User className="size-12 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground">{seller.store_name}</h2>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {seller.store_name}
+                </h2>
                 <p className="text-muted-foreground">{user?.email}</p>
-                
+
                 <div className="flex gap-4 mt-6">
-                  <Button variant="outline" size="sm" onClick={() => setSubTab('analytics')} className={cn((subTab === 'analytics' || !subTab) && "bg-primary/5 border-primary text-primary")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubTab('analytics')}
+                    className={cn(
+                      (subTab === 'analytics' || !subTab) &&
+                        'bg-primary/5 border-primary text-primary',
+                    )}
+                  >
                     <BarChart3 className="size-4 mr-2" /> Analytics
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setSubTab('settings')} className={cn(subTab === 'settings' && "bg-primary/5 border-primary text-primary")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubTab('settings')}
+                    className={cn(
+                      subTab === 'settings' &&
+                        'bg-primary/5 border-primary text-primary',
+                    )}
+                  >
                     <Settings className="size-4 mr-2" /> Settings
                   </Button>
                 </div>
               </div>
 
               <div className="animate-fade-in">
-                {(subTab === 'analytics' || !subTab) && <Analytics orders={orders} />}
-                {subTab === 'settings' && <StoreSettings seller={seller} onUpdate={updateSellerProfile} />}
+                {(subTab === 'analytics' || !subTab) && (
+                  <Analytics orders={orders} />
+                )}
+                {subTab === 'settings' && (
+                  <StoreSettings
+                    seller={seller}
+                    onUpdate={updateSellerProfile}
+                  />
+                )}
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <Skeleton className="h-12 w-48" /><Skeleton className="h-64 w-full" />
+        <Skeleton className="h-12 w-48" />
+        <Skeleton className="h-64 w-full" />
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
-        <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center"><Store className="size-4 text-white" /></div>
-        <h1 className="text-xl font-semibold text-foreground">{t("common.appName")}</h1>
+        <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center">
+          <Store className="size-4 text-white" />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground">
+          {t('common.appName')}
+        </h1>
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <ThemeToggle />
         <LanguageSwitcher />
-        {!showHeaderOnly &&
-        <>
+        {!showHeaderOnly && (
+          <>
             <FeedbackModal />
-            <Button variant="ghost" size="sm" onClick={startTour} className="text-muted-foreground hover:text-primary"><HelpCircle className="size-4" /></Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={startTour}
+              className="text-muted-foreground hover:text-primary"
+            >
+              <HelpCircle className="size-4" />
+            </Button>
           </>
-        }
-        <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="size-4 mr-2" />{t('common.signOut')}</Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={signOut}>
+          <LogOut className="size-4 mr-2" />
+          {t('common.signOut')}
+        </Button>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
-function DashboardHeader({ seller, t, signOut, startTour, copied, copyStoreLink, navigate }: any) {
+function DashboardHeader({
+  seller,
+  t,
+  signOut,
+  startTour,
+  copied,
+  copyStoreLink,
+  navigate,
+}: any) {
   return (
     <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
-              <div className="size-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center"><Store className="size-4 text-white" /></div>
-              <div className="min-w-0"><h1 className="text-sm font-semibold text-foreground leading-tight">{t("common.appName")}</h1><p className="truncate text-[11px] text-muted-foreground leading-tight">{seller.store_name}</p></div>
+              <div className="size-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center">
+                <Store className="size-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold text-foreground leading-tight">
+                  {t('common.appName')}
+                </h1>
+                <p className="truncate text-[11px] text-muted-foreground leading-tight">
+                  {seller.store_name}
+                </p>
+              </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
               <NetworkStrengthIndicator />
-              <ThemeToggle /><LanguageSwitcher variant="compact" /><FeedbackModal />
-              <Button variant="ghost" size="sm" onClick={startTour} title={t("auto.help_tour")}><HelpCircle className="size-4" /></Button>
-              <Button variant="ghost" size="sm" onClick={signOut} title={t('common.signOut')}><LogOut className="size-3.5" /></Button>
+              <ThemeToggle />
+              <LanguageSwitcher variant="compact" />
+              <FeedbackModal />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startTour}
+                title={t('auto.help_tour')}
+              >
+                <HelpCircle className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                title={t('common.signOut')}
+              >
+                <LogOut className="size-3.5" />
+              </Button>
             </div>
           </div>
           <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
             <div className="flex w-max items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyStoreLink} className="shrink-0 border-border/50 text-xs">
-                {copied ? <Check className="mr-1.5 size-3.5" /> : <Copy className="mr-1.5 size-3.5" />}
-                <span>{copied ? t('dashboard.copied') : t('dashboard.copyLink')}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyStoreLink}
+                className="shrink-0 border-border/50 text-xs"
+              >
+                {copied ? (
+                  <Check className="mr-1.5 size-3.5" />
+                ) : (
+                  <Copy className="mr-1.5 size-3.5" />
+                )}
+                <span>
+                  {copied ? t('dashboard.copied') : t('dashboard.copyLink')}
+                </span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate(`/store/${seller.store_slug}`)} className="shrink-0 border-border/50 text-xs">
-                <ExternalLink className="mr-1.5 size-3.5" /><span>{t('dashboard.viewStore')}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/store/${seller.store_slug}`)}
+                className="shrink-0 border-border/50 text-xs"
+              >
+                <ExternalLink className="mr-1.5 size-3.5" />
+                <span>{t('dashboard.viewStore')}</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
-    </header>);
-
+    </header>
+  );
 }
 
 function DashboardStats({ productsCount, seller, t, isApproved }: any) {
   return (
-    <div id="tour-welcome" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
-      <StatCard icon={Package} value={isApproved ? productsCount : "—"} label={t('dashboard.totalProducts')} />
+    <div
+      id="tour-welcome"
+      className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in"
+    >
+      <StatCard
+        icon={Package}
+        value={isApproved ? productsCount : '—'}
+        label={t('dashboard.totalProducts')}
+      />
       <StatCard
         icon={isApproved ? Upload : Lock}
-        value={!isApproved ? t("auto.locked") : productsCount > 0 ? t('dashboard.active') : t('dashboard.ready')}
+        value={
+          !isApproved
+            ? t('auto.locked')
+            : productsCount > 0
+              ? t('dashboard.active')
+              : t('dashboard.ready')
+        }
         label={t('dashboard.aiAgent')}
-        color={!isApproved ? t("auto.amber") : t("auto.green")} />
-      
-      <StatCard icon={Store} value={`/store/${seller.store_slug}`} label={t('dashboard.storeUrl')} color="amber" truncate />
-    </div>);
+        color={!isApproved ? t('auto.amber') : t('auto.green')}
+      />
 
+      <StatCard
+        icon={Store}
+        value={`/store/${seller.store_slug}`}
+        label={t('dashboard.storeUrl')}
+        color="amber"
+        truncate
+      />
+    </div>
+  );
 }
 
-function ToolCard({ icon: Icon, label, description, onClick, color, active }: any) {
+function ToolCard({
+  icon: Icon,
+  label,
+  description,
+  onClick,
+  color,
+  active,
+}: any) {
   const colorMap: any = {
     blue: 'text-blue-500 bg-blue-500/10',
     green: 'text-green-500 bg-green-500/10',
@@ -341,18 +537,25 @@ function ToolCard({ icon: Icon, label, description, onClick, color, active }: an
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center p-5 rounded-2xl border transition-all duration-300 text-left gap-4",
-        active 
-          ? "border-primary bg-primary/5 shadow-sm" 
-          : "border-border/50 bg-card hover:shadow-lg hover:border-border"
+        'flex items-center p-5 rounded-2xl border transition-all duration-300 text-left gap-4',
+        active
+          ? 'border-primary bg-primary/5 shadow-sm'
+          : 'border-border/50 bg-card hover:shadow-lg hover:border-border',
       )}
     >
-      <div className={cn("size-12 shrink-0 rounded-xl flex items-center justify-center", colorMap[color])}>
+      <div
+        className={cn(
+          'size-12 shrink-0 rounded-xl flex items-center justify-center',
+          colorMap[color],
+        )}
+      >
         <Icon className="size-6" />
       </div>
       <div>
         <p className="font-bold text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground line-clamp-1">{description}</p>
+        <p className="text-xs text-muted-foreground line-clamp-1">
+          {description}
+        </p>
       </div>
       <ChevronRight className="size-4 ml-auto text-muted-foreground/50" />
     </button>
@@ -364,43 +567,85 @@ function StatCard({ icon: Icon, value, label, color, truncate }: any) {
   return (
     <div className="border border-border/50 rounded-xl p-5 bg-card shadow-surface hover:shadow-surface-lg transition-shadow">
       <div className="flex items-center gap-3">
-        <div className={`size-10 rounded-xl flex items-center justify-center ${color === 'green' ? t("auto.bg_green_500_10_text_green_500") : color === 'amber' ? t("auto.bg_amber_500_10_text_amber_500") : t("auto.bg_primary_10_text_primary")}`}>
+        <div
+          className={`size-10 rounded-xl flex items-center justify-center ${color === 'green' ? t('auto.bg_green_500_10_text_green_500') : color === 'amber' ? t('auto.bg_amber_500_10_text_amber_500') : t('auto.bg_primary_10_text_primary')}`}
+        >
           <Icon className="size-5" />
         </div>
         <div className="min-w-0">
-          <p className={`text-2xl font-bold text-foreground ${truncate ? t("auto.text_sm_truncate_max_w_140px") : t("auto.tabular_nums")}`}>{value}</p>
+          <p
+            className={`text-2xl font-bold text-foreground ${truncate ? t('auto.text_sm_truncate_max_w_140px') : t('auto.tabular_nums')}`}
+          >
+            {value}
+          </p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
   if (products.length === 0) {
     return (
       <div className="border border-dashed border-border/50 rounded-xl p-16 text-center">
-        <div className="size-14 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"><Package className="size-6 text-muted-foreground" /></div>
-        <h3 className="font-medium text-foreground mb-2">{t('dashboard.noProducts')}</h3>
-        <p className="text-sm text-muted-foreground mb-4">{t('dashboard.noProductsDesc')}</p>
-        <Button onClick={onUpload} className="bg-gradient-brand hover:opacity-90 transition-opacity"><Upload className="size-4 mr-2" />{t('dashboard.uploadProducts')}</Button>
-      </div>);
-
+        <div className="size-14 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <Package className="size-6 text-muted-foreground" />
+        </div>
+        <h3 className="font-medium text-foreground mb-2">
+          {t('dashboard.noProducts')}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {t('dashboard.noProductsDesc')}
+        </p>
+        <Button
+          onClick={onUpload}
+          className="bg-gradient-brand hover:opacity-90 transition-opacity"
+        >
+          <Upload className="size-4 mr-2" />
+          {t('dashboard.uploadProducts')}
+        </Button>
+      </div>
+    );
   }
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold text-foreground">{t('dashboard.catalog')} ({products.length})</h2>
-        <Button size="sm" variant="outline" onClick={onUpload} className="w-full border-border/50 sm:w-auto"><Upload className="size-3.5 mr-1.5" />{t('dashboard.addProducts')}</Button>
+        <h2 className="text-lg font-semibold text-foreground">
+          {t('dashboard.catalog')} ({products.length})
+        </h2>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onUpload}
+          className="w-full border-border/50 sm:w-auto"
+        >
+          <Upload className="size-3.5 mr-1.5" />
+          {t('dashboard.addProducts')}
+        </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product: any) => <ProductCard key={product.id} product={product} editable onUpdate={onUpdate} onDelete={onDelete} />)}
+        {products.map((product: any) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            editable
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />
+        ))}
       </div>
-    </>);
-
+    </>
+  );
 }
 
-function VerificationStatusBanner({ seller, onSubmit }: {seller: any;onSubmit: any;}) {
+function VerificationStatusBanner({
+  seller,
+  onSubmit,
+}: {
+  seller: any;
+  onSubmit: any;
+}) {
   const [showResubmit, setShowResubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -415,19 +660,25 @@ function VerificationStatusBanner({ seller, onSubmit }: {seller: any;onSubmit: a
           <Clock className="size-5 text-amber-600" />
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400">{t("auto.store_verification_pending")}</h3>
-          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">{t("auto.our_admins_are_reviewing_your")}
-
+          <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400">
+            {t('auto.store_verification_pending')}
+          </h3>
+          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+            {t('auto.our_admins_are_reviewing_your')}
           </p>
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   if (seller.verification_status === 'rejected') {
-    const lastSubmitted = seller.last_submitted_at ? new Date(seller.last_submitted_at) : null;
+    const lastSubmitted = seller.last_submitted_at
+      ? new Date(seller.last_submitted_at)
+      : null;
     const now = new Date();
-    const hoursDiff = lastSubmitted ? (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60) : 24;
+    const hoursDiff = lastSubmitted
+      ? (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60)
+      : 24;
     const canResubmit = hoursDiff >= 24;
     const hoursLeft = Math.ceil(24 - hoursDiff);
 
@@ -438,44 +689,76 @@ function VerificationStatusBanner({ seller, onSubmit }: {seller: any;onSubmit: a
             <Ban className="size-5 text-red-600" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-red-900 dark:text-red-400">{t("auto.verification_rejected")}</h3>
-            <p className="text-xs text-red-700 dark:text-red-500 mt-1">{t("auto.reason")}
-              <span className="font-semibold italic">"{seller.admin_feedback || 'Documentation incomplete'}"</span>
+            <h3 className="text-sm font-bold text-red-900 dark:text-red-400">
+              {t('auto.verification_rejected')}
+            </h3>
+            <p className="text-xs text-red-700 dark:text-red-500 mt-1">
+              {t('auto.reason')}
+              <span className="font-semibold italic">
+                "{seller.admin_feedback || 'Documentation incomplete'}"
+              </span>
             </p>
-            {!canResubmit &&
-            <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
-                <Clock className="size-3" />{t("auto.you_can_resubmit_in")}{hoursLeft}{t("auto.hours")}
-            </p>
-            }
+            {!canResubmit && (
+              <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
+                <Clock className="size-3" />
+                {t('auto.you_can_resubmit_in')}
+                {hoursLeft}
+                {t('auto.hours')}
+              </p>
+            )}
           </div>
-          {canResubmit && !showResubmit &&
-          <Button size="sm" onClick={() => setShowResubmit(true)} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">{t("auto.update_resubmit")}
-
-          </Button>
-          }
+          {canResubmit && !showResubmit && (
+            <Button
+              size="sm"
+              onClick={() => setShowResubmit(true)}
+              variant="outline"
+              className="border-red-200 text-red-600 hover:bg-red-50"
+            >
+              {t('auto.update_resubmit')}
+            </Button>
+          )}
         </div>
 
-        {showResubmit &&
-        <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
-            <StoreSetup onComplete={async (data) => {
-            setIsSubmitting(true);
-            const { error } = await onSubmit({
-              gstin: data.gstin,
-              registered_business_name: data.registered_business_name,
-              documents: data.verification_documents
-            });
-            setIsSubmitting(false);
-            if (error) toast({ title: "Error", description: error.message, variant: "destructive" });else
-            {
-              toast({ title: "Resubmitted!", description: "Your details have been sent for re-verification." });
-              setShowResubmit(false);
-            }
-          }} />
-            <Button variant="ghost" size="sm" onClick={() => setShowResubmit(false)} className="w-full mt-2" disabled={isSubmitting}>{t("auto.cancel")}</Button>
+        {showResubmit && (
+          <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
+            <StoreSetup
+              onComplete={async data => {
+                setIsSubmitting(true);
+                const { error } = await onSubmit({
+                  gstin: data.gstin,
+                  registered_business_name: data.registered_business_name,
+                  documents: data.verification_documents,
+                });
+                setIsSubmitting(false);
+                if (error)
+                  toast({
+                    title: 'Error',
+                    description: error.message,
+                    variant: 'destructive',
+                  });
+                else {
+                  toast({
+                    title: 'Resubmitted!',
+                    description:
+                      'Your details have been sent for re-verification.',
+                  });
+                  setShowResubmit(false);
+                }
+              }}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowResubmit(false)}
+              className="w-full mt-2"
+              disabled={isSubmitting}
+            >
+              {t('auto.cancel')}
+            </Button>
           </div>
-        }
-      </div>);
-
+        )}
+      </div>
+    );
   }
 
   return null;

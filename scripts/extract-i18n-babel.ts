@@ -13,11 +13,30 @@ const LOCALES_DIR = path.resolve(SRC_DIR, 'locales/en');
 const TRANSLATION_PATH = path.resolve(LOCALES_DIR, 'translation.json');
 
 const BLACKLISTED_ATTRS = new Set([
-  'className', 'id', 'src', 'href', 'target', 'rel', 'type', 'key', 'ref', 'name', 'variant', 'size', 'color', 'icon', 'role', 'aria-hidden'
+  'className',
+  'id',
+  'src',
+  'href',
+  'target',
+  'rel',
+  'type',
+  'key',
+  'ref',
+  'name',
+  'variant',
+  'size',
+  'color',
+  'icon',
+  'role',
+  'aria-hidden',
 ]);
 
 const TRANSLATABLE_ATTRS = new Set([
-  'placeholder', 'title', 'label', 'description', 'alt'
+  'placeholder',
+  'title',
+  'label',
+  'description',
+  'alt',
 ]);
 
 interface ExtractedString {
@@ -46,10 +65,12 @@ function getFiles(dir: string): string[] {
     const stat = fs.statSync(fullPath);
     if (stat && stat.isDirectory()) {
       // Exclude node_modules, tests, and UI components
-      if (!fullPath.includes('node_modules') && 
-          !fullPath.includes('.test.') && 
-          !fullPath.includes('__tests__') && 
-          !fullPath.includes('src/components/ui')) {
+      if (
+        !fullPath.includes('node_modules') &&
+        !fullPath.includes('.test.') &&
+        !fullPath.includes('__tests__') &&
+        !fullPath.includes('src/components/ui')
+      ) {
         results = results.concat(getFiles(fullPath));
       }
     } else {
@@ -63,16 +84,20 @@ function getFiles(dir: string): string[] {
 
 function generateKey(str: string): string {
   // Simple key generator: prefix with 'auto.', lowercase, replace non-alphanumeric with underscore, truncate
-  const slug = str.toLowerCase()
+  const slug = str
+    .toLowerCase()
     .replace(/[^a-z0-9]/g, '_')
     .replace(/_+/g, '_')
     .substring(0, 30)
     .replace(/^_|_$/g, '');
-  
+
   return `auto.${slug || 'string'}`;
 }
 
-function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): boolean {
+function processFile(
+  filePath: string,
+  mode: 'scan' | 'replace' | 'check',
+): boolean {
   const code = fs.readFileSync(filePath, 'utf-8');
   let ast: any;
   try {
@@ -95,7 +120,11 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
   const visitor = {
     ImportDeclaration(path: any) {
       if (path.node.source.value === 'react-i18next') {
-        if (path.node.specifiers.some((s: any) => s.imported?.name === 'useTranslation')) {
+        if (
+          path.node.specifiers.some(
+            (s: any) => s.imported?.name === 'useTranslation',
+          )
+        ) {
           hasUseTranslationImport = true;
         }
       }
@@ -103,7 +132,12 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
     VariableDeclarator(path: any) {
       if (
         t.isObjectPattern(path.node.id) &&
-        path.node.id.properties.some((p: any) => t.isObjectProperty(p) && t.isIdentifier(p.key) && p.key.name === 't') &&
+        path.node.id.properties.some(
+          (p: any) =>
+            t.isObjectProperty(p) &&
+            t.isIdentifier(p.key) &&
+            p.key.name === 't',
+        ) &&
         t.isCallExpression(path.node.init) &&
         t.isIdentifier(path.node.init.callee) &&
         path.node.init.callee.name === 'useTranslation'
@@ -114,9 +148,16 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
     JSXText(path: any) {
       const value = path.node.value.trim();
       if (value && !/^[0-9\W]+$/.test(value)) {
-        localExtracted.push({ value, filePath, line: path.node.loc.start.line, column: path.node.loc.start.column });
+        localExtracted.push({
+          value,
+          filePath,
+          line: path.node.loc.start.line,
+          column: path.node.loc.start.column,
+        });
         if (mode === 'replace') {
-          let key = Object.keys(translations).find(k => translations[k] === value);
+          let key = Object.keys(translations).find(
+            k => translations[k] === value,
+          );
           if (!key) {
             key = generateKey(value);
             while (translations[key] && translations[key] !== value) {
@@ -124,7 +165,11 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
             }
             translations[key] = value;
           }
-          path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier('t'), [t.stringLiteral(key)])));
+          path.replaceWith(
+            t.jsxExpressionContainer(
+              t.callExpression(t.identifier('t'), [t.stringLiteral(key)]),
+            ),
+          );
           fileChanged = true;
           needsTFunction = true;
         }
@@ -132,14 +177,24 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
     },
     JSXAttribute(path: any) {
       const name = path.node.name.name;
-      if (TRANSLATABLE_ATTRS.has(name) || (!BLACKLISTED_ATTRS.has(name) && typeof name === 'string')) {
+      if (
+        TRANSLATABLE_ATTRS.has(name) ||
+        (!BLACKLISTED_ATTRS.has(name) && typeof name === 'string')
+      ) {
         const valueNode = path.node.value;
         if (t.isStringLiteral(valueNode)) {
           const value = valueNode.value.trim();
           if (value && !/^[0-9\W]+$/.test(value)) {
-            localExtracted.push({ value, filePath, line: valueNode.loc.start.line, column: valueNode.loc.start.column });
+            localExtracted.push({
+              value,
+              filePath,
+              line: valueNode.loc.start.line,
+              column: valueNode.loc.start.column,
+            });
             if (mode === 'replace') {
-              let key = Object.keys(translations).find(k => translations[k] === value);
+              let key = Object.keys(translations).find(
+                k => translations[k] === value,
+              );
               if (!key) {
                 key = generateKey(value);
                 while (translations[key] && translations[key] !== value) {
@@ -147,7 +202,13 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
                 }
                 translations[key] = value;
               }
-              path.get('value').replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier('t'), [t.stringLiteral(key)])));
+              path
+                .get('value')
+                .replaceWith(
+                  t.jsxExpressionContainer(
+                    t.callExpression(t.identifier('t'), [t.stringLiteral(key)]),
+                  ),
+                );
               fileChanged = true;
               needsTFunction = true;
             }
@@ -157,16 +218,36 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
     },
     StringLiteral(path: any) {
       // Avoid strings inside imports, exports, and blacklisted attributes
-      if (t.isImportDeclaration(path.parent) || t.isExportDeclaration(path.parent) || t.isJSXAttribute(path.parent)) return;
-      
+      if (
+        t.isImportDeclaration(path.parent) ||
+        t.isExportDeclaration(path.parent) ||
+        t.isJSXAttribute(path.parent)
+      )
+        return;
+
       const value = path.node.value.trim();
-      if (value && !/^[0-9\W]+$/.test(value) && !path.node.value.includes('\n')) {
+      if (
+        value &&
+        !/^[0-9\W]+$/.test(value) &&
+        !path.node.value.includes('\n')
+      ) {
         // This might catch too much, but let's see. Typically we want strings in JSX expressions or return statements.
         // For now, let's limit to strings that are likely UI text.
-        if (t.isJSXExpressionContainer(path.parent) || t.isReturnStatement(path.parent) || t.isConditionalExpression(path.parent)) {
-          localExtracted.push({ value, filePath, line: path.node.loc.start.line, column: path.node.loc.start.column });
+        if (
+          t.isJSXExpressionContainer(path.parent) ||
+          t.isReturnStatement(path.parent) ||
+          t.isConditionalExpression(path.parent)
+        ) {
+          localExtracted.push({
+            value,
+            filePath,
+            line: path.node.loc.start.line,
+            column: path.node.loc.start.column,
+          });
           if (mode === 'replace') {
-            let key = Object.keys(translations).find(k => translations[k] === value);
+            let key = Object.keys(translations).find(
+              k => translations[k] === value,
+            );
             if (!key) {
               key = generateKey(value);
               while (translations[key] && translations[key] !== value) {
@@ -174,7 +255,9 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
               }
               translations[key] = value;
             }
-            path.replaceWith(t.callExpression(t.identifier('t'), [t.stringLiteral(key)]));
+            path.replaceWith(
+              t.callExpression(t.identifier('t'), [t.stringLiteral(key)]),
+            );
             fileChanged = true;
             needsTFunction = true;
           }
@@ -185,9 +268,16 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
       if (path.node.expressions.length === 0) {
         const value = path.node.quasis[0].value.cooked.trim();
         if (value && !/^[0-9\W]+$/.test(value)) {
-          localExtracted.push({ value, filePath, line: path.node.loc.start.line, column: path.node.loc.start.column });
+          localExtracted.push({
+            value,
+            filePath,
+            line: path.node.loc.start.line,
+            column: path.node.loc.start.column,
+          });
           if (mode === 'replace') {
-            let key = Object.keys(translations).find(k => translations[k] === value);
+            let key = Object.keys(translations).find(
+              k => translations[k] === value,
+            );
             if (!key) {
               key = generateKey(value);
               while (translations[key] && translations[key] !== value) {
@@ -195,13 +285,15 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
               }
               translations[key] = value;
             }
-            path.replaceWith(t.callExpression(t.identifier('t'), [t.stringLiteral(key)]));
+            path.replaceWith(
+              t.callExpression(t.identifier('t'), [t.stringLiteral(key)]),
+            );
             fileChanged = true;
             needsTFunction = true;
           }
         }
       }
-    }
+    },
   };
 
   traverse(ast, visitor);
@@ -217,40 +309,66 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
           body.unshift(
             t.variableDeclaration('const', [
               t.variableDeclarator(
-                t.objectPattern([t.objectProperty(t.identifier('t'), t.identifier('t'), false, true)]),
-                t.callExpression(t.identifier('useTranslation'), [])
-              )
-            ])
+                t.objectPattern([
+                  t.objectProperty(
+                    t.identifier('t'),
+                    t.identifier('t'),
+                    false,
+                    true,
+                  ),
+                ]),
+                t.callExpression(t.identifier('useTranslation'), []),
+              ),
+            ]),
           );
           hookAdded = true;
         },
         ArrowFunctionExpression(path: any) {
           if (hookAdded) return;
-          if (t.isVariableDeclarator(path.parent) && t.isBlockStatement(path.node.body)) {
+          if (
+            t.isVariableDeclarator(path.parent) &&
+            t.isBlockStatement(path.node.body)
+          ) {
             const body = path.node.body.body;
             body.unshift(
               t.variableDeclaration('const', [
                 t.variableDeclarator(
-                  t.objectPattern([t.objectProperty(t.identifier('t'), t.identifier('t'), false, true)]),
-                  t.callExpression(t.identifier('useTranslation'), [])
-                )
-              ])
+                  t.objectPattern([
+                    t.objectProperty(
+                      t.identifier('t'),
+                      t.identifier('t'),
+                      false,
+                      true,
+                    ),
+                  ]),
+                  t.callExpression(t.identifier('useTranslation'), []),
+                ),
+              ]),
             );
             hookAdded = true;
           }
-        }
+        },
       });
     }
 
     if (needsTFunction && !hasUseTranslationImport) {
       const importNode = t.importDeclaration(
-        [t.importSpecifier(t.identifier('useTranslation'), t.identifier('useTranslation'))],
-        t.stringLiteral('react-i18next')
+        [
+          t.importSpecifier(
+            t.identifier('useTranslation'),
+            t.identifier('useTranslation'),
+          ),
+        ],
+        t.stringLiteral('react-i18next'),
       );
       ast.program.body.unshift(importNode);
     }
 
-    const output = generate(ast, { retainLines: true, jscsEnabled: false }, code);
+    const output = generate(
+      ast,
+      { retainLines: true, jscsEnabled: false },
+      code,
+    );
     fs.writeFileSync(filePath, output.code);
   }
 
@@ -259,7 +377,11 @@ function processFile(filePath: string, mode: 'scan' | 'replace' | 'check'): bool
 }
 
 const args = process.argv.slice(2);
-const mode = args.includes('--replace') ? 'replace' : args.includes('--check') ? 'check' : 'scan';
+const mode = args.includes('--replace')
+  ? 'replace'
+  : args.includes('--check')
+    ? 'check'
+    : 'scan';
 
 const files = getFiles(SRC_DIR);
 let foundAny = false;

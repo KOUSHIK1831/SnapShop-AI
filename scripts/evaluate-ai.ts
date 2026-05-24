@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
-import { supabase } from "../src/integrations/supabase/client";
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join } from 'path';
+import { supabase } from '../src/integrations/supabase/client';
 
 interface GroundTruthItem {
   id: string;
@@ -16,7 +16,7 @@ interface GroundTruthItem {
 interface EvalItem {
   id: string;
   image: string;
-  expected: GroundTruthItem["expected"];
+  expected: GroundTruthItem['expected'];
   actual: any;
   scores: {
     categoryMatch: boolean;
@@ -51,17 +51,19 @@ function stringSimilarity(s1: string, s2: string): number {
 }
 
 function jaccardSimilarity(a1: string[], a2: string[]): number {
-  const s1 = new Set(a1.map((s) => s.toLowerCase().trim()));
-  const s2 = new Set(a2.map((s) => s.toLowerCase().trim()));
-  const intersection = new Set([...s1].filter((x) => s2.has(x)));
+  const s1 = new Set(a1.map(s => s.toLowerCase().trim()));
+  const s2 = new Set(a2.map(s => s.toLowerCase().trim()));
+  const intersection = new Set([...s1].filter(x => s2.has(x)));
   const union = new Set([...s1, ...s2]);
   return intersection.size / union.size;
 }
 
 async function callDigitize(imagePath: string) {
   try {
-    const { data, error } = await supabase.functions.invoke("digitize", {
-      body: { imageUrl: `https://raw.githubusercontent.com/stackblitz/stackblitz-apnabazar/main/ai-eval/images/${imagePath}` },
+    const { data, error } = await supabase.functions.invoke('digitize', {
+      body: {
+        imageUrl: `https://raw.githubusercontent.com/stackblitz/stackblitz-apnabazar/main/ai-eval/images/${imagePath}`,
+      },
     });
     if (error) throw error;
     return data;
@@ -72,16 +74,16 @@ async function callDigitize(imagePath: string) {
 }
 
 async function main() {
-  const groundTruthPath = join(process.cwd(), "ai-eval", "ground-truth.json");
-  const outputPath = join(process.cwd(), "ai-eval", "results.json");
+  const groundTruthPath = join(process.cwd(), 'ai-eval', 'ground-truth.json');
+  const outputPath = join(process.cwd(), 'ai-eval', 'results.json');
 
   if (!existsSync(groundTruthPath)) {
-    console.error("Ground truth file not found!");
+    console.error('Ground truth file not found!');
     process.exit(1);
   }
 
   const groundTruth: GroundTruthItem[] = JSON.parse(
-    readFileSync(groundTruthPath, "utf-8")
+    readFileSync(groundTruthPath, 'utf-8'),
   );
 
   console.log(`\n AI Accuracy Evaluation`);
@@ -90,10 +92,12 @@ async function main() {
 
   console.log(`Processing ${groundTruth.length} items concurrently...\n`);
 
-  const results = await Promise.all(groundTruth.map(async (item) => {
-    const actual = await callDigitize(item.image);
-    return { item, actual };
-  }));
+  const results = await Promise.all(
+    groundTruth.map(async item => {
+      const actual = await callDigitize(item.image);
+      return { item, actual };
+    }),
+  );
 
   const items: EvalItem[] = [];
   let categoryCorrect = 0;
@@ -104,7 +108,9 @@ async function main() {
 
   for (const { item, actual } of results) {
     processedCount++;
-    console.log(`[${item.id}] ${item.image} - ${actual ? 'Success' : 'Failed'}`);
+    console.log(
+      `[${item.id}] ${item.image} - ${actual ? 'Success' : 'Failed'}`,
+    );
 
     if (actual) {
       const categoryMatch =
@@ -134,13 +140,13 @@ async function main() {
       tagJaccardSum += tagJaccard;
 
       console.log(
-        `  → Category: ${categoryMatch ? "✓" : "✗"} (got: ${actual.category}, expected: ${item.expected.category})`
+        `  → Category: ${categoryMatch ? '✓' : '✗'} (got: ${actual.category}, expected: ${item.expected.category})`,
       );
       console.log(
-        `  → Title sim: ${(titleSim * 100).toFixed(0)}%  (got: "${actual.title}")`
+        `  → Title sim: ${(titleSim * 100).toFixed(0)}%  (got: "${actual.title}")`,
       );
       console.log(
-        `  → Price: ${priceInRange ? "✓" : "✗"} ₹${actual.price} [expected ₹${item.expected.priceRange.min}-${item.expected.priceRange.max}]`
+        `  → Price: ${priceInRange ? '✓' : '✗'} ₹${actual.price} [expected ₹${item.expected.priceRange.min}-${item.expected.priceRange.max}]`,
       );
       console.log(`  → Tag Jaccard: ${(tagJaccard * 100).toFixed(0)}%`);
     } else {
@@ -149,11 +155,16 @@ async function main() {
         image: item.image,
         expected: item.expected,
         actual: null,
-        scores: { categoryMatch: false, titleSimilarity: 0, priceInRange: false, tagJaccard: 0 },
+        scores: {
+          categoryMatch: false,
+          titleSimilarity: 0,
+          priceInRange: false,
+          tagJaccard: 0,
+        },
       });
       console.log(`  → SKIPPED (no result)`);
     }
-    console.log("");
+    console.log('');
   }
 
   const finalResults: EvalResults = {
@@ -161,12 +172,24 @@ async function main() {
     summary: {
       total: groundTruth.length,
       processed: processedCount,
-      success: items.filter((i) => i.actual).length,
+      success: items.filter(i => i.actual).length,
       accuracy: {
-        category: Math.round((categoryCorrect / items.filter((i) => i.actual).length) * 100) || 0,
-        price: Math.round((priceInRangeCount / items.filter((i) => i.actual).length) * 100) || 0,
-        titleSimilarity: Math.round((titleSimilaritySum / items.filter((i) => i.actual).length) * 100) || 0,
-        tagJaccard: Math.round((tagJaccardSum / items.filter((i) => i.actual).length) * 100) || 0,
+        category:
+          Math.round(
+            (categoryCorrect / items.filter(i => i.actual).length) * 100,
+          ) || 0,
+        price:
+          Math.round(
+            (priceInRangeCount / items.filter(i => i.actual).length) * 100,
+          ) || 0,
+        titleSimilarity:
+          Math.round(
+            (titleSimilaritySum / items.filter(i => i.actual).length) * 100,
+          ) || 0,
+        tagJaccard:
+          Math.round(
+            (tagJaccardSum / items.filter(i => i.actual).length) * 100,
+          ) || 0,
       },
     },
     items,
@@ -175,9 +198,13 @@ async function main() {
   writeFileSync(outputPath, JSON.stringify(finalResults, null, 2));
   console.log(`\nResults saved to ${outputPath}`);
   console.log(`Summary:`);
-  console.log(`- Category Accuracy: ${finalResults.summary.accuracy.category}%`);
+  console.log(
+    `- Category Accuracy: ${finalResults.summary.accuracy.category}%`,
+  );
   console.log(`- Price Accuracy: ${finalResults.summary.accuracy.price}%`);
-  console.log(`- Title Similarity: ${finalResults.summary.accuracy.titleSimilarity}%`);
+  console.log(
+    `- Title Similarity: ${finalResults.summary.accuracy.titleSimilarity}%`,
+  );
   console.log(`- Tag Accuracy: ${finalResults.summary.accuracy.tagJaccard}%`);
 }
 

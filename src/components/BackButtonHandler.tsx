@@ -12,25 +12,32 @@ export function BackButtonHandler() {
     let lastBackPress = 0;
 
     const setupListener = async () => {
-      const listener = await CapacitorApp.addListener('backButton', async () => {
-        // 1. If not on home page, go back in history
-        if (location.pathname !== '/' && location.pathname !== '/dashboard' && location.pathname !== '/buyer') {
-          navigate(-1);
-          return;
-        }
+      const listener = await CapacitorApp.addListener(
+        'backButton',
+        async () => {
+          // 1. If not on home page, go back in history
+          if (
+            location.pathname !== '/' &&
+            location.pathname !== '/dashboard' &&
+            location.pathname !== '/buyer'
+          ) {
+            navigate(-1);
+            return;
+          }
 
-        // 2. If on a main page, handle double-tap to exit
-        const now = Date.now();
-        if (now - lastBackPress < 2000) {
-          await CapacitorApp.exitApp();
-        } else {
-          lastBackPress = now;
-          toast({
-            description: "Press back again to exit",
-            duration: 2000,
-          });
-        }
-      });
+          // 2. If on a main page, handle double-tap to exit
+          const now = Date.now();
+          if (now - lastBackPress < 2000) {
+            await CapacitorApp.exitApp();
+          } else {
+            lastBackPress = now;
+            toast({
+              description: 'Press back again to exit',
+              duration: 2000,
+            });
+          }
+        },
+      );
 
       return listener;
     };

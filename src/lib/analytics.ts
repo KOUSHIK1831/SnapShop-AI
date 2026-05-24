@@ -1,7 +1,8 @@
-import posthog from "posthog-js";
+import posthog from 'posthog-js';
 
-const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || "";
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
+const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || '';
+const POSTHOG_HOST =
+  import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 let initialized = false;
 
@@ -20,7 +21,10 @@ export function initAnalytics() {
   }
 }
 
-export function trackEvent(event: string, properties?: Record<string, unknown>) {
+export function trackEvent(
+  event: string,
+  properties?: Record<string, unknown>,
+) {
   if (!initialized) return;
   try {
     posthog.capture(event, properties);

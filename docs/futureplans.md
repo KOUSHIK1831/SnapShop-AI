@@ -17,31 +17,31 @@ Each seller gets their own WhatsApp Business number. Customers message that numb
 
 ## What the Agent Can Do
 
-| Capability | Description |
-|---|---|
-| Greet customers | Warm welcome message with store name on first contact |
-| Show product catalog | Fetches live products from Supabase, formats for WhatsApp |
-| Product recommendations | Suggests products based on occasion, budget, preference |
-| Complete order flow | Product → quantity → name → address → delivery date → summary → confirm |
-| Multi-language support | Detects customer's language (Hindi, English, Tamil, Telugu, Bengali) and replies in the same language |
-| Price objection handling | Can offer up to 5% discount if customer insists |
-| FAQ answering | Delivery areas, timings, payment methods — all from system prompt |
-| Order summary generation | Clean formatted summary before confirmation |
-| UPI payment link | Generates `upi://pay?pa=...` deep link after order confirmation |
-| Conversation memory | Remembers context across messages using `conversations` table |
-| Guest ordering | No account needed — buyer just needs WhatsApp |
+| Capability               | Description                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Greet customers          | Warm welcome message with store name on first contact                                                 |
+| Show product catalog     | Fetches live products from Supabase, formats for WhatsApp                                             |
+| Product recommendations  | Suggests products based on occasion, budget, preference                                               |
+| Complete order flow      | Product → quantity → name → address → delivery date → summary → confirm                               |
+| Multi-language support   | Detects customer's language (Hindi, English, Tamil, Telugu, Bengali) and replies in the same language |
+| Price objection handling | Can offer up to 5% discount if customer insists                                                       |
+| FAQ answering            | Delivery areas, timings, payment methods — all from system prompt                                     |
+| Order summary generation | Clean formatted summary before confirmation                                                           |
+| UPI payment link         | Generates `upi://pay?pa=...` deep link after order confirmation                                       |
+| Conversation memory      | Remembers context across messages using `conversations` table                                         |
+| Guest ordering           | No account needed — buyer just needs WhatsApp                                                         |
 
 ---
 
 ## Tech Stack
 
-| Tool | Purpose |
-|---|---|
-| **Anthropic Claude (claude-opus-4-5)** | AI brain — powers all conversations |
-| **Supabase Edge Functions (Deno)** | Webhook server — receives WhatsApp messages |
-| **Meta WhatsApp Cloud API** | Customer-facing interface |
-| **Supabase PostgreSQL** | Product catalog + order storage + conversation memory |
-| **`conversations` table (JSONB)** | Conversation memory per phone number |
+| Tool                                   | Purpose                                               |
+| -------------------------------------- | ----------------------------------------------------- |
+| **Anthropic Claude (claude-opus-4-5)** | AI brain — powers all conversations                   |
+| **Supabase Edge Functions (Deno)**     | Webhook server — receives WhatsApp messages           |
+| **Meta WhatsApp Cloud API**            | Customer-facing interface                             |
+| **Supabase PostgreSQL**                | Product catalog + order storage + conversation memory |
+| **`conversations` table (JSONB)**      | Conversation memory per phone number                  |
 
 ---
 
@@ -114,23 +114,27 @@ Seller Dashboard — Orders Tab
 ## The 4 Tools Claude Can Call
 
 ### Tool 1: `get_products`
+
 - **When:** Customer asks "what do you have?", "show me menu", etc.
 - **Input:** `{ store_slug: string }`
 - **DB query:** `SELECT id, title, price, description, category, stock FROM products WHERE seller_id = (SELECT id FROM sellers WHERE store_slug = ?) AND stock > 0 ORDER BY created_at DESC`
 - **Key rule:** Claude NEVER makes up products — always calls this tool first
 
 ### Tool 2: `place_order`
+
 - **When:** Customer confirms after seeing the order summary
 - **Input:** `{ store_slug, product_id, buyer_name, quantity }`
 - **DB query:** `INSERT INTO orders (seller_id, product_id, buyer_phone, buyer_name, quantity, status) VALUES (?, ?, ?, ?, ?, 'pending')`
 - **Note:** `buyer_id` is NULL — guest order via WhatsApp
 
 ### Tool 3: `get_datetime`
+
 - **When:** Customer asks about delivery timing
 - **Input:** `{}`
 - **Output:** "Monday, 20 January 2026, 02:30 PM IST"
 
 ### Tool 4: `generate_upi_payment`
+
 - **When:** After place_order succeeds
 - **Input:** `{ amount: number, note: string }`
 - **Output:** `upi://pay?pa=seller@upi&am=500&tn=Order%20abc123&cu=INR`
@@ -153,6 +157,7 @@ CREATE TABLE public.conversations (
 ```
 
 **Flow for every incoming message:**
+
 1. Receive message from phone for a store
 2. `SELECT messages FROM conversations WHERE phone = ? AND store_slug = ?`
 3. Append new user message to the array
@@ -172,7 +177,7 @@ Built dynamically per store using the seller's `store_name` and `store_slug`:
 3. **Strict order flow sequence** — Greet → ask → show products → confirm → place order → payment
 4. **Language detection** — "Detect the customer's language from their first message. Reply in the EXACT same language."
 5. **Discount policy** — Up to 5% if customer insists
-6. **WhatsApp formatting** — *bold* for names/prices, • for bullets, max 3-4 lines, no markdown headers
+6. **WhatsApp formatting** — _bold_ for names/prices, • for bullets, max 3-4 lines, no markdown headers
 7. **Delivery rules** — Same day if before 2 PM IST, next day otherwise
 8. **Fallback** — "Let me check with the store team and get back to you!"
 

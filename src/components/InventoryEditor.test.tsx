@@ -21,9 +21,7 @@ const mockProducts = [
 
 describe('InventoryEditor', () => {
   it('renders product information correctly', () => {
-    render(
-      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} />
-    );
+    render(<InventoryEditor products={mockProducts} onUpdate={vi.fn()} />);
 
     expect(screen.getByText('Product 1')).toBeInTheDocument();
     expect(screen.getByText('₹100')).toBeInTheDocument();
@@ -35,7 +33,11 @@ describe('InventoryEditor', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(
-      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
+      <InventoryEditor
+        products={mockProducts}
+        onUpdate={vi.fn()}
+        onDelete={onDelete}
+      />,
     );
 
     const deleteButton = screen.getByTitle('Delete');
@@ -50,7 +52,11 @@ describe('InventoryEditor', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(
-      <InventoryEditor products={mockProducts} onUpdate={vi.fn()} onDelete={onDelete} />
+      <InventoryEditor
+        products={mockProducts}
+        onUpdate={vi.fn()}
+        onDelete={onDelete}
+      />,
     );
 
     const deleteButton = screen.getByTitle('Delete');

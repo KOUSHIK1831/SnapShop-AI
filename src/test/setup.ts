@@ -1,11 +1,11 @@
-import "@testing-library/jest-dom";
+import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import en from '../locales/en/translation.json';
 
-vi.mock("react-i18next", () => ({
+vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => (en as any)[key] || key,
-    i18n: { language: 'en', changeLanguage: vi.fn() }
+    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   initReactI18next: {
     type: '3rdParty',
@@ -13,7 +13,7 @@ vi.mock("react-i18next", () => ({
   },
 }));
 
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
     matches: false,

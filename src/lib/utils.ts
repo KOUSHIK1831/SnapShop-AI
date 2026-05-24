@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,7 +13,7 @@ export async function compressImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = (event) => {
+    reader.onload = event => {
       const img = new Image();
       img.src = event.target?.result as string;
       img.onload = () => {
@@ -42,7 +42,7 @@ export async function compressImage(file: File): Promise<Blob> {
 
         // Quality 0.7 for good balance of size and AI readability
         canvas.toBlob(
-          (blob) => {
+          blob => {
             if (blob) {
               resolve(blob);
             } else {
@@ -50,11 +50,13 @@ export async function compressImage(file: File): Promise<Blob> {
             }
           },
           'image/jpeg',
-          0.7
+          0.7,
         );
       };
-      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.onerror = () =>
+        reject(new Error('Failed to load image for compression'));
     };
-    reader.onerror = () => reject(new Error('Failed to read file for compression'));
+    reader.onerror = () =>
+      reject(new Error('Failed to read file for compression'));
   });
 }

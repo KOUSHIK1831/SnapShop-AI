@@ -65,7 +65,15 @@ export interface Order {
   seller_id: string;
   product_id: string;
   quantity: number;
-  status: 'pending' | 'accepted' | 'confirmed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled';
+  status:
+    | 'pending'
+    | 'accepted'
+    | 'confirmed'
+    | 'shipped'
+    | 'out_for_delivery'
+    | 'delivered'
+    | 'completed'
+    | 'cancelled';
   pay_method: 'cod' | 'online';
   pay_status: 'pending' | 'paid' | 'failed' | 'refunded';
   gateway_payment_id?: string | null;
@@ -81,7 +89,14 @@ export interface Order {
   tracking_number?: string;
   delivery_person_name?: string;
   delivery_person_phone?: string;
-  delivery_address?: { name: string; phone: string; line1: string; city: string; state: string; pincode: string } | null;
+  delivery_address?: {
+    name: string;
+    phone: string;
+    line1: string;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
   product?: Product;
 }
 
@@ -94,15 +109,18 @@ type SellerState = {
   loading: boolean;
 };
 
-type SellerAction = 
-  | { type: 'SET_DATA', payload: Partial<SellerState> }
-  | { type: 'SET_LOADING', payload: boolean };
+type SellerAction =
+  | { type: 'SET_DATA'; payload: Partial<SellerState> }
+  | { type: 'SET_LOADING'; payload: boolean };
 
 function sellerReducer(state: SellerState, action: SellerAction): SellerState {
   switch (action.type) {
-    case 'SET_DATA': return { ...state, ...action.payload };
-    case 'SET_LOADING': return { ...state, loading: action.payload };
-    default: return state;
+    case 'SET_DATA':
+      return { ...state, ...action.payload };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    default:
+      return state;
   }
 }
 
@@ -128,54 +146,79 @@ export function useSeller() {
     return data;
   }, [user]);
 
-  const fetchProducts = useCallback(async (currentSeller?: Seller) => {
-    const s = currentSeller || state.seller;
-    if (!s) return;
-    const { data } = await supabase
-      .from('products')
-      .select('*')
-      .eq('seller_id', s.id)
-      .order('created_at', { ascending: false });
-    dispatch({ type: 'SET_DATA', payload: { products: data || [] } });
-  }, [state.seller]);
+  const fetchProducts = useCallback(
+    async (currentSeller?: Seller) => {
+      const s = currentSeller || state.seller;
+      if (!s) return;
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_id', s.id)
+        .order('created_at', { ascending: false });
+      dispatch({ type: 'SET_DATA', payload: { products: data || [] } });
+    },
+    [state.seller],
+  );
 
-  const fetchFiles = useCallback(async (currentSeller?: Seller) => {
-    const s = currentSeller || state.seller;
-    if (!s) return;
-    const { data } = await supabase
-      .from('files')
-      .select('*')
-      .eq('seller_id', s.id)
-      .order('created_at', { ascending: false });
-    
-    // Calculate usage today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const usageToday = (data || []).filter(f => new Date(f.created_at) >= startOfDay).length;
+  const fetchFiles = useCallback(
+    async (currentSeller?: Seller) => {
+      const s = currentSeller || state.seller;
+      if (!s) return;
+      const { data } = await supabase
+        .from('files')
+        .select('*')
+        .eq('seller_id', s.id)
+        .order('created_at', { ascending: false });
 
-    dispatch({ type: 'SET_DATA', payload: { files: data || [], ai_usage_today: usageToday } });
-  }, [state.seller]);
+      // Calculate usage today
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const usageToday = (data || []).filter(
+        f => new Date(f.created_at) >= startOfDay,
+      ).length;
 
-  const fetchOrders = useCallback(async (currentSeller?: Seller) => {
-    const s = currentSeller || state.seller;
-    if (!s) return;
-    const { data } = await supabase
-      .from('orders')
-      .select('*, product:products(*)')
-      .eq('seller_id', s.id)
-      .order('created_at', { ascending: false });
-    dispatch({ type: 'SET_DATA', payload: { orders: data || [] } });
-  }, [state.seller]);
+      dispatch({
+        type: 'SET_DATA',
+        payload: { files: data || [], ai_usage_today: usageToday },
+      });
+    },
+    [state.seller],
+  );
+
+  const fetchOrders = useCallback(
+    async (currentSeller?: Seller) => {
+      const s = currentSeller || state.seller;
+      if (!s) return;
+      const { data } = await supabase
+        .from('orders')
+        .select('*, product:products(*)')
+        .eq('seller_id', s.id)
+        .order('created_at', { ascending: false });
+      dispatch({ type: 'SET_DATA', payload: { orders: data || [] } });
+    },
+    [state.seller],
+  );
 
   const updateOrderStatus = async (
-    orderId: string, 
-    status: Order['status'], 
-    trackingInfo?: Partial<Pick<Order, 'del_type' | 'tracking_provider' | 'tracking_number' | 'delivery_person_name' | 'delivery_person_phone'>>,
-    paymentInfo?: Partial<Pick<Order, 'pay_status' | 'gateway_payment_id'>>
+    orderId: string,
+    status: Order['status'],
+    trackingInfo?: Partial<
+      Pick<
+        Order,
+        | 'del_type'
+        | 'tracking_provider'
+        | 'tracking_number'
+        | 'delivery_person_name'
+        | 'delivery_person_phone'
+      >
+    >,
+    paymentInfo?: Partial<Pick<Order, 'pay_status' | 'gateway_payment_id'>>,
   ): Promise<{ error: PostgrestError | Error | null }> => {
     const updates: Partial<Order> = { status };
-    if (status === 'confirmed' || status === 'accepted') updates.confirmed_at = new Date().toISOString();
-    if (status === 'completed' || status === 'delivered') updates.completed_at = new Date().toISOString();
+    if (status === 'confirmed' || status === 'accepted')
+      updates.confirmed_at = new Date().toISOString();
+    if (status === 'completed' || status === 'delivered')
+      updates.completed_at = new Date().toISOString();
 
     if (trackingInfo) {
       Object.assign(updates, trackingInfo);
@@ -265,10 +308,15 @@ export function useSeller() {
     if (state.seller.last_submitted_at) {
       const lastSubmitted = new Date(state.seller.last_submitted_at);
       const now = new Date();
-      const hoursDiff = (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60);
+      const hoursDiff =
+        (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60);
       if (hoursDiff < 24) {
         const timeLeft = Math.ceil(24 - hoursDiff);
-        return { error: new Error(`Rate limit: Please wait ${timeLeft} hours before resubmitting.`) };
+        return {
+          error: new Error(
+            `Rate limit: Please wait ${timeLeft} hours before resubmitting.`,
+          ),
+        };
       }
     }
 
@@ -299,7 +347,10 @@ export function useSeller() {
     return { error };
   };
 
-  const updateProduct = async (productId: string, updates: Partial<Product>) => {
+  const updateProduct = async (
+    productId: string,
+    updates: Partial<Product>,
+  ) => {
     const { error } = await supabase
       .from('products')
       .update(updates)
@@ -320,30 +371,46 @@ export function useSeller() {
   useEffect(() => {
     if (user) {
       dispatch({ type: 'SET_LOADING', payload: true });
-      fetchSeller().then(async (s) => {
-        if (s) {
-          // Fetch everything else concurrently
-          const [productsData, filesData, ordersData] = await Promise.all([
-            supabase.from('products').select('*').eq('seller_id', s.id).order('created_at', { ascending: false }),
-            supabase.from('files').select('*').eq('seller_id', s.id).order('created_at', { ascending: false }),
-            supabase.from('orders').select('*, product:products(*)').eq('seller_id', s.id).order('created_at', { ascending: false })
-          ]);
-          // Calculate usage today
-          const startOfDay = new Date();
-          startOfDay.setHours(0, 0, 0, 0);
-          const usageToday = (filesData.data || []).filter(f => new Date(f.created_at) >= startOfDay).length;
+      fetchSeller()
+        .then(async s => {
+          if (s) {
+            // Fetch everything else concurrently
+            const [productsData, filesData, ordersData] = await Promise.all([
+              supabase
+                .from('products')
+                .select('*')
+                .eq('seller_id', s.id)
+                .order('created_at', { ascending: false }),
+              supabase
+                .from('files')
+                .select('*')
+                .eq('seller_id', s.id)
+                .order('created_at', { ascending: false }),
+              supabase
+                .from('orders')
+                .select('*, product:products(*)')
+                .eq('seller_id', s.id)
+                .order('created_at', { ascending: false }),
+            ]);
+            // Calculate usage today
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const usageToday = (filesData.data || []).filter(
+              f => new Date(f.created_at) >= startOfDay,
+            ).length;
 
-          dispatch({ 
-            type: 'SET_DATA', 
-            payload: { 
-              products: productsData.data || [], 
-              files: filesData.data || [], 
-              orders: ordersData.data || [],
-              ai_usage_today: usageToday
-            } 
-          });
-        }
-      }).finally(() => dispatch({ type: 'SET_LOADING', payload: false }));
+            dispatch({
+              type: 'SET_DATA',
+              payload: {
+                products: productsData.data || [],
+                files: filesData.data || [],
+                orders: ordersData.data || [],
+                ai_usage_today: usageToday,
+              },
+            });
+          }
+        })
+        .finally(() => dispatch({ type: 'SET_LOADING', payload: false }));
     } else {
       dispatch({ type: 'SET_LOADING', payload: false });
     }

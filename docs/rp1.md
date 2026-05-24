@@ -7,6 +7,7 @@
 ## 1. Academic Suitability
 
 **Confirmed:**
+
 - ~7,300 lines of real TypeScript/React code across 5 pages, 11 custom components, 4 hooks, 1 Supabase Edge Function, 4 database tables with RLS and triggers, 70 i18n keys in 3 languages
 - Non-trivial architecture: React + TypeScript + Vite + Supabase (Auth + DB + Storage + Edge Functions) + Gemini 2.5 Flash + TanStack Query + shadcn/ui
 
@@ -29,6 +30,7 @@
 | **Client-side image compression** (`src/lib/utils.ts`) | Canvas-based, quality fallback, target ~100KB |
 
 **What is standard CRUD:**
+
 - Product CRUD (useSeller:167-183) — straightforward Supabase read/write
 - Auth flow (useAuth.tsx) — standard Supabase Auth wrapper
 - Store settings form — form validation + Supabase upsert
@@ -44,6 +46,7 @@
 **Confirmed:** The combination of (a) AI-powered product digitization from images + (b) instant multilingual storefront + (c) WhatsApp integration + (d) target audience of local Indian retailers is **genuinely differentiated** from typical student projects.
 
 **Comparison to typical B.Tech projects:**
+
 - Most e-commerce projects are standard CRUD with no AI component
 - Most AI projects are chatbots or classifiers trained on canned datasets
 - Most localization efforts stop at 2 languages with incomplete coverage
@@ -66,32 +69,32 @@
 
 ## 5. Weaknesses
 
-| Issue | Evidence | Severity |
-|---|---|---|
-| **Zero real tests** | `src/test/example.test.ts` contains only `expect(true).toBe(true)` | **Critical** |
-| **Zero Playwright tests** | Config exists, no `.spec.ts` files | **Critical** |
-| **Two Supabase clients** | `lib/supabase.ts` (untyped) and `integrations/supabase/client.ts` (typed) both exist and the hooks use the untyped one | **Medium** |
-| **Order placement is disabled** | Storefront shows "Coming Soon" for order button; `placeOrder()` exists but is dead code | **Medium** |
-| **AI accuracy unevaluated** | No mechanism to log or measure AI extraction correctness | **Medium** |
-| **No loading/skeleton states in all places** | Some pages show raw loading text | **Low-Medium** |
-| **No error boundary** | No React error boundary wrapping the app | **Low** |
-| **No CI/CD** | No GitHub Actions or similar visible | **Low** |
-| **Edge function has no auth protection** | `verify_jwt = false` in `config.toml` — anyone could invoke the digitize endpoint | **Medium** |
-| **Both `bun.lock` and `package-lock.json`** | Ambiguous package management | **Low** |
+| Issue                                        | Evidence                                                                                                               | Severity       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **Zero real tests**                          | `src/test/example.test.ts` contains only `expect(true).toBe(true)`                                                     | **Critical**   |
+| **Zero Playwright tests**                    | Config exists, no `.spec.ts` files                                                                                     | **Critical**   |
+| **Two Supabase clients**                     | `lib/supabase.ts` (untyped) and `integrations/supabase/client.ts` (typed) both exist and the hooks use the untyped one | **Medium**     |
+| **Order placement is disabled**              | Storefront shows "Coming Soon" for order button; `placeOrder()` exists but is dead code                                | **Medium**     |
+| **AI accuracy unevaluated**                  | No mechanism to log or measure AI extraction correctness                                                               | **Medium**     |
+| **No loading/skeleton states in all places** | Some pages show raw loading text                                                                                       | **Low-Medium** |
+| **No error boundary**                        | No React error boundary wrapping the app                                                                               | **Low**        |
+| **No CI/CD**                                 | No GitHub Actions or similar visible                                                                                   | **Low**        |
+| **Edge function has no auth protection**     | `verify_jwt = false` in `config.toml` — anyone could invoke the digitize endpoint                                      | **Medium**     |
+| **Both `bun.lock` and `package-lock.json`**  | Ambiguous package management                                                                                           | **Low**        |
 
 ---
 
 ## 6. Viva Voce — Questions an Evaluator Might Ask
 
-| Question | How to answer |
-|---|---|
-| "How do you measure AI accuracy?" | **You currently can't** — this is a gap. Build an evaluation set of ~50 labeled product images and measure title/description/category accuracy |
-| "Why did the order placement remain incomplete?" | Acknowledge scope constraint. Explain the WhatsApp bridge pattern as an alternative |
-| "How do you handle concurrent uploads?" | The UploadZone component has per-file states but no queue management or concurrency limit |
-| "How secure is the edge function?" | Currently unprotected (`verify_jwt: false`). Discuss adding JWT verification |
-| "What happens if Gemini returns garbage?" | There's a JSON parse fallback to a default product — but no semantic validation |
-| "Why two Supabase clients?" | This is a code quality issue — acknowledge it and explain migration plan |
-| "What performance optimization did you do?" | Image compression, memoization via TanStack Query, lazy loading of routes |
+| Question                                         | How to answer                                                                                                                                  |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| "How do you measure AI accuracy?"                | **You currently can't** — this is a gap. Build an evaluation set of ~50 labeled product images and measure title/description/category accuracy |
+| "Why did the order placement remain incomplete?" | Acknowledge scope constraint. Explain the WhatsApp bridge pattern as an alternative                                                            |
+| "How do you handle concurrent uploads?"          | The UploadZone component has per-file states but no queue management or concurrency limit                                                      |
+| "How secure is the edge function?"               | Currently unprotected (`verify_jwt: false`). Discuss adding JWT verification                                                                   |
+| "What happens if Gemini returns garbage?"        | There's a JSON parse fallback to a default product — but no semantic validation                                                                |
+| "Why two Supabase clients?"                      | This is a code quality issue — acknowledge it and explain migration plan                                                                       |
+| "What performance optimization did you do?"      | Image compression, memoization via TanStack Query, lazy loading of routes                                                                      |
 
 ---
 
@@ -99,18 +102,18 @@
 
 Ranked by impact on your report's academic rigor:
 
-| Enhancement | Impact | Effort |
-|---|---|---|
-| **1. AI accuracy evaluation** — build a test set of 50-100 labeled clothing images, measure precision/recall of title, category, price estimation | **Highest** — gives you a results chapter with real numbers | Medium |
-| **2. Add unit tests (Vitest)** — test `compressImage`, `useSeller`, translations parsing, edge function response parsing | **High** — removes the "zero tests" stigma | Medium |
-| **3. Add E2E tests (Playwright)** — test the full upload → AI → storefront flow | **High** — demonstrates CI/CD readiness | Medium |
-| **4. Image-to-text OCR for label extraction** — use Gemini's vision capability to read price tags, labels, brand names from images, and display extracted text | **Medium-High** — strengthens the AI narrative | Low (Gemini already supports it) |
-| **5. Semantic search** — store Gemini embeddings in PostgreSQL via `pgvector` and allow natural language product search | **Medium-High** — adds vector DB + embedding section to report | Medium |
-| **6. Admin analytics dashboard** — aggregate metrics across all sellers | **Medium** — adds an analytics chapter | Medium |
-| **7. AI quality scoring** — add confidence scores to AI output; flag low-confidence products for human review | **Medium** — demonstrates production thinking | Medium |
-| **8. Performance benchmarking** — measure upload-to-storefront latency, compression ratio, AI response time, vs manual entry baseline | **Medium** — fills the "Evaluation" chapter with real graphs | Medium |
-| **9. Role-based access control** — admin vs seller vs buyer roles | **Low-Medium** — standard but easy to add to report | Medium |
-| **10. A/B testing** — compare AI-assisted upload vs manual form for time-to-publish | **Low-Medium** — interesting but requires user study | High |
+| Enhancement                                                                                                                                                    | Impact                                                         | Effort                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------- |
+| **1. AI accuracy evaluation** — build a test set of 50-100 labeled clothing images, measure precision/recall of title, category, price estimation              | **Highest** — gives you a results chapter with real numbers    | Medium                           |
+| **2. Add unit tests (Vitest)** — test `compressImage`, `useSeller`, translations parsing, edge function response parsing                                       | **High** — removes the "zero tests" stigma                     | Medium                           |
+| **3. Add E2E tests (Playwright)** — test the full upload → AI → storefront flow                                                                                | **High** — demonstrates CI/CD readiness                        | Medium                           |
+| **4. Image-to-text OCR for label extraction** — use Gemini's vision capability to read price tags, labels, brand names from images, and display extracted text | **Medium-High** — strengthens the AI narrative                 | Low (Gemini already supports it) |
+| **5. Semantic search** — store Gemini embeddings in PostgreSQL via `pgvector` and allow natural language product search                                        | **Medium-High** — adds vector DB + embedding section to report | Medium                           |
+| **6. Admin analytics dashboard** — aggregate metrics across all sellers                                                                                        | **Medium** — adds an analytics chapter                         | Medium                           |
+| **7. AI quality scoring** — add confidence scores to AI output; flag low-confidence products for human review                                                  | **Medium** — demonstrates production thinking                  | Medium                           |
+| **8. Performance benchmarking** — measure upload-to-storefront latency, compression ratio, AI response time, vs manual entry baseline                          | **Medium** — fills the "Evaluation" chapter with real graphs   | Medium                           |
+| **9. Role-based access control** — admin vs seller vs buyer roles                                                                                              | **Low-Medium** — standard but easy to add to report            | Medium                           |
+| **10. A/B testing** — compare AI-assisted upload vs manual form for time-to-publish                                                                            | **Low-Medium** — interesting but requires user study           | High                             |
 
 ---
 
@@ -118,15 +121,15 @@ Ranked by impact on your report's academic rigor:
 
 **Confirmed:** The project naturally supports all standard report sections:
 
-| Section | Content |
-|---|---|
-| **Literature Review** | AI in e-commerce · Digital divide for small retailers in India · Vision-language models for product understanding · Multilingual UX design patterns · Low-code/BaaS platforms |
-| **System Architecture** | C4 diagrams: context → containers → components → code (React → Supabase → Gemini) |
-| **Database Design** | ER diagram of sellers/products/files/orders with RLS policies |
-| **Algorithms** | Image compression algorithm · Gemini prompt engineering · JSON extraction pipeline |
-| **Testing** | *Currently missing* — but can add Vitest unit tests + Playwright E2E |
-| **Results & Metrics** | AI accuracy · compression ratio · latency · time-to-publish |
-| **Future Scope** | RBAC · semantic search · OCR · payment gateway · analytics · mobile app |
+| Section                 | Content                                                                                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Literature Review**   | AI in e-commerce · Digital divide for small retailers in India · Vision-language models for product understanding · Multilingual UX design patterns · Low-code/BaaS platforms |
+| **System Architecture** | C4 diagrams: context → containers → components → code (React → Supabase → Gemini)                                                                                             |
+| **Database Design**     | ER diagram of sellers/products/files/orders with RLS policies                                                                                                                 |
+| **Algorithms**          | Image compression algorithm · Gemini prompt engineering · JSON extraction pipeline                                                                                            |
+| **Testing**             | _Currently missing_ — but can add Vitest unit tests + Playwright E2E                                                                                                          |
+| **Results & Metrics**   | AI accuracy · compression ratio · latency · time-to-publish                                                                                                                   |
+| **Future Scope**        | RBAC · semantic search · OCR · payment gateway · analytics · mobile app                                                                                                       |
 
 **Publishable paper:** With the addition of AI accuracy metrics (item 1 in Section 7), this can be expanded into a conference paper for **ICDEIS, ICCCNT, or INDICON** — especially with a focus on "AI-Assisted Digitization for Micro-Retailers in India."
 
@@ -134,29 +137,29 @@ Ranked by impact on your report's academic rigor:
 
 ## 9. Evaluation Metrics to Report
 
-| Metric | How to measure | Where in report |
-|---|---|---|
-| **AI extraction accuracy** | Manual evaluation of 50-100 products: % correct title, category, price within ±20% | Results chapter |
-| **Time reduction** | Measure manual entry (typing title/desc/price/category/tags) vs AI-assisted (~30s total) | Results chapter |
-| **Image compression** | Original vs compressed file size (KB), quality score, time taken | Performance section |
-| **AI response time** | P50/P95/P99 latency of edge function → Gemini → response | Performance section |
-| **Translation coverage** | 70 keys × 3 languages = 100% coverage (already confirmed) | Localization section |
-| **Build size / bundle** | Vite build output: vendor chunk size, gzipped size | Deployment section |
-| **Test coverage** | Vitest coverage report (`--coverage` flag) | Testing section |
+| Metric                     | How to measure                                                                           | Where in report      |
+| -------------------------- | ---------------------------------------------------------------------------------------- | -------------------- |
+| **AI extraction accuracy** | Manual evaluation of 50-100 products: % correct title, category, price within ±20%       | Results chapter      |
+| **Time reduction**         | Measure manual entry (typing title/desc/price/category/tags) vs AI-assisted (~30s total) | Results chapter      |
+| **Image compression**      | Original vs compressed file size (KB), quality score, time taken                         | Performance section  |
+| **AI response time**       | P50/P95/P99 latency of edge function → Gemini → response                                 | Performance section  |
+| **Translation coverage**   | 70 keys × 3 languages = 100% coverage (already confirmed)                                | Localization section |
+| **Build size / bundle**    | Vite build output: vendor chunk size, gzipped size                                       | Deployment section   |
+| **Test coverage**          | Vitest coverage report (`--coverage` flag)                                               | Testing section      |
 
 ---
 
 ## 10. Comparison: ApnaBazar vs RAG Project as a Report Topic
 
-| Dimension | ApnaBazar (this project) | Typical RAG project |
-|---|---|---|
-| **Technical novelty** | E-commerce × Vision AI × Localization | Document retrieval × embeddings |
-| **Real-world impact** | Direct — helps actual small retailers | Indirect — depends on use case |
-| **AI complexity** | Multimodal (vision + text), prompt engineering | Text embeddings, vector search |
-| **Difficulty** | Full-stack + AI integration | Backend-heavy, simpler frontend |
-| **Report depth** | Can cover frontend, backend, DB, AI, localization, deployment | Focuses on retrieval pipeline, embedding models, chunking strategies |
-| **Evaluator appeal** | Tangible product they can visit | Abstract system they can't easily demo |
-| **Viva defensibility** | "Show me the storefront" — easy to demonstrate | "Show me a query" — harder to impress |
+| Dimension              | ApnaBazar (this project)                                      | Typical RAG project                                                  |
+| ---------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Technical novelty**  | E-commerce × Vision AI × Localization                         | Document retrieval × embeddings                                      |
+| **Real-world impact**  | Direct — helps actual small retailers                         | Indirect — depends on use case                                       |
+| **AI complexity**      | Multimodal (vision + text), prompt engineering                | Text embeddings, vector search                                       |
+| **Difficulty**         | Full-stack + AI integration                                   | Backend-heavy, simpler frontend                                      |
+| **Report depth**       | Can cover frontend, backend, DB, AI, localization, deployment | Focuses on retrieval pipeline, embedding models, chunking strategies |
+| **Evaluator appeal**   | Tangible product they can visit                               | Abstract system they can't easily demo                               |
+| **Viva defensibility** | "Show me the storefront" — easy to demonstrate                | "Show me a query" — harder to impress                                |
 
 **Verdict:** A RAG project is **academically comparable** but harder to demonstrate impact. ApnaBazar is the stronger choice for an internship report because it shows end-to-end product building skills, which is exactly what an internship is supposed to demonstrate.
 
@@ -164,14 +167,14 @@ Ranked by impact on your report's academic rigor:
 
 ## 11. Overall Ratings
 
-| Dimension | Rating (/10) | Justification |
-|---|---|---|
-| **Technical Complexity** | **7.5/10** | Full-stack with AI, auth, storage, localization, deployment. Dock 2.5 for no tests, dead order flow |
-| **Innovation** | **7/10** | AI-assisted product digitization for Indian micro-retailers is not novel in industry (Meesho, etc.) but is novel for a B.Tech project |
-| **Academic Value** | **7.5/10** | Rich content for all sections. Could be 8.5+ with tests and AI accuracy metrics |
-| **Originality** | **7/10** | The combination is unique even if individual pieces (AI, e-commerce, i18n) are standard |
-| **Viva Defensibility** | **7/10** | Strong because the product is deployed and demoable. Weak on security, testing, and AI accuracy questions |
-| **Overall** | **7.2/10** | |
+| Dimension                | Rating (/10) | Justification                                                                                                                         |
+| ------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Technical Complexity** | **7.5/10**   | Full-stack with AI, auth, storage, localization, deployment. Dock 2.5 for no tests, dead order flow                                   |
+| **Innovation**           | **7/10**     | AI-assisted product digitization for Indian micro-retailers is not novel in industry (Meesho, etc.) but is novel for a B.Tech project |
+| **Academic Value**       | **7.5/10**   | Rich content for all sections. Could be 8.5+ with tests and AI accuracy metrics                                                       |
+| **Originality**          | **7/10**     | The combination is unique even if individual pieces (AI, e-commerce, i18n) are standard                                               |
+| **Viva Defensibility**   | **7/10**     | Strong because the product is deployed and demoable. Weak on security, testing, and AI accuracy questions                             |
+| **Overall**              | **7.2/10**   |                                                                                                                                       |
 
 ---
 
@@ -180,6 +183,7 @@ Ranked by impact on your report's academic rigor:
 **Yes, I recommend this as your IP-2 final report topic**, with conditions.
 
 **Why yes:**
+
 - The project has genuine technical breadth: React + TypeScript + Supabase (Auth/DB/Storage/Functions) + Gemini 2.5 Flash + i18n
 - It is **deployed and accessible** — this is a significant advantage over most student projects
 - The problem statement (digitizing local retailers) is meaningful, well-scoped, and easy to defend
