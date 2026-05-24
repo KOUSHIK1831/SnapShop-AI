@@ -152,9 +152,16 @@ export default function Auth() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      // Check if user was immediately signed out (blocked)
+      // Check if user was immediately signed out (blocked) or needs verification
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return; 
+
+      if (!session.user.email_confirmed_at) {
+        toast({ title: 'Verification Required', description: 'Please verify your email to continue.' });
+        dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+        dispatch({ type: 'UPDATE_FORM', payload: { signupEmail: session.user.email || form.loginEmail } });
+        return;
+      }
 
       toast({ title: 'Success', description: 'Logged in successfully' });
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
@@ -183,10 +190,21 @@ export default function Auth() {
       const { error } = await signUp(form.phone, form.signupName, form.signupEmail, form.signupPassword, form.signupRole === 'buyer');
       if (error) throw error;
       
-      // Persist email so OTP screen survives a page refresh
-      sessionStorage.setItem('apnabazar_pending_otp_email', form.signupEmail);
-      toast({ title: 'Verification Required', description: 'Please check your email for the 6-digit verification code.' });
-      dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+      // Check if session exists (email confirmation might be disabled in Supabase, though we want it on)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user.email_confirmed_at) {
+        toast({ title: 'Success', description: 'Account created successfully!' });
+        const role = form.signupRole;
+        if (returnTo) navigate(returnTo);
+        else if (role === 'buyer') navigate('/buyer');
+        else navigate('/dashboard');
+      } else {
+        // Stay for OTP
+        sessionStorage.setItem('apnabazar_pending_otp_email', form.signupEmail);
+        toast({ title: 'Verification Required', description: 'Please check your email for the 6-digit verification code.' });
+        dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
+      }
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create account', variant: 'destructive' });
     }
