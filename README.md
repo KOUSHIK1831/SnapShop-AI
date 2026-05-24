@@ -11,7 +11,7 @@ Public URL - https://apna-bazar-cs.vercel.app
 ## ✨ Features
 
 | Feature | Description |
-|---|---|---|
+|---|---|
 | **🤖 AI Product Digitization** | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with robust error handling (Zod validation, auto-retry, fallback) |
 | **👤 HITL Review Step** | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock before saving to DB |
 | **📱 Instant Storefront & App** | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Mobile via Capacitor (Android). |
@@ -220,7 +220,7 @@ The app will be available at `http://localhost:5173`.
 ## 🌐 Routes
 
 | Path | Page | Access |
-|---|---|---|---|
+|---|---|---|
 | `/` | Landing page | Public |
 | `/auth` | Login / Sign-up | Public |
 | `/dashboard` | Seller dashboard | 🔒 Protected (Seller) |
