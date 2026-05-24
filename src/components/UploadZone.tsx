@@ -15,6 +15,7 @@ interface AIProduct {
   category: string;
   tags: string[];
   size?: string;
+  size_variants?: { size: string; stock: number }[];
   discount_percent?: number;
   digitization_failed?: boolean;
 }

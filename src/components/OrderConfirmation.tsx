@@ -22,6 +22,8 @@ interface OrderConfirmationProps {
   discountPercent?: number;
   sellerName?: string;
   sellerContact?: string;
+  initialAddress?: Partial<DeliveryAddress>;
+  selectedSize?: string | null;
   onConfirm: (address: DeliveryAddress, payMethod: 'cod' | 'online') => Promise<void>;
 }
 
@@ -40,7 +42,8 @@ type Action =
   | { type: 'SET_ERRORS'; errors: Partial<DeliveryAddress> }
   | { type: 'SET_SUBMITTING'; value: boolean }
   | { type: 'SET_PAY_METHOD'; method: 'cod' | 'online' }
-  | { type: 'SET_STEP'; step: Step };
+  | { type: 'SET_STEP'; step: Step }
+  | { type: 'RESET_ADDRESS'; address: DeliveryAddress };
 
 const emptyAddress: DeliveryAddress = { name: '', phone: '', line1: '', city: '', state: '', pincode: '' };
 
@@ -51,6 +54,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_SUBMITTING': return { ...state, submitting: action.value };
     case 'SET_PAY_METHOD': return { ...state, payMethod: action.method };
     case 'SET_STEP': return { ...state, step: action.step };
+    case 'RESET_ADDRESS': return { ...state, address: action.address };
     default: return state;
   }
 }
@@ -58,7 +62,7 @@ function reducer(state: State, action: Action): State {
 function validate(address: DeliveryAddress): Partial<DeliveryAddress> {
   const errors: Partial<DeliveryAddress> = {};
   if (!address.name.trim()) errors.name = 'Full name is required';
-  if (!/^\d{10}$/.test(address.phone.replace(/\s/g, ''))) errors.phone = 'Enter a valid 10-digit phone';
+  if (!/^\d{10}$/.test(address.phone.replace(/\D/g, ''))) errors.phone = 'Enter a valid 10-digit phone';
   if (!address.line1.trim()) errors.line1 = 'Address is required';
   if (!address.city.trim()) errors.city = 'City is required';
   if (!address.state.trim()) errors.state = 'State is required';
@@ -68,15 +72,21 @@ function validate(address: DeliveryAddress): Partial<DeliveryAddress> {
 
 export default function OrderConfirmation({
   isOpen, onClose, productTitle, productPrice, discountPercent = 0,
-  sellerName, sellerContact, onConfirm,
+  sellerName, sellerContact, initialAddress, selectedSize, onConfirm,
 }: OrderConfirmationProps) {
   const [state, dispatch] = useReducer(reducer, {
     step: 'address',
     submitting: false,
-    address: emptyAddress,
+    address: { ...emptyAddress, ...initialAddress },
     payMethod: 'cod',
     errors: {},
   });
+
+  React.useEffect(() => {
+    if (isOpen && initialAddress) {
+      dispatch({ type: 'RESET_ADDRESS', address: { ...emptyAddress, ...initialAddress } });
+    }
+  }, [isOpen, initialAddress]);
 
   if (!isOpen) return null;
 
@@ -262,6 +272,7 @@ export default function OrderConfirmation({
 
             <div className="bg-muted/40 rounded-xl p-4 text-left space-y-2 border border-border/50">
               <Row label="Product" value={productTitle} />
+              {selectedSize && <Row label="Size" value={selectedSize} />}
               <Row label="Amount" value={`₹${finalPrice}${discountPercent > 0 ? ` (${discountPercent}% off)` : ''}`} />
               {sellerName && <Row label="Seller" value={sellerName} />}
               <div className="border-t border-border/50 pt-2 mt-2">

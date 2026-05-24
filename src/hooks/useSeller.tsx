@@ -28,7 +28,12 @@ interface Seller {
   created_at: string;
 }
 
-interface Product {
+export interface SizeVariant {
+  size: string;
+  stock: number;
+}
+
+export interface Product {
   id: string;
   seller_id: string;
   title: string;
@@ -40,6 +45,7 @@ interface Product {
   stock?: number;
   low_stock_threshold?: number;
   size?: string | null;
+  size_variants?: SizeVariant[] | null;
   discount_percent?: number | null;
   created_at: string;
 }
@@ -65,6 +71,7 @@ export interface Order {
   gateway_payment_id?: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
+  selected_size?: string | null;
   created_at: string;
   confirmed_at?: string;
   completed_at?: string;

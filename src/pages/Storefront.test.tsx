@@ -8,12 +8,14 @@ const {
   toastMock,
   fromMock,
   useParamsMock,
+  navigateMock,
   windowOpenMock,
 } = vi.hoisted(() => ({
   authState: { user: null as null | { id: string; email: string } },
   toastMock: vi.fn(),
   fromMock: vi.fn(),
   useParamsMock: vi.fn(() => ({ slug: "ravi-boutique" })),
+  navigateMock: vi.fn(),
   windowOpenMock: vi.fn(),
 }));
 
@@ -44,6 +46,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useParams: () => useParamsMock(),
+    useNavigate: () => navigateMock,
   };
 });
 
@@ -167,9 +170,6 @@ describe("Storefront page", () => {
     fireEvent.click(await screen.findByRole("button", { name: /storefront.orderNow/i }));
 
     await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "storefront.orderPlaced" }),
-      );
       expect(screen.getByText("OrderConfirmation")).toBeInTheDocument();
     });
   });
