@@ -120,7 +120,11 @@ export default function StoreSetup({ onComplete }: StoreSetupProps) {
   };
 
   const handleChange = (field: keyof State) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    dispatch({ type: 'SET_FIELD', field, value: e.target.value });
+    let value = e.target.value;
+    if (field === 'contactNumber') {
+      value = value.replace(/\D/g, '').slice(0, 10);
+    }
+    dispatch({ type: 'SET_FIELD', field, value });
   };
 
   return (
@@ -146,7 +150,17 @@ export default function StoreSetup({ onComplete }: StoreSetupProps) {
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="contactNumber" className="text-sm font-medium text-foreground">{t('setup.contactNumber')}</label>
-                  <Input id="contactNumber" value={state.contactNumber} onChange={handleChange('contactNumber')} placeholder="+91 9876543210" type="tel" />
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">+91</div>
+                    <Input
+                      id="contactNumber"
+                      value={state.contactNumber}
+                      onChange={handleChange('contactNumber')}
+                      placeholder="9876543210"
+                      type="tel"
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
               </div>
 
