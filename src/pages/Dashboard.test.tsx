@@ -128,7 +128,7 @@ describe('Dashboard page', () => {
     });
   });
 
-  it('copies the storefront link and can switch tabs', () => {
+  it('copies the storefront link and opens the upload view', async () => {
     sellerState.seller = {
       id: 'seller-1',
       store_name: 'Ravi Boutique',
@@ -150,12 +150,29 @@ describe('Dashboard page', () => {
       `${window.location.origin}/store/ravi-boutique`,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /upload/i }));
-    expect(screen.getByText('UploadZone seller-1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /add products/i }));
+    await waitFor(() => {
+      expect(screen.getByText('UploadZone seller-1')).toBeInTheDocument();
+    });
+  });
 
-    fireEvent.click(
-      screen.getAllByRole('button', { name: /store settings/i })[0],
+  it('renders store settings when profile tab is active', () => {
+    sellerState.seller = {
+      id: 'seller-1',
+      store_name: 'Ravi Boutique',
+      store_slug: 'ravi-boutique',
+      verification_status: 'approved',
+    };
+    sellerState.products = [
+      { id: 'product-1', title: 'Kurta', price: 999, seller_id: 'seller-1' },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard?tab=profile&sub=settings']}>
+        <Dashboard />
+      </MemoryRouter>,
     );
+
     expect(screen.getByText('StoreSettings')).toBeInTheDocument();
   });
 });

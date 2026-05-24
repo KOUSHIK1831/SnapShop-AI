@@ -231,6 +231,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
     loading: true,
