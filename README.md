@@ -278,13 +278,18 @@ npx cap open android
 
 ## 🌍 Internationalization
 
-The app supports three languages out of the box (750+ translated keys each):
+ApnaBazar provides **100% localization support** for three languages across the entire user interface, ensuring a seamless experience for diverse users:
 
-- **English** (`en`)
-- **Hindi** (`hi`)
-- **Telugu** (`te`)
+- **English** (`en`) — Default international interface.
+- **Hindi (हिन्दी)** (`hi`) — Natural translations for North Indian retailers.
+- **Telugu (తెలుగు)** (`te`) — Natural translations for South Indian retailers.
 
-Users can switch languages using the **LanguageSwitcher** component in the navbar. Language preference is persisted in `localStorage`. Product data can also be generated in the seller's chosen language via AI localization.
+**Implementation Details:**
+- **Dynamic Switching**: Users can instantly toggle languages using the **LanguageSwitcher** in the navbar.
+- **Full Coverage**: Every label, placeholder, toast notification, and instruction is localized (750+ keys per language).
+- **Logic Integrity**: Technical strings, CSS classes, and internal logic remain in English to ensure system stability while the UI adapts.
+- **Persistence**: Language preferences are saved in `localStorage`, maintaining the user's choice across sessions.
+- **AI Integration**: The AI digitization pipeline can interpret and generate content in the user's preferred language.
 
 ---
 
