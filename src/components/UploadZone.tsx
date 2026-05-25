@@ -7,8 +7,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  IndianRupee,
-} from 'lucide-react';
+  IndianRupee } from
+'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { compressImage } from '@/lib/utils';
@@ -21,7 +21,7 @@ interface AIProduct {
   category: string;
   tags: string[];
   size?: string;
-  size_variants?: { size: string; stock: number }[];
+  size_variants?: {size: string;stock: number;}[];
   discount_percent?: number;
   digitization_failed?: boolean;
 }
@@ -40,12 +40,12 @@ interface UploadZoneProps {
 }
 
 type ProcessingStep =
-  | 'idle'
-  | 'uploading'
-  | 'processing'
-  | 'review'
-  | 'complete'
-  | 'error';
+'idle' |
+'uploading' |
+'processing' |
+'review' |
+'complete' |
+'error';
 
 interface UploadState {
   step: ProcessingStep;
@@ -59,18 +59,18 @@ interface UploadState {
 }
 
 type UploadAction =
-  | { type: 'SET_STEP'; payload: ProcessingStep }
-  | { type: 'SET_DRAG_OVER'; payload: boolean }
-  | { type: 'START_UPLOAD'; payload: number }
-  | {
-      type: 'UPDATE_PROGRESS';
-      payload: { processed: number; currentFile: string };
-    }
-  | { type: 'SET_REVIEWS'; payload: PendingReview[] }
-  | { type: 'APPROVE_REVIEW'; payload: string }
-  | { type: 'REJECT_REVIEW'; payload: string }
-  | { type: 'SET_OVERRIDE_PRICE'; payload: string }
-  | { type: 'RESET' };
+{type: 'SET_STEP';payload: ProcessingStep;} |
+{type: 'SET_DRAG_OVER';payload: boolean;} |
+{type: 'START_UPLOAD';payload: number;} |
+{
+  type: 'UPDATE_PROGRESS';
+  payload: {processed: number;currentFile: string;};
+} |
+{type: 'SET_REVIEWS';payload: PendingReview[];} |
+{type: 'APPROVE_REVIEW';payload: string;} |
+{type: 'REJECT_REVIEW';payload: string;} |
+{type: 'SET_OVERRIDE_PRICE';payload: string;} |
+{type: 'RESET';};
 
 const initialUploadState: UploadState = {
   step: 'idle',
@@ -80,7 +80,7 @@ const initialUploadState: UploadState = {
   currentFileName: '',
   overridePrice: '',
   pendingReviews: [],
-  approvedCount: 0,
+  approvedCount: 0
 };
 
 function uploadReducer(state: UploadState, action: UploadAction): UploadState {
@@ -96,13 +96,13 @@ function uploadReducer(state: UploadState, action: UploadAction): UploadState {
         fileCount: action.payload,
         processedCount: 0,
         pendingReviews: [],
-        approvedCount: 0,
+        approvedCount: 0
       };
     case 'UPDATE_PROGRESS':
       return {
         ...state,
         processedCount: action.payload.processed,
-        currentFileName: action.payload.currentFile,
+        currentFileName: action.payload.currentFile
       };
     case 'SET_REVIEWS':
       return { ...state, step: 'review', pendingReviews: action.payload };
@@ -111,15 +111,15 @@ function uploadReducer(state: UploadState, action: UploadAction): UploadState {
         ...state,
         approvedCount: state.approvedCount + 1,
         pendingReviews: state.pendingReviews.filter(
-          r => r.fileId !== action.payload,
-        ),
+          (r) => r.fileId !== action.payload
+        )
       };
     case 'REJECT_REVIEW':
       return {
         ...state,
         pendingReviews: state.pendingReviews.filter(
-          r => r.fileId !== action.payload,
-        ),
+          (r) => r.fileId !== action.payload
+        )
       };
     case 'SET_OVERRIDE_PRICE':
       return { ...state, overridePrice: action.payload };
@@ -134,7 +134,7 @@ export default function UploadZone({
   sellerId,
   onComplete,
   usageToday,
-  dailyLimit,
+  dailyLimit
 }: UploadZoneProps) {
   const [state, dispatch] = useReducer(uploadReducer, initialUploadState);
   const {
@@ -145,7 +145,7 @@ export default function UploadZone({
     currentFileName,
     overridePrice,
     pendingReviews,
-    approvedCount,
+    approvedCount
   } = state;
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -163,13 +163,13 @@ export default function UploadZone({
         tags: product.tags || [],
         image_url: imageUrl,
         size: product.size || null,
-        discount_percent: product.discount_percent || 0,
+        discount_percent: product.discount_percent || 0
       });
       if (error) {
         toast({
           title: 'Error',
           description: `Failed to save product: ${error.message}`,
-          variant: 'destructive',
+          variant: 'destructive'
         });
       } else {
         dispatch({ type: 'APPROVE_REVIEW', payload: fileId });
@@ -178,12 +178,12 @@ export default function UploadZone({
           onComplete();
           toast({
             title: 'Digitization complete',
-            description: `${approvedCount + 1} files processed.`,
+            description: `${approvedCount + 1} files processed.`
           });
         }
       }
     },
-    [sellerId, toast, pendingReviews.length, onComplete, approvedCount],
+    [sellerId, toast, pendingReviews.length, onComplete, approvedCount]
   );
 
   const handleRejectReview = useCallback(
@@ -195,7 +195,7 @@ export default function UploadZone({
         onComplete();
       }
     },
-    [pendingReviews.length, approvedCount, onComplete],
+    [pendingReviews.length, approvedCount, onComplete]
   );
 
   // Remove the problematic useEffect
@@ -209,7 +209,7 @@ export default function UploadZone({
         toast({
           title: 'Limit reached',
           description: `You only have ${remaining} AI digitization credits left for today. Please upload fewer files or contact admin.`,
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
@@ -220,7 +220,7 @@ export default function UploadZone({
           toast({
             title: 'File too large',
             description: `${file.name} is larger than 5MB`,
-            variant: 'destructive',
+            variant: 'destructive'
           });
           return;
         }
@@ -230,7 +230,7 @@ export default function UploadZone({
 
       try {
         const uploadedFiles = await Promise.all(
-          files.map(async file => {
+          files.map(async (file) => {
             let fileToUpload: File | Blob = file;
             if (file.type.startsWith('image/') && file.size > 150 * 1024) {
               try {
@@ -241,30 +241,30 @@ export default function UploadZone({
             }
             const ext = file.name.split('.').pop();
             const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error: uploadError } = await supabase.storage
-              .from('uploads')
-              .upload(path, fileToUpload);
+            const { error: uploadError } = await supabase.storage.
+            from('uploads').
+            upload(path, fileToUpload);
             if (uploadError) return null;
-            const { data: urlData } = supabase.storage
-              .from('uploads')
-              .getPublicUrl(path);
-            const { data: fileRecord, error: insertError } = await supabase
-              .from('files')
-              .insert({
-                seller_id: sellerId,
-                file_url: urlData.publicUrl,
-                file_type: file.type,
-                status: 'pending',
-              })
-              .select()
-              .single();
+            const { data: urlData } = supabase.storage.
+            from('uploads').
+            getPublicUrl(path);
+            const { data: fileRecord, error: insertError } = await supabase.
+            from('files').
+            insert({
+              seller_id: sellerId,
+              file_url: urlData.publicUrl,
+              file_type: file.type,
+              status: 'pending'
+            }).
+            select().
+            single();
             if (insertError) return null;
             return {
               fileUrl: urlData.publicUrl,
               fileId: fileRecord.id,
-              fileName: file.name,
+              fileName: file.name
             };
-          }),
+          })
         );
 
         const validUploads = uploadedFiles.filter((f): f is any => f !== null);
@@ -280,24 +280,24 @@ export default function UploadZone({
             try {
               dispatch({
                 type: 'UPDATE_PROGRESS',
-                payload: { processed: i, currentFile: fileInfo.fileName },
+                payload: { processed: i, currentFile: fileInfo.fileName }
               });
               const { data, error: invokeError } =
-                await supabase.functions.invoke('digitize', {
-                  body: { imageUrl: fileInfo.fileUrl, sellerId },
-                });
+              await supabase.functions.invoke('digitize', {
+                body: { imageUrl: fileInfo.fileUrl, sellerId }
+              });
 
               if (invokeError) {
                 console.error('Edge Function Error:', invokeError);
                 if (
-                  invokeError.message?.includes('limit-exceeded') ||
-                  String(invokeError).includes('limit-exceeded')
-                ) {
+                invokeError.message?.includes('limit-exceeded') ||
+                String(invokeError).includes('limit-exceeded'))
+                {
                   toast({
                     title: 'Limit Reached',
                     description:
-                      'Your daily AI digitization limit has been reached.',
-                    variant: 'destructive',
+                    'Your daily AI digitization limit has been reached.',
+                    variant: 'destructive'
                   });
                   dispatch({ type: 'SET_STEP', payload: 'error' });
                   return null;
@@ -308,7 +308,7 @@ export default function UploadZone({
                 console.warn(
                   'AI Digitization failed for:',
                   fileInfo.fileName,
-                  invokeError,
+                  invokeError
                 );
                 return {
                   product: {
@@ -317,20 +317,20 @@ export default function UploadZone({
                     price: priceOverride ?? 0,
                     category: 'Uncategorized',
                     tags: [],
-                    digitization_failed: true,
+                    digitization_failed: true
                   },
                   imageUrl: fileInfo.fileUrl,
-                  fileId: fileInfo.fileId,
+                  fileId: fileInfo.fileId
                 };
               }
 
               return {
                 product: {
                   ...data.product,
-                  price: priceOverride ?? data.product.price ?? 0,
+                  price: priceOverride ?? data.product.price ?? 0
                 },
                 imageUrl: fileInfo.fileUrl,
-                fileId: fileInfo.fileId,
+                fileId: fileInfo.fileId
               };
             } catch (err) {
               console.error('Digitization error:', err);
@@ -341,81 +341,81 @@ export default function UploadZone({
                   price: priceOverride ?? 0,
                   category: 'Uncategorized',
                   tags: [],
-                  digitization_failed: true,
+                  digitization_failed: true
                 },
                 imageUrl: fileInfo.fileUrl,
-                fileId: fileInfo.fileId,
+                fileId: fileInfo.fileId
               };
             }
-          }),
+          })
         );
 
         const validReviews = reviews.filter(
-          (r): r is PendingReview => r !== null,
+          (r): r is PendingReview => r !== null
         );
 
         if (validReviews.length === 0)
-          dispatch({ type: 'SET_STEP', payload: 'error' });
-        else dispatch({ type: 'SET_REVIEWS', payload: validReviews });
+        dispatch({ type: 'SET_STEP', payload: 'error' });else
+        dispatch({ type: 'SET_REVIEWS', payload: validReviews });
       } catch (err) {
         dispatch({ type: 'SET_STEP', payload: 'error' });
       }
     },
-    [sellerId, overridePrice],
+    [sellerId, overridePrice]
   );
 
   if (step === 'complete')
-    return (
-      <UploadComplete
-        onReset={() => dispatch({ type: 'RESET' })}
-        fileCount={fileCount}
-      />
-    );
+  return (
+    <UploadComplete
+      onReset={() => dispatch({ type: 'RESET' })}
+      fileCount={fileCount} />);
+
+
   if (step === 'uploading' || step === 'processing')
-    return (
-      <UploadProcessing
-        step={step}
-        currentFile={currentFileName}
-        processed={processedCount}
-        total={fileCount}
-      />
-    );
+  return (
+    <UploadProcessing
+      step={step}
+      currentFile={currentFileName}
+      processed={processedCount}
+      total={fileCount} />);
+
+
   if (step === 'review')
-    return (
-      <UploadReview
-        reviews={pendingReviews}
-        approvedCount={approvedCount}
-        onApprove={handleApproveReview}
-        onReject={handleRejectReview}
-      />
-    );
+  return (
+    <UploadReview
+      reviews={pendingReviews}
+      approvedCount={approvedCount}
+      onApprove={handleApproveReview}
+      onReject={handleRejectReview} />);
+
+
   if (step === 'error')
-    return (
-      <UploadError
-        onRetry={() => dispatch({ type: 'SET_STEP', payload: 'idle' })}
-      />
-    );
+  return (
+    <UploadError
+      onRetry={() => dispatch({ type: 'SET_STEP', payload: 'idle' })} />);
+
+
 
   return (
     <div className="space-y-4">
       <UsageIndicator used={usageToday} limit={dailyLimit} />
       <PriceOverride
         value={overridePrice}
-        onChange={v => dispatch({ type: 'SET_OVERRIDE_PRICE', payload: v })}
-      />
+        onChange={(v) => dispatch({ type: 'SET_OVERRIDE_PRICE', payload: v })} />
+      
       <DropZone
         dragOver={dragOver}
-        onDragOver={v => dispatch({ type: 'SET_DRAG_OVER', payload: v })}
+        onDragOver={(v) => dispatch({ type: 'SET_DRAG_OVER', payload: v })}
         onFiles={processFiles}
-        disabled={remaining <= 0}
-      />
-    </div>
-  );
+        disabled={remaining <= 0} />
+      
+    </div>);
+
 }
 
-function UsageIndicator({ used, limit }: { used: number; limit: number }) {
+function UsageIndicator({ used, limit }: {used: number;limit: number;}) {
   const { t } = useTranslation();
-  const percent = Math.min(100, (used / limit) * 100);
+  const percent = Math.min(100, used / limit * 100);
   const remaining = Math.max(0, limit - used);
 
   return (
@@ -424,8 +424,8 @@ function UsageIndicator({ used, limit }: { used: number; limit: number }) {
         <div className="flex items-center gap-2">
           <div className="size-8 bg-primary/10 rounded-lg flex items-center justify-center">
             <CheckCircle2
-              className={`size-4 ${remaining > 0 ? t('auto.text_primary') : t('auto.text_destructive')}`}
-            />
+              className={`size-4 ${remaining > 0 ? t("auto.text_primary") : t("auto.text_destructive")}`} />
+            
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">
@@ -447,12 +447,12 @@ function UsageIndicator({ used, limit }: { used: number; limit: number }) {
       </div>
       <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-1000 ${percent > 90 ? t('auto.bg_destructive') : percent > 70 ? t('auto.bg_amber_500') : t('auto.bg_primary')}`}
-          style={{ width: `${percent}%` }}
-        />
+          className={`h-full rounded-full transition-all duration-1000 ${percent > 90 ? t("auto.bg_destructive") : percent > 70 ? t("auto.bg_amber_500") : t("auto.bg_primary")}`}
+          style={{ width: `${percent}%` }} />
+        
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function UploadComplete({ onReset, fileCount }: any) {
@@ -467,14 +467,13 @@ function UploadComplete({ onReset, fileCount }: any) {
       </h3>
 
       <p className="text-sm text-muted-foreground mb-6">
-        {fileCount}
-        {t('auto.files_processed_successfully')}
+        {fileCount} {t('auto.files_processed_successfully')}
       </p>
       <Button variant="outline" onClick={onReset} className="border-border/50">
         {t('auto.upload_more')}
       </Button>
-    </div>
-  );
+    </div>);
+
 }
 
 function UploadProcessing({ step, currentFile, processed, total }: any) {
@@ -483,23 +482,22 @@ function UploadProcessing({ step, currentFile, processed, total }: any) {
     <div className="border border-border/50 rounded-xl p-12 flex flex-col items-center bg-card shadow-surface">
       <Loader2 className="size-8 text-primary animate-spin mb-4" />
       <h3 className="font-semibold text-foreground mb-1">
-        {step === 'uploading'
-          ? t('upload.processing')
-          : t('auto.ai_is_digitizing_your_catalog')}
+        {step === 'uploading' ?
+        t('upload.processing') :
+        t('auto.ai_is_digitizing_your_catalog')}
       </h3>
       <p className="text-sm text-muted-foreground mb-1">{currentFile}</p>
       <p className="text-xs text-muted-foreground">
-        {processed + 1} / {total}
-        {t('auto.files')}
+        {processed + 1} / {total} {t('auto.files')}
       </p>
       <div className="mt-4 w-full max-w-xs bg-secondary rounded-full h-2 overflow-hidden">
         <div
           className="h-full bg-gradient-brand rounded-full transition-all duration-500"
-          style={{ width: `${total > 0 ? (processed / total) * 100 : 0}%` }}
-        />
+          style={{ width: `${total > 0 ? processed / total * 100 : 0}%` }} />
+        
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function UploadReview({ reviews, approvedCount, onApprove, onReject }: any) {
@@ -511,9 +509,7 @@ function UploadReview({ reviews, approvedCount, onApprove, onReject }: any) {
           {t('auto.review_products')}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {reviews.length}
-          {t('auto.pending')}
-          {approvedCount}
+          {reviews.length} {t('auto.pending')} | {approvedCount}{' '}
           {t('auto.approved')}
         </p>
       </div>
@@ -521,19 +517,19 @@ function UploadReview({ reviews, approvedCount, onApprove, onReject }: any) {
         {t('auto.review_the_ai_extracted_produc')}
       </p>
       <div className="space-y-4">
-        {reviews.map((review: any) => (
-          <ReviewCard
-            key={review.fileId}
-            product={review.product}
-            imageUrl={review.imageUrl}
-            index={0}
-            onApprove={(p: any) => onApprove(p, review.imageUrl, review.fileId)}
-            onReject={() => onReject(review.fileId)}
-          />
-        ))}
+        {reviews.map((review: any) =>
+        <ReviewCard
+          key={review.fileId}
+          product={review.product}
+          imageUrl={review.imageUrl}
+          index={0}
+          onApprove={(p: any) => onApprove(p, review.imageUrl, review.fileId)}
+          onReject={() => onReject(review.fileId)} />
+
+        )}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function UploadError({ onRetry }: any) {
@@ -550,8 +546,8 @@ function UploadError({ onRetry }: any) {
       <Button variant="outline" onClick={onRetry} className="border-border/50">
         {t('auto.try_again')}
       </Button>
-    </div>
-  );
+    </div>);
+
 }
 
 function PriceOverride({ value, onChange }: any) {
@@ -574,69 +570,67 @@ function PriceOverride({ value, onChange }: any) {
       <Input
         type="number"
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={t('auto.e_g_999_leave_empty_for_ai_est')}
         className="max-w-xs"
         min="0"
-        step="1"
-      />
-    </div>
-  );
+        step="1" />
+      
+    </div>);
+
 }
 
 function DropZone({ dragOver, onDragOver, onFiles, disabled }: any) {
   const { t } = useTranslation();
   return (
     <div
-      onDragOver={e => {
+      onDragOver={(e) => {
         e.preventDefault();
         if (!disabled) onDragOver(true);
       }}
       onDragLeave={() => onDragOver(false)}
-      onDrop={e => {
+      onDrop={(e) => {
         e.preventDefault();
         onDragOver(false);
         if (e.dataTransfer.files && !disabled) onFiles(e.dataTransfer.files);
       }}
-      className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center bg-card shadow-surface transition-all duration-200 ${disabled ? t('auto.opacity_50_cursor_not_allowed_429') : t('auto.cursor_pointer')} ${dragOver && !disabled ? t('auto.border_primary_bg_primary_5') : t('auto.border_border_50_hover_border_423')}`}
-    >
+      className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center bg-card shadow-surface transition-all duration-200 ${disabled ? t("auto.opacity_50_cursor_not_allowed_429") : t("auto.cursor_pointer")} ${dragOver && !disabled ? t("auto.border_primary_bg_primary_5") : t("auto.border_border_50_hover_border_423")}`}>
+      
       <div
-        className={`size-14 rounded-full flex items-center justify-center mb-4 ${disabled ? t('auto.bg_muted') : t('auto.bg_primary_10')}`}
-      >
+        className={`size-14 rounded-full flex items-center justify-center mb-4 ${disabled ? t("auto.bg_muted") : t("auto.bg_primary_10")}`}>
+        
         <Upload
-          className={`size-6 ${disabled ? t('auto.text_muted_foreground') : t('auto.text_primary')}`}
-        />
+          className={`size-6 ${disabled ? t("auto.text_muted_foreground") : t("auto.text_primary")}`} />
+        
       </div>
       <h3 className="font-semibold text-foreground mb-1">
         {disabled ? t('auto.daily_limit_reached') : t('upload.dragDrop')}
       </h3>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
-        {disabled
-          ? t('auto.please_come_back_tomorrow_or_c')
-          : t('upload.supported').replace('—', ':')}
+        {disabled ?
+        t('auto.please_come_back_tomorrow_or_c') :
+        t('upload.supported').replace('—', ':')}
       </p>
       <label
-        htmlFor={t('auto.file_upload')}
-        className={
-          disabled ? t('auto.pointer_events_none') : t('auto.cursor_pointer')
-        }
-      >
+        htmlFor="file-upload"
+        className={disabled ? t("auto.pointer_events_none") : t("auto.cursor_pointer")}>
+        
         <input
           id="file-upload"
           type="file"
           multiple
-          accept={t('auto.image')}
-          onChange={e => {
+          accept="image/*"
+          onChange={(e) => {
             if (e.target.files && !disabled) onFiles(e.target.files);
           }}
-          className="hidden"
-        />
+          className="hidden" />
+        
         <div
-          className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 ${disabled ? t('auto.bg_muted_text_muted_foreground') : t('auto.bg_primary_text_primary_foregr_984')}`}
-        >
+          className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 ${disabled ? t("auto.bg_muted_text_muted_foreground") : t("auto.bg_primary_text_primary_foregr_984")}`}>
+          
           {disabled ? t('auto.blocked') : t('upload.orClick')}
         </div>
       </label>
-    </div>
-  );
+    </div>);
+
 }

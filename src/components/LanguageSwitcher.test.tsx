@@ -56,4 +56,9 @@ describe('LanguageSwitcher', () => {
       expect(screen.queryByText('English')).not.toBeInTheDocument();
     });
   });
+
+  it('renders correctly with compact variant', () => {
+    render(<LanguageSwitcher variant="compact" />);
+    expect(screen.getByRole('button', { name: /switch language/i })).toBeInTheDocument();
+  });
 });

@@ -70,6 +70,7 @@ export default function ResetPassword() {
     error: '',
   });
 
+  const { t } = useTranslation();
   const { updatePassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

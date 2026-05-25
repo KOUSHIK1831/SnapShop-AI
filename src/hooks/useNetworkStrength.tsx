@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import SpeedTest from '@cloudflare/speedtest';
 import {
   createContext,
@@ -5,8 +6,9 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
+  type ReactNode
 } from 'react';
+import i18n from '@/i18n';
 
 export type NetworkStatus = 'fast' | 'medium' | 'slow' | 'offline' | 'unknown';
 
@@ -30,11 +32,10 @@ type SpeedTestConfig = NonNullable<ConstructorParameters<typeof SpeedTest>[0]>;
 const SPEED_TEST_CONFIG: SpeedTestConfig = {
   autoStart: false,
   measurements: [
-    { type: 'download', bytes: 100_000, count: 1, bypassMinDuration: true },
+    { type: 'download', bytes: 100_000, count: 1, bypassMinDuration: true }
   ],
-
   measureDownloadLoadedLatency: false,
-  measureUploadLoadedLatency: false,
+  measureUploadLoadedLatency: false
 };
 
 function isBrowserOnline(): boolean {
@@ -62,7 +63,7 @@ const makeOffline = (): NetworkInfo => ({
   downloadMbps: null,
   connected: false,
   isOnline: false,
-  lastUpdatedAt: null,
+  lastUpdatedAt: null
 });
 
 const makeUnknown = (): NetworkInfo => ({
@@ -70,7 +71,7 @@ const makeUnknown = (): NetworkInfo => ({
   downloadMbps: null,
   connected: false,
   isOnline: isBrowserOnline(),
-  lastUpdatedAt: null,
+  lastUpdatedAt: null
 });
 
 const makeFromMbps = (mbps: number | null): NetworkInfo => ({
@@ -78,14 +79,14 @@ const makeFromMbps = (mbps: number | null): NetworkInfo => ({
   downloadMbps: mbps,
   connected: mbps != null,
   isOnline: true,
-  lastUpdatedAt: Date.now(),
+  lastUpdatedAt: Date.now()
 });
 
 const NetworkContext = createContext<NetworkInfo>(makeUnknown());
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<NetworkInfo>(() =>
-    isBrowserOnline() ? makeUnknown() : makeOffline(),
+    isBrowserOnline() ? makeUnknown() : makeOffline()
   );
 
   const mountedRef = useRef(true);

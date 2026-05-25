@@ -189,9 +189,9 @@ export default function Index() {
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-center">
             {[
-              { icon: Shield, label: 'Secure & Private' },
-              { icon: Zap, label: 'Setup in 2 Minutes' },
-              { icon: Globe, label: 'Share Anywhere' },
+              { icon: Shield, label: t('auto.secure_private') },
+              { icon: Zap, label: t('auto.setup_in_2_minutes') },
+              { icon: Globe, label: t('auto.share_anywhere') },
             ].map(item => (
               <div
                 key={item.label}

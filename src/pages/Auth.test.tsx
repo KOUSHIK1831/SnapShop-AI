@@ -1,15 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import Auth from './Auth';
 
-const { signInMock, signUpMock, toastMock, navigateMock, supabaseMock } =
+const { signInMock, signUpMock, toastMock, navigateMock, supabaseMock, resetPasswordMock, verifyOtpMock, resendOtpMock } =
   vi.hoisted(() => ({
     signInMock: vi.fn(),
     signUpMock: vi.fn(),
     toastMock: vi.fn(),
     navigateMock: vi.fn(),
+    resetPasswordMock: vi.fn(),
+    verifyOtpMock: vi.fn(),
+    resendOtpMock: vi.fn(),
     supabaseMock: {
       auth: {
         getSession: vi.fn(),
@@ -32,8 +35,9 @@ vi.mock('@/hooks/useAuth', () => ({
     loading: false,
     signIn: { password: signInMock, sendOtp: vi.fn(), verifyOtp: vi.fn() },
     signUp: signUpMock,
-    resetPassword: vi.fn(),
-    verifyOtp: vi.fn(),
+    resetPassword: resetPasswordMock,
+    verifyOtp: verifyOtpMock,
+    resendOtp: resendOtpMock,
   }),
 }));
 
@@ -57,13 +61,14 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => navigateMock,
-    useSearchParams: () => [new URLSearchParams(), vi.fn()],
   };
 });
 
 describe('Auth page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+    localStorage.clear();
     mockUser = null;
 
     // Default supabase mocks
@@ -200,5 +205,215 @@ describe('Auth page', () => {
         expect.objectContaining({ title: 'Verification Required' }),
       );
     });
+  });
+
+  it('toggles password visibility', () => {
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    const passwordInput = screen.getByPlaceholderText(/password/i);
+    expect(passwordInput).toHaveAttribute('type', 'password');
+
+    const toggleButton = screen.getByTestId('toggle-password');
+    fireEvent.click(toggleButton);
+
+    expect(passwordInput).toHaveAttribute('type', 'text');
+
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute('type', 'password');
+  });
+
+  it('shows blocked user alert from sessionStorage', async () => {
+    sessionStorage.setItem('apnabazar_blocked_alert', 'true');
+
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Account Blocked',
+        }),
+      );
+      expect(sessionStorage.getItem('apnabazar_blocked_alert')).toBeNull();
+    });
+  });
+
+  it('sets signup role from search params', async () => {
+    render(
+      <MemoryRouter initialEntries={['/auth?role=buyer']}>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /create account/i }).slice(-1)[0],
+    );
+
+    // Roles are buttons with text
+    await waitFor(() => {
+      const buyerButton = screen.getByText('Buyer').closest('button');
+      // Selected state should have text-primary (from auto.bg_card_text_primary_shadow_md)
+      expect(buyerButton?.className).toContain('text-primary');
+    });
+  });
+
+  it('handles forgot password flow', async () => {
+    resetPasswordMock.mockResolvedValue({ error: null });
+
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByText(/forgot password/i));
+
+    const emailInput = screen.getByPlaceholderText(/enter your email/i);
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
+    fireEvent.submit(screen.getByRole('button', { name: /send reset code/i }));
+
+    await waitFor(() => {
+      expect(resetPasswordMock).toHaveBeenCalledWith('test@example.com');
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'OTP Sent' }),
+      );
+      expect(screen.getByText(/verify your email/i)).toBeDefined();
+    });
+  });
+
+  it('handles OTP verification for signup', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    // Enter signup mode first to set the email
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /create account/i }).slice(-1)[0],
+    );
+    fireEvent.change(screen.getByPlaceholderText(/phone/i), {
+      target: { value: '9876543210' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), {
+      target: { value: 'New Seller' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    signUpMock.mockResolvedValue({ error: null });
+    fireEvent.submit(
+      screen
+        .getAllByRole('button', { name: /create account/i })
+        .slice(-1)[0]
+        .closest('form')!,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/verify your email/i)).toBeDefined();
+    });
+
+    const otpInput = screen.getByPlaceholderText('0 0 0 0 0 0');
+    fireEvent.change(otpInput, { target: { value: '123456' } });
+
+    fireEvent.submit(screen.getByRole('button', { name: /verify & continue/i }));
+
+    await waitFor(() => {
+      expect(verifyOtpMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'new@example.com',
+          token: '123456',
+        }),
+      );
+      expect(navigateMock).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
+  it('handles resend OTP with cooldown', async () => {
+    resendOtpMock.mockResolvedValue({ error: null });
+
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    // Switch to forgot password and then OTP recovery mode
+    fireEvent.click(screen.getByText(/forgot password/i));
+    fireEvent.change(screen.getByPlaceholderText(/enter your email/i), {
+      target: { value: 'test@example.com' },
+    });
+    resetPasswordMock.mockResolvedValue({ error: null });
+    fireEvent.submit(screen.getByRole('button', { name: /send reset code/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/resend otp/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/resend otp/i));
+
+    await waitFor(() => {
+      expect(resendOtpMock).toHaveBeenCalled();
+      expect(screen.getByText(/resend otp in/i)).toBeDefined();
+    });
+  });
+
+  it('shows validation errors for invalid inputs', async () => {
+    render(
+      <MemoryRouter>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    // Login validation
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
+      target: { value: 'invalid-email' },
+    });
+    fireEvent.submit(
+      screen
+        .getAllByRole('button', { name: /sign in/i })
+        .slice(-1)[0]
+        .closest('form')!,
+    );
+
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Please enter a valid email and password',
+      }),
+    );
+
+    // Signup validation
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /create account/i }).slice(-1)[0],
+    );
+    fireEvent.change(screen.getByPlaceholderText(/phone/i), {
+      target: { value: '123' },
+    });
+    fireEvent.submit(
+      screen
+        .getAllByRole('button', { name: /create account/i })
+        .slice(-1)[0]
+        .closest('form')!,
+    );
+
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Please enter a valid 10-digit phone number',
+      }),
+    );
   });
 });

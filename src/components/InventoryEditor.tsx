@@ -286,8 +286,8 @@ export default function InventoryEditor({
                         <Badge
                           variant={
                             hasVariants
-                              ? t('auto.secondary')
-                              : t('auto.outline')
+                              ? 'secondary'
+                              : 'outline'
                           }
                           className="text-[10px] uppercase font-bold"
                         >

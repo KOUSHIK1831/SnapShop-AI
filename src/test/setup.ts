@@ -1,6 +1,19 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import React from 'react';
 import en from '../locales/en/translation.json';
+
+// Polyfill React.use() for React 18 (shadcn/ui components use React 19 use() API)
+if (!React.use) {
+  (React as any).use = React.useContext;
+}
+
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+    exitApp: vi.fn(),
+  },
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -5,7 +5,7 @@ test.describe('Product upload flow', () => {
     await page.goto('/auth');
     await page
       .getByPlaceholder('you@example.com')
-      .fill('test-seller@apnabazar.com');
+      .fill('test-seller@snapshop.app');
     await page.getByPlaceholder('••••••••').fill('Test@123456');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await page.waitForURL('/dashboard', { timeout: 10000 });

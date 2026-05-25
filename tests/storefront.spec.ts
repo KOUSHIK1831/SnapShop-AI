@@ -12,7 +12,7 @@ test.describe('Storefront', () => {
     await page.goto('/auth');
     await page
       .getByPlaceholder('you@example.com')
-      .fill('test-seller@apnabazar.com');
+      .fill('test-seller@snapshop.app');
     await page.getByPlaceholder('••••••••').fill('Test@123456');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await page.waitForURL('/dashboard', { timeout: 10000 });
@@ -25,8 +25,8 @@ test.describe('Storefront', () => {
     }
   });
 
-  test('footer shows Powered by ApnaBazar', async ({ page }) => {
+  test('footer shows Powered by SnapShop AI', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Powered by ApnaBazar')).toBeVisible();
+    await expect(page.getByText('Powered by SnapShop AI')).toBeVisible();
   });
 });

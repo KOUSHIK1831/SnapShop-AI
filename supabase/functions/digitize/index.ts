@@ -100,31 +100,6 @@ If the image does NOT contain any clothing, fashion item, or textile, return: {"
 Otherwise, return ONLY valid JSON. No markdown, no explanations.`,
 };
 
-// ── Rate limiter (2D.3) ──
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const recent = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
-  if (recent.length >= RATE_LIMIT_MAX) return false;
-  recent.push(now);
-  rateLimitMap.set(ip, recent);
-  return true;
-}
-
-// ── Cleanup stale rate limit entries every 5 minutes ──
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, timestamps] of rateLimitMap) {
-    const recent = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
-    if (recent.length === 0) rateLimitMap.delete(ip);
-    else rateLimitMap.set(ip, recent);
-  }
-}, 300_000);
-
 function isValidUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     str,
@@ -164,10 +139,27 @@ serve(async req => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false },
+  });
+
   // ── Rate limiting (2D.3) ──
+  // Use persistent DB-level rate limiting
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  if (!checkRateLimit(ip)) {
+  
+  const { data: allowed, error: limitError } = await supabaseAdmin.rpc('check_rate_limit', {
+    p_key: `digitize_ip_${ip}`,
+    p_max_requests: 10,
+    p_window_seconds: 60
+  });
+
+  if (limitError) {
+    console.error('Rate limit RPC error:', limitError);
+  } else if (!allowed) {
     return new Response(
       JSON.stringify({
         error: 'Rate limit exceeded. Max 10 requests per minute.',
@@ -181,24 +173,10 @@ serve(async req => {
 
   // ── Auth token verification (2D.2) ──
   const authHeader = req.headers.get('authorization') || '';
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-
   let userId: string | null = null;
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseServiceKey || supabaseAnonKey,
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false },
-      },
-    );
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser(token);
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
     userId = user?.id || null;
   }
 

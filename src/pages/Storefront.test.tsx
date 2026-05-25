@@ -1,47 +1,29 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Storefront from './Storefront';
 
-const {
-  authState,
-  toastMock,
-  fromMock,
-  useParamsMock,
-  navigateMock,
-  windowOpenMock,
-} = vi.hoisted(() => ({
-  authState: { user: null as null | { id: string; email: string } },
+// Mock dependencies
+const { toastMock, navigateMock, supabaseMock } = vi.hoisted(() => ({
   toastMock: vi.fn(),
-  fromMock: vi.fn(),
-  useParamsMock: vi.fn(() => ({ slug: 'ravi-boutique' })),
   navigateMock: vi.fn(),
-  windowOpenMock: vi.fn(),
+  supabaseMock: {
+    from: vi.fn((table) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn(() => chain),
+        single: vi.fn(),
+        update: vi.fn(() => chain),
+        insert: vi.fn(() => Promise.resolve({ error: null })),
+        then: vi.fn((resolve) => resolve({ data: [], error: null })),
+      };
+      return chain;
+    }),
+  },
 }));
 
-vi.stubGlobal('open', windowOpenMock);
-
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => authState,
-}));
-
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: toastMock }),
-}));
-
-vi.mock('@/components/LanguageSwitcher', () => ({
-  default: () => <div>LanguageSwitcher</div>,
-}));
-
-vi.mock('@/components/BuyerAuthModal', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div>BuyerAuthModal</div> : null,
-}));
-
-vi.mock('@/components/OrderConfirmation', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div>OrderConfirmation</div> : null,
-}));
+let mockUser: any = null;
 
 vi.mock('react-router-dom', async () => {
   const actual =
@@ -50,128 +32,298 @@ vi.mock('react-router-dom', async () => {
     );
   return {
     ...actual,
-    useParams: () => useParamsMock(),
     useNavigate: () => navigateMock,
   };
 });
 
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: mockUser,
+    loading: false,
+  }),
+}));
+
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: toastMock }),
+}));
+
 vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: fromMock,
-  },
+  supabase: supabaseMock,
+}));
+
+// Mock components
+vi.mock('@/components/BuyerAuthModal', () => ({
+  default: ({ isOpen, onOpenChange }: any) =>
+    isOpen ? (
+      <div data-testid="buyer-auth-modal">
+        BuyerAuthModal
+        <button onClick={() => onOpenChange(false)}>Close</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('@/components/OrderConfirmation', () => ({
+  default: ({ isOpen, onConfirm }: any) =>
+    isOpen ? (
+      <div data-testid="order-confirmation">
+        OrderConfirmation
+        <button
+          onClick={() =>
+            onConfirm(
+              { name: 'Test', phone: '1234567890' },
+              'cod',
+              'upi_qr',
+              'proof.jpg',
+            )
+          }
+        >
+          Confirm
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('@/components/LanguageSwitcher', () => ({
+  default: () => <div>LanguageSwitcher</div>,
+}));
+
+vi.mock('@/components/ThemeToggle', () => ({
+  default: () => <div>ThemeToggle</div>,
 }));
 
 describe('Storefront page', () => {
-  it('shows a not-found state when the seller slug does not exist', async () => {
-    fromMock.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          single: async () => ({ data: null }),
-        }),
-      }),
-    }));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    mockUser = null;
+  });
 
-    render(<Storefront />);
+  const mockSeller = {
+    id: 's1',
+    store_name: 'Ravi Boutique',
+    store_slug: 'ravi-boutique',
+    verification_status: 'approved',
+    phone: '9999999999',
+    theme_color: '#8b5cf6',
+  };
+
+  const mockProducts = [
+    {
+      id: 'p1',
+      title: 'Kurta',
+      price: 999,
+      image_url: 'kurta.jpg',
+      category: 'Clothing',
+      seller_id: 's1',
+    },
+    {
+      id: 'p2',
+      title: 'Saree',
+      price: 2999,
+      image_url: 'saree.jpg',
+      category: 'Ethnic',
+      seller_id: 's1',
+    },
+  ];
+
+  it('renders store and products correctly', async () => {
+    supabaseMock.from.mockImplementation((table: string) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn(() => Promise.resolve({ data: mockProducts, error: null })),
+        single: vi.fn().mockResolvedValue({ data: mockSeller, error: null }),
+      };
+      return chain;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Ravi Boutique')).toBeInTheDocument();
+    expect(await screen.findByText('Kurta')).toBeInTheDocument();
+  });
+
+  it('shows not found state if store does not exist', async () => {
+    supabaseMock.from.mockImplementation(() => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      return chain;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/store/non-existent']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText(/store not found/i)).toBeInTheDocument();
   });
 
-  it('opens buyer auth when an unauthenticated user tries to order', async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  id: 'seller-1',
-                  store_name: 'Ravi Boutique',
-                  store_slug: 'ravi-boutique',
-                },
-              }),
-            }),
-          }),
-        };
-      }
-
-      return {
-        select: () => ({
-          eq: () => ({
-            order: async () => ({
-              data: [
-                {
-                  id: 'product-1',
-                  seller_id: 'seller-1',
-                  title: 'Kurta',
-                  price: 999,
-                  category: 'Kurtas',
-                },
-              ],
-            }),
-          }),
+  it('shows blocked state if store is blocked', async () => {
+    supabaseMock.from.mockImplementation(() => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        single: vi.fn().mockResolvedValue({
+          data: { ...mockSeller, status: 'blocked', verification_status: 'blocked' },
+          error: null,
         }),
       };
+      return chain;
     });
 
-    render(<Storefront />);
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    fireEvent.click(await screen.findByRole('button', { name: /order now/i }));
-
-    expect(await screen.findByText('BuyerAuthModal')).toBeInTheDocument();
+    expect(await screen.findByText(/store unavailable/i)).toBeInTheDocument();
   });
 
-  it('places an order for authenticated users', async () => {
-    authState.user = { id: 'buyer-1', email: 'buyer@example.com' };
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  id: 'seller-1',
-                  store_name: 'Ravi Boutique',
-                  store_slug: 'ravi-boutique',
-                  contact_number: '+91 9999999999',
-                },
-              }),
-            }),
-          }),
-        };
-      }
-
-      if (table === 'products') {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: [
-                  {
-                    id: 'product-1',
-                    seller_id: 'seller-1',
-                    title: 'Kurta',
-                    price: 999,
-                    category: 'Kurtas',
-                  },
-                ],
-              }),
-            }),
-          }),
-        };
-      }
-
-      return {
-        insert: async () => ({ error: null }),
+  it('filters products by category', async () => {
+    supabaseMock.from.mockImplementation((table: string) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn().mockResolvedValue({ data: mockProducts, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockSeller, error: null }),
       };
+      return chain;
     });
 
-    render(<Storefront />);
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    fireEvent.click(await screen.findByRole('button', { name: /order now/i }));
+    await screen.findByText('Kurta');
+
+    const ethnicBadge = screen.getByText(/ethnic/i);
+    fireEvent.click(ethnicBadge);
+
+    expect(screen.queryByText('Kurta')).not.toBeInTheDocument();
+    expect(screen.getByText('Saree')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/all/i));
+    expect(screen.getByText('Kurta')).toBeInTheDocument();
+  });
+
+  it('handles WhatsApp chat click', async () => {
+    const openMock = vi.fn();
+    window.open = openMock;
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn().mockResolvedValue({ data: mockProducts, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockSeller, error: null }),
+      };
+      return chain;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Kurta');
+
+    const whatsappBtn = screen.getByTestId('whatsapp-btn-p1');
+    fireEvent.click(whatsappBtn);
+
+    expect(openMock).toHaveBeenCalledWith(
+      expect.stringContaining('wa.me/9999999999'),
+      '_blank',
+    );
+  });
+
+  it('completes order flow for authenticated user', async () => {
+    mockUser = { id: 'u1', role: 'buyer', email_confirmed: true };
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn().mockResolvedValue({ data: mockProducts, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockSeller, error: null }),
+        update: vi.fn(() => chain),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      };
+      return chain;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Kurta');
+
+    const orderBtn = screen.getByTestId('buy-now-btn-p1');
+    fireEvent.click(orderBtn);
+
+    expect(await screen.findByText('OrderConfirmation')).toBeInTheDocument();
+
+    const confirmBtn = screen.getByText('Confirm');
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(supabaseMock.from).toHaveBeenCalledWith('orders');
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Order placed!' }),
+      );
+    });
+  });
+
+  it('handles pending order from sessionStorage', async () => {
+    mockUser = { id: 'u1', role: 'buyer', email_confirmed: true };
+    sessionStorage.setItem('pending_order_product_id', 'p1');
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        order: vi.fn().mockResolvedValue({ data: mockProducts, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockSeller, error: null }),
+      };
+      return chain;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/store/ravi-boutique']}>
+        <Routes>
+          <Route path="/store/:slug" element={<Storefront />} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText('OrderConfirmation')).toBeInTheDocument();
+      expect(sessionStorage.getItem('pending_order_product_id')).toBeNull();
     });
   });
 });

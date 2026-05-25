@@ -92,6 +92,11 @@ export default function StoreSettings({
     setUploadingBanner(false);
   };
 
+  const generatedSlug = `${formData.storeName} ${formData.location}`.
+  toLowerCase().
+  replace(/[^a-z0-9]+/g, '-').
+  replace(/(^-|-$)/g, '');
+
   const handleSave = async () => {
     setSaving(true);
     const result = await onUpdate({
@@ -121,11 +126,6 @@ export default function StoreSettings({
       });
     }
   };
-
-  const generatedSlug = `${formData.storeName} ${formData.location}`.
-  toLowerCase().
-  replace(/[^a-z0-9]+/g, '-').
-  replace(/(^-|-$)/g, '');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -368,7 +368,7 @@ export default function StoreSettings({
                 onClick={() =>
                 setFormData((prev) => ({ ...prev, themeColor: color }))
                 }
-                className={`size-8 rounded-full transition-all duration-200 ${formData.themeColor === color ? t("auto.ring_2_ring_offset_2_ring_prim_248") : t("auto.hover_scale_110")}`}
+                className={`size-8 rounded-full transition-all duration-200 ${formData.themeColor === color ? "ring-2 ring-offset-2 ring-primary" : "hover:scale-110"}`}
                 style={{ backgroundColor: color }}
                 title={color} />
 

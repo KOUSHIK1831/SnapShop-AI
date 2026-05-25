@@ -69,14 +69,17 @@ export interface Order {
     | 'pending'
     | 'accepted'
     | 'confirmed'
+    | 'preparing'
+    | 'ready_for_dispatch'
     | 'shipped'
     | 'out_for_delivery'
     | 'delivered'
     | 'completed'
     | 'cancelled';
   pay_method: 'cod' | 'online';
-  pay_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  pay_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'awaiting_verification';
   gateway_payment_id?: string | null;
+  payment_proof_url?: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
   unit_price: number;

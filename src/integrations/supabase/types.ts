@@ -155,6 +155,7 @@ export type Database = {
           pay_method: Database['public']['Enums']['payment_method'] | null;
           pay_status: Database['public']['Enums']['payment_status'] | null;
           gateway_payment_id: string | null;
+          payment_proof_url: string | null;
         };
         Insert: {
           buyer_id?: string | null;
@@ -184,6 +185,7 @@ export type Database = {
           pay_method?: Database['public']['Enums']['payment_method'] | null;
           pay_status?: Database['public']['Enums']['payment_status'] | null;
           gateway_payment_id?: string | null;
+          payment_proof_url?: string | null;
         };
         Update: {
           buyer_id?: string | null;
@@ -213,6 +215,7 @@ export type Database = {
           pay_method?: Database['public']['Enums']['payment_method'] | null;
           pay_status?: Database['public']['Enums']['payment_status'] | null;
           gateway_payment_id?: string | null;
+          payment_proof_url?: string | null;
         };
         Relationships: [
           {
@@ -378,7 +381,7 @@ export type Database = {
     Enums: {
       delivery_type: 'courier' | 'self_delivery';
       payment_method: 'cod' | 'online';
-      payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+      payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'awaiting_verification';
     };
     CompositeTypes: {
       [_ in never]: never;

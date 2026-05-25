@@ -12,16 +12,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  DialogTrigger } from
+'@/components/ui/dialog';
 import {
   MessageSquarePlus,
   Bug,
   History,
   MessageSquare,
   Clock,
-  ShieldCheck,
-} from 'lucide-react';
+  ShieldCheck } from
+'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -44,17 +44,17 @@ type FeedbackState = {
 };
 
 type FeedbackAction =
-  | { type: 'SET_CONTENT'; value: string }
-  | { type: 'SET_SUBMITTING'; value: boolean }
-  | { type: 'SET_OPEN'; value: boolean }
-  | { type: 'SET_HISTORY'; value: FeedbackItem[] }
-  | { type: 'SET_LOADING'; value: boolean }
-  | { type: 'RESET' };
+{type: 'SET_CONTENT';value: string;} |
+{type: 'SET_SUBMITTING';value: boolean;} |
+{type: 'SET_OPEN';value: boolean;} |
+{type: 'SET_HISTORY';value: FeedbackItem[];} |
+{type: 'SET_LOADING';value: boolean;} |
+{type: 'RESET';};
 
 function feedbackReducer(
-  state: FeedbackState,
-  action: FeedbackAction,
-): FeedbackState {
+state: FeedbackState,
+action: FeedbackAction)
+: FeedbackState {
   switch (action.type) {
     case 'SET_CONTENT':
       return { ...state, content: action.value };
@@ -83,7 +83,7 @@ export default function FeedbackModal() {
     isSubmitting: false,
     isOpen: false,
     myFeedback: [],
-    loadingHistory: false,
+    loadingHistory: false
   });
 
   useEffect(() => {
@@ -91,11 +91,11 @@ export default function FeedbackModal() {
     if (state.isOpen && user) {
       const fetchMyFeedback = async () => {
         dispatch({ type: 'SET_LOADING', value: true });
-        const { data, error } = await supabase
-          .from('feedback')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('created_at', { ascending: false });
+        const { data, error } = await supabase.
+        from('feedback').
+        select('*').
+        eq('user_id', user?.id).
+        order('created_at', { ascending: false });
 
         if (!error) {
           dispatch({ type: 'SET_HISTORY', value: data || [] });
@@ -105,21 +105,21 @@ export default function FeedbackModal() {
 
       fetchMyFeedback();
 
-      channel = supabase
-        .channel('my-feedback-realtime')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'feedback',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            fetchMyFeedback();
-          },
-        )
-        .subscribe();
+      channel = supabase.
+      channel('my-feedback-realtime').
+      on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'feedback',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchMyFeedback();
+        }
+      ).
+      subscribe();
     }
     return () => {
       if (channel) {
@@ -141,7 +141,7 @@ export default function FeedbackModal() {
       } = {
         user_id: user?.id,
         content: state.content.trim(),
-        status: 'open',
+        status: 'open'
       };
 
       // Include seller_id if the user is a seller
@@ -158,19 +158,19 @@ export default function FeedbackModal() {
 
       toast({
         title: t('feedback.success'),
-        variant: 'default',
+        variant: 'default'
       });
       dispatch({ type: 'RESET' });
     } catch (err: unknown) {
       console.error('Feedback: Detailed error:', err);
       const errorMessage =
-        err instanceof Error
-          ? err.message
-          : t('auto.could_not_submit_feedback_plea');
+      err instanceof Error ?
+      err.message :
+      t('auto.could_not_submit_feedback_plea');
       toast({
         title: t('feedback.error'),
         description: errorMessage,
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       dispatch({ type: 'SET_SUBMITTING', value: false });
@@ -182,16 +182,16 @@ export default function FeedbackModal() {
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={open => dispatch({ type: 'SET_OPEN', value: open })}
-    >
+      onOpenChange={(open) => dispatch({ type: 'SET_OPEN', value: open })}>
+      
       <DialogTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
           className="text-muted-foreground hover:text-primary gap-2"
           title={t('feedback.title')}
-          id="tour-feedback"
-        >
+          id="tour-feedback">
+          
           <Bug className="size-4" />
           <span className="hidden sm:inline text-xs font-medium">
             {t('admin.feedback')}
@@ -199,7 +199,7 @@ export default function FeedbackModal() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
-        <Tabs defaultValue={t('auto.send')} className="size-full flex flex-col">
+        <Tabs defaultValue="send" className="size-full flex flex-col">
           <div className="p-6 pb-2">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
@@ -209,10 +209,10 @@ export default function FeedbackModal() {
               <DialogDescription>{t('feedback.placeholder')}</DialogDescription>
             </DialogHeader>
             <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1">
-              <TabsTrigger value={t('auto.send')} className="text-xs">
+              <TabsTrigger value="send" className="text-xs">
                 <MessageSquare className="size-3.5 mr-2" /> {t('feedback.send')}
               </TabsTrigger>
-              <TabsTrigger value={t('auto.history')} className="text-xs">
+              <TabsTrigger value="history" className="text-xs">
                 <History className="size-3.5 mr-2" /> {t('feedback.history')} (
                 {myFeedback.length})
               </TabsTrigger>
@@ -220,60 +220,60 @@ export default function FeedbackModal() {
           </div>
 
           <TabsContent
-            value={t('auto.send')}
-            className="flex-1 flex flex-col p-6 pt-2"
-          >
+            value="send"
+            className="flex-1 flex flex-col p-6 pt-2">
+            
             <div className="flex-1 py-4">
               <Textarea
                 value={content}
-                onChange={e =>
-                  dispatch({ type: 'SET_CONTENT', value: e.target.value })
+                onChange={(e) =>
+                dispatch({ type: 'SET_CONTENT', value: e.target.value })
                 }
                 placeholder={t('feedback.placeholder')}
-                className="h-full min-h-[250px] resize-none border-border/50 focus-visible:ring-primary/20 bg-background text-foreground"
-              />
+                className="h-full min-h-[250px] resize-none border-border/50 focus-visible:ring-primary/20 bg-background text-foreground" />
+              
             </div>
             <DialogFooter className="pt-4 border-t border-border/10">
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !content.trim()}
-                className="w-full bg-gradient-brand text-white shadow-lg shadow-primary/20"
-              >
+                className="w-full bg-gradient-brand text-white shadow-lg shadow-primary/20">
+                
                 {isSubmitting ? t('common.saving') : t('feedback.submit')}
               </Button>
             </DialogFooter>
           </TabsContent>
 
           <TabsContent
-            value={t('auto.history')}
-            className="flex-1 overflow-y-auto p-6 pt-2 space-y-4"
-          >
-            {loadingHistory && myFeedback.length === 0 ? (
-              <div className="flex items-center justify-center h-40">
+            value="history"
+            className="flex-1 overflow-y-auto p-6 pt-2 space-y-4">
+            
+            {loadingHistory && myFeedback.length === 0 ?
+            <div className="flex items-center justify-center h-40">
                 <p className="text-sm text-muted-foreground">
                   {t('feedback.loadingHistory')}
                 </p>
-              </div>
-            ) : myFeedback.length === 0 ? (
-              <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
+              </div> :
+            myFeedback.length === 0 ?
+            <div className="text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border/50">
                 <History className="size-10 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">
                   {t('feedback.noFeedback')}
                 </p>
-              </div>
-            ) : (
-              myFeedback.map(item => (
-                <FeedbackCard key={item.id} item={item} t={t} />
-              ))
-            )}
+              </div> :
+
+            myFeedback.map((item) =>
+            <FeedbackCard key={item.id} item={item} t={t} />
+            )
+            }
           </TabsContent>
         </Tabs>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
 
-function FeedbackCard({ item, t }: { item: any; t: any }) {
+export function FeedbackCard({ item, t }: {item: any;t: any;}) {
   const [formattedDate, setFormattedDate] = React.useState('');
 
   React.useEffect(() => {
@@ -285,14 +285,14 @@ function FeedbackCard({ item, t }: { item: any; t: any }) {
       <div className="flex items-center justify-between">
         <Badge
           variant={
-            item.status === 'open'
-              ? t('auto.destructive')
-              : item.status === 'resolved'
-                ? t('auto.default')
-                : t('auto.secondary')
+          item.status === 'open' ? "destructive" :
+
+          item.status === 'resolved' ? "default" : "secondary"
+
+
           }
-          className="text-[10px] uppercase"
-        >
+          className="text-[10px] uppercase">
+          
           {item.status.replace('_', ' ')}
         </Badge>
         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -303,8 +303,8 @@ function FeedbackCard({ item, t }: { item: any; t: any }) {
         "{item.content}"
       </p>
 
-      {item.admin_response && (
-        <div className="mt-3 pt-3 border-t border-border/30 bg-primary/5 -mx-4 -mb-4 p-4">
+      {item.admin_response &&
+      <div className="mt-3 pt-3 border-t border-border/30 bg-primary/5 -mx-4 -mb-4 p-4">
           <p className="text-[10px] font-bold text-primary flex items-center gap-1 mb-1 uppercase tracking-wider">
             <ShieldCheck className="size-3" /> {t('feedback.adminResponse')}
           </p>
@@ -312,7 +312,7 @@ function FeedbackCard({ item, t }: { item: any; t: any }) {
             {item.admin_response}
           </p>
         </div>
-      )}
-    </Card>
-  );
+      }
+    </Card>);
+
 }

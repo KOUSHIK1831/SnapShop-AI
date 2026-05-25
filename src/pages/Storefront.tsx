@@ -834,6 +834,7 @@ function StorefrontContent() {
                       <div className="flex gap-2">
                         <Button
                     size="sm"
+                    data-testid={`buy-now-btn-${product.id}`}
                     className="flex-1 bg-gradient-brand hover:opacity-90 transition-opacity"
                     onClick={() => handleOrder(product)}>
                     
@@ -843,6 +844,7 @@ function StorefrontContent() {
                         <Button
                     size="sm"
                     variant="outline"
+                    data-testid={`whatsapp-btn-${product.id}`}
                     className="border-border/50"
                     onClick={() => handleWhatsAppChat(product)}
                     title={t('orders.whatsapp')}>

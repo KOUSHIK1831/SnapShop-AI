@@ -104,18 +104,14 @@ export default function StoreSetup({ onComplete }: StoreSetupProps) {
     try {
       for (const file of files) {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
+        const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.
         from('seller-proofs').
         upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
-        const {
-          data: { publicUrl }
-        } = supabase.storage.from('seller-proofs').getPublicUrl(fileName);
-
-        documentUrls.push(publicUrl);
+        documentUrls.push(fileName);
       }
 
       onComplete({

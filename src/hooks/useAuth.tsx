@@ -3,13 +3,8 @@ import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailOtpType, MobileOtpType } from '@supabase/supabase-js';
 
-const CREDENTIALS_KEY = 'apnabazar_credentials';
 const PHONE_EMAIL_MAP_KEY = 'apnabazar_phone_email_map';
 
-interface StoredCredentials {
-  email: string;
-  password: string;
-}
 interface AuthUser {
   id: string;
   name?: string;
@@ -51,34 +46,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-function storeCredentials(email: string, password: string) {
-  try {
-    sessionStorage.setItem(
-      CREDENTIALS_KEY,
-      JSON.stringify({ email, password }),
-    );
-  } catch {
-    // sessionStorage unavailable
-  }
-}
-
-function getStoredCredentials(): StoredCredentials | null {
-  try {
-    const raw = sessionStorage.getItem(CREDENTIALS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearStoredCredentials() {
-  try {
-    sessionStorage.removeItem(CREDENTIALS_KEY);
-  } catch {
-    // sessionStorage unavailable
-  }
-}
 
 function storePhoneEmail(phone: string, email: string) {
   try {
@@ -192,19 +159,6 @@ function normalizePasswordLoginError(error: Error) {
     );
   }
   return error;
-}
-
-async function ensureSupabaseSession(email: string, password: string) {
-  if (!email || !password) return;
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (session?.user?.email === email) return;
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    console.warn('[Auth] Supabase re-auth failed:', error.message);
-  }
 }
 
 type AuthState = {
@@ -416,7 +370,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       storePhoneEmail(phone, email);
-      storeCredentials(email, password);
 
       // If email confirmation is off, a session is returned immediately.
       // If it's on, data.session will be null.
@@ -554,7 +507,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       recordSuccess(cleanIdentifier);
-      storeCredentials(email, password);
       return { error: null };
     } catch (err) {
       return { error: err instanceof Error ? err : new Error('Network error') };
@@ -562,7 +514,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    clearStoredCredentials();
     await supabase.auth.signOut();
   };
 

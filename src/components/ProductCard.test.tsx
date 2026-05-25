@@ -76,4 +76,18 @@ describe('ProductCard', () => {
 
     confirmSpy.mockRestore();
   });
+
+  it('cancels the edit mode without changes', () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+    
+    const titleInput = screen.getAllByRole('textbox')[0];
+    fireEvent.change(titleInput!, { target: { value: 'Changed Title' } });
+    
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByDisplayValue('Changed Title')).not.toBeInTheDocument();
+    expect(screen.getByText('Linen Kurta')).toBeInTheDocument();
+  });
 });
