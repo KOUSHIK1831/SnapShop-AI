@@ -1,6 +1,6 @@
-# Contributing to ApnaBazar
+# Contributing to SnapShop AI
 
-Thank you for your interest in contributing to the ApnaBazar project! This document provides guidelines and information for contributors to help keep our marketplace robust and high-quality.
+Thank you for your interest in contributing to the SnapShop AI project! This document provides guidelines and information for contributors to help keep our marketplace robust and high-quality.
 
 ## 🚀 Quick Start
 
@@ -121,7 +121,7 @@ npm run validate
 
 ### 4. Commit Your Changes
 
-ApnaBazar follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+SnapShop AI follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
 #### Format: `<type>: <subject>`
 
@@ -146,8 +146,8 @@ Push your branch and open a Merge Request on GitLab. Use the default template pr
 
 ## 📄 License
 
-By contributing to ApnaBazar, you agree that your contributions will be licensed under the **GNU Affero General Public License (AGPL) v3**.
+By contributing to SnapShop AI, you agree that your contributions will be licensed under the **GNU Affero General Public License (AGPL) v3**.
 
 ---
 
-Thank you for helping us build ApnaBazar! 🚀
+Thank you for helping us build SnapShop AI! 🚀

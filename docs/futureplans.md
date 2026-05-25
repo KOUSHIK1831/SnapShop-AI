@@ -1,17 +1,27 @@
 # WhatsApp AI Sales Agent
 
-An autonomous AI-powered sales agent that runs on WhatsApp for sellers on ApnaBazar. Handles the complete sales lifecycle — product discovery, order taking, language switching, and UPI payment collection — without any human in the loop.
+> **⚠️ Status: COMING SOON — FUTURE WORK**
+> **This feature is actively being developed and is NOT ready for production.**
+> The existing edge function is an alpha-stage prototype for testing purposes only.
+
+
+An autonomous AI-powered sales agent that runs on WhatsApp for sellers on SnapShop AI. Handles the complete sales lifecycle — product discovery, order taking, language switching, and UPI payment collection — without any human in the loop.
 
 Each seller gets their own WhatsApp Business number. Customers message that number and the AI agent responds as if it were the seller's personal sales assistant, reading from that seller's product catalog and writing orders into the existing `orders` table.
 
 ---
 
-## Status
+## Current Status
 
-- **Edge function deployed:** `supabase/functions/whatsapp-agent/index.ts` (398 lines)
-- **Used by:** WhatsApp Cloud API webhook
-- **AI Model:** Anthropic Claude (claude-opus-4-5)
-- **Conversation memory:** `conversations` table (JSONB)
+| Aspect               | Status                  |
+|----------------------|-------------------------|
+| Edge Function        | ✅ Deployed (Alpha)     |
+| AI Model (Claude)    | ✅ Integration done     |
+| Conversation Memory  | ✅ Table exists         |
+| WhatsApp Webhook     | ✅ Working              |
+| **Production Ready** | ❌ **Not Yet**          |
+| **Testing**          | ⏳ In Progress          |
+| **Documentation**    | ⏳ Being Written        |
 
 ---
 
@@ -242,3 +252,18 @@ Agent:     "✅ Order confirm ho gaya! Order ID: ORD-abc123
             Kal subah 10 baje delivery hogi! 🚚
             Shukriya Sunita ji! 🙏"
 ```
+
+---
+
+## Related: FastAPI Backend Migration
+
+A separate plan exists for migrating the entire application (including the WhatsApp agent) from Supabase Edge Functions to a proper FastAPI backend:
+
+📄 **See [`api.md`](./api.md)** — *Full Migration Plan — FastAPI Backend*
+
+That document covers:
+- Complete API endpoint specification (47 endpoints across 10 routers)
+- Directory structure for the Python backend
+- Migration phases (scaffold → core CRUD → AI/WhatsApp → admin → frontend)
+- Authentication flow using JWT + Supabase service role key
+- Production hardening for the WhatsApp agent within the FastAPI ecosystem

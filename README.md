@@ -1,8 +1,8 @@
-# 🛍️ ApnaBazar — Digitize Your Store
+# 📸 SnapShop AI — Digitize Your Store
 
 **AI-powered digitization platform for local clothing sellers.** Upload photos of your products, let AI extract titles, descriptions, prices & categories, and instantly get a shareable online storefront.
 
-> Built for the hackathon — empowering small retailers to go digital in under 2 minutes.
+> **SnapShop AI** — empowering small retailers to go digital in under 2 minutes.
 
 Public URL - https://apna-bazar-cs.vercel.app
 
@@ -266,7 +266,7 @@ The buyer flow on the public storefront is:
 
 ## 📱 Mobile (Android)
 
-ApnaBazar includes a Capacitor setup for generating native Android apps.
+SnapShop AI includes a Capacitor setup for generating native Android apps.
 To build and sync for Android:
 
 ```bash
@@ -278,7 +278,7 @@ npx cap open android
 
 ## 🌍 Internationalization
 
-ApnaBazar provides **100% localization support** for three languages across the entire user interface, ensuring a seamless experience for diverse users:
+SnapShop AI provides **100% localization support** for three languages across the entire user interface, ensuring a seamless experience for diverse users:
 
 - **English** (`en`) — Default international interface.
 - **Hindi (हिन्दी)** (`hi`) — Natural translations for North Indian retailers.
@@ -295,7 +295,7 @@ ApnaBazar provides **100% localization support** for three languages across the 
 
 ## 🤝 Contributing
 
-We welcome contributions to ApnaBazar! Whether you're fixing a bug, adding a feature, or improving documentation, please check out our [Contributing Guidelines](CONTRIBUTING.md) to get started.
+We welcome contributions to SnapShop AI! Whether you're fixing a bug, adding a feature, or improving documentation, please check out our [Contributing Guidelines](CONTRIBUTING.md) to get started.
 
 ---
 

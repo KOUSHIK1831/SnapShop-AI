@@ -19,7 +19,7 @@ export interface ProductData {
 
 export const FALLBACK_PRODUCT: ProductData = {
   title: 'Untitled Product',
-  description: 'Product uploaded via ApnaBazar',
+  description: 'Product uploaded via SnapShop AI',
   price: 499,
   category: 'Menswear',
   tags: ['clothing'],

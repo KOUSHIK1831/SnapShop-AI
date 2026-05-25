@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 
@@ -9,9 +10,10 @@ const Breadcrumb = ({
   ...props
 }: React.ComponentPropsWithoutRef<'nav'> & {
   separator?: React.ReactNode;
-} & { ref?: React.Ref<HTMLElement> }) => (
-  <nav ref={ref} aria-label="breadcrumb" {...props} />
-);
+} & { ref?: React.Ref<HTMLElement> }) => {
+  const { t } = useTranslation();
+  return <nav ref={ref} aria-label={t('auto.breadcrumb')} {...props} />;
+};
 Breadcrumb.displayName = 'Breadcrumb';
 
 const BreadcrumbList = ({
@@ -75,16 +77,19 @@ const BreadcrumbPage = ({
   ...props
 }: React.ComponentPropsWithoutRef<'span'> & {
   ref?: React.Ref<HTMLSpanElement>;
-}) => (
-  <span
-    ref={ref}
-    role="link"
-    aria-disabled="true"
-    aria-current="page"
-    className={cn('font-normal text-foreground', className)}
-    {...props}
-  />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      ref={ref}
+      role="link"
+      aria-disabled="true"
+      aria-current={t('auto.page')}
+      className={cn('font-normal text-foreground', className)}
+      {...props}
+    />
+  );
+};
 
 BreadcrumbPage.displayName = 'BreadcrumbPage';
 
@@ -107,17 +112,20 @@ BreadcrumbSeparator.displayName = 'BreadcrumbSeparator';
 const BreadcrumbEllipsis = ({
   className,
   ...props
-}: React.ComponentProps<'span'>) => (
-  <span
-    role="presentation"
-    aria-hidden="true"
-    className={cn('flex size-9 items-center justify-center', className)}
-    {...props}
-  >
-    <MoreHorizontal className="size-4" />
-    <span className="sr-only">More</span>
-  </span>
-);
+}: React.ComponentProps<'span'>) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      role="presentation"
+      aria-hidden="true"
+      className={cn('flex size-9 items-center justify-center', className)}
+      {...props}
+    >
+      <MoreHorizontal className="size-4" />
+      <span className="sr-only">{t('auto.more')}</span>
+    </span>
+  );
+};
 BreadcrumbEllipsis.displayName = 'BreadcrumbElipssis';
 
 export {

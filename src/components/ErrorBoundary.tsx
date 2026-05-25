@@ -24,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[ApnaBazar Error] Uncaught error:', error, errorInfo);
+    console.error('[SnapShop AI Error] Uncaught error:', error, errorInfo);
   }
 
   private handleReset = () => {

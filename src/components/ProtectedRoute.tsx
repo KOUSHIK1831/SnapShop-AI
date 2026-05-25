@@ -23,15 +23,14 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user) return <Navigate to={t('auto.auth')} replace />;
+  if (!user) return <Navigate to="/auth" replace />;
 
-  if (!user.email_confirmed) return <Navigate to={t('auto.auth')} replace />;
+  if (!user.email_confirmed) return <Navigate to="/auth" replace />;
 
   if (requiredRole && user.role !== requiredRole) {
-    if (user.role === 'admin') return <Navigate to={t('auto.admin')} replace />;
-    if (user.role === 'seller')
-      return <Navigate to={t('auto.dashboard')} replace />;
-    if (user.role === 'buyer') return <Navigate to={t('auto.buyer')} replace />;
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user.role === 'seller') return <Navigate to="/dashboard" replace />;
+    if (user.role === 'buyer') return <Navigate to="/buyer" replace />;
     return <Navigate to="/" replace />;
   }
 

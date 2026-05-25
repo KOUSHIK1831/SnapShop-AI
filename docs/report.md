@@ -1,10 +1,10 @@
-# ApnaBazar — Comprehensive Project Report
+# SnapShop AI — Comprehensive Project Report
 
 **Title:** Design and Development of an AI-Powered Digital Storefront Platform for Local Retail Sellers Using Vision-Language Models
 
 **Public URL:** https://apna-bazar-cs.vercel.app  
 **Supabase Project:** pupjskrkmhzesjfltncb  
-**Git Repo:** /home/koushik/Hackathon - ApnaBazar/hackathon-cs
+**Git Repo:** /home/koushik/SnapShop AI/hackathon-cs
 
 ---
 
@@ -46,7 +46,7 @@ Local clothing sellers in India lack affordable digital storefronts. Existing so
 - India has **63M+ small retailers**, most using WhatsApp for business
 - **487M WhatsApp users** in India
 - **70% of Indian SMBs** already use WhatsApp to take orders manually
-- ApnaBazar automates this workflow with AI
+- SnapShop AI automates this workflow with AI
 
 ### Objectives
 
@@ -548,7 +548,7 @@ interface ProductData {
 ```typescript
 {
   title: "Untitled Product",
-  description: "Product uploaded via ApnaBazar",
+  description: "Product uploaded via SnapShop AI",
   price: 499,
   category: "Menswear",
   tags: ["clothing"],
@@ -847,7 +847,7 @@ verify_jwt = false  # Meta sends unauthenticated POST requests
 - `WHATSAPP_TOKEN` — Meta (Facebook) permanent/temporary token
 - `PHONE_NUMBER_ID` — From Meta Developer Dashboard
 - `VERIFY_TOKEN` — Custom string, must match Meta webhook config
-- `UPI_ID` — Seller's UPI ID (default: `apnabazar@upi`)
+- `UPI_ID` — Seller's UPI ID (default: `snapshop@upi`)
 - `STORE_SLUG` — The seller's store slug from the sellers table
 - `SUPABASE_SERVICE_ROLE_KEY` — For admin DB access
 
@@ -1559,13 +1559,13 @@ Compare to manual entry: ~3-5 minutes to type title, description, price, categor
 | **"What's the most technically complex part?"**                   | "The AI pipeline: client-side canvas compression (resize + quality reduction), Supabase Storage upload, Edge Function invocation with JWT verification, Gemini API call with base64 image, response parsing with XML sanitization, and the HITL review stage — all connected in a state machine with error handling at every step." |
 | **"How does the WhatsApp agent work?"**                           | "It's a Supabase Edge Function using Anthropic Claude Opus 4-5 with an agentic loop. The AI has 4 tools (get_products, place_order, get_datetime, generate_upi_payment). It keeps calling Claude until it produces a final response (max 10 iterations). Conversation history is stored in the database for context."               |
 | **"How did you handle i18n?"**                                    | "We built a custom React Context (`LanguageContext`) without any external library. 207 translation keys × 3 languages (English, Hindi, Telugu) = 621 translation strings with 100% coverage verified by a Vitest test. Language choice is persisted in localStorage."                                                               |
-| **"What's the difference between ApnaBazar and Shopify/Meesho?"** | "Shopify and Meesho are generic multi-seller platforms requiring technical setup. ApnaBazar is built specifically for single-seller rapid digitization — upload photos, AI extracts product data, instant storefront in under 2 minutes with no technical skills required."                                                         |
+| **"What's the difference between SnapShop AI and Shopify/Meesho?"** | "Shopify and Meesho are generic multi-seller platforms requiring technical setup. SnapShop AI is built specifically for single-seller rapid digitization — upload photos, AI extracts product data, instant storefront in under 2 minutes with no technical skills required."                                                         |
 
 ---
 
-_End of Report — ApnaBazar Project_
+_End of Report — SnapShop AI Project_
 
 **Prepared for:** B.Tech IP-2 Final Report  
 **Title:** Design and Development of an AI-Powered Digital Storefront Platform for Local Retail Sellers Using Vision-Language Models  
 **Deployment:** https://apna-bazar-cs.vercel.app  
-**Repository:** /home/koushik/Hackathon - ApnaBazar/hackathon-cs
+**Repository:** /home/koushik/SnapShop AI/hackathon-cs

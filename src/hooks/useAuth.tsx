@@ -47,6 +47,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  resendOtp: (email: string, type?: EmailOtpType) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -513,7 +514,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const email = cleanIdentifier.includes('@')
         ? cleanIdentifier
         : getEmailForPhone(cleanIdentifier) ||
-          `${cleanIdentifier.replace(/\D/g, '')}@apnabazar.app`;
+          `${cleanIdentifier.replace(/\D/g, '')}@snapshop.app`;
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -592,6 +593,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resendOtp = async (email: string, type: EmailOtpType = 'signup') => {
+    try {
+      const { error } = await supabase.auth.resend({
+        email: email.trim().toLowerCase(),
+        type,
+      });
+      if (error) return { error: new Error(error.message) };
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Network error') };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -608,6 +622,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resetPassword,
         updatePassword,
+        resendOtp,
       }}
     >
       {children}

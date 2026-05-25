@@ -1,7 +1,7 @@
-## ✨ ApnaBazar Feature Request
+## ✨ SnapShop AI Feature Request
 
 **Summary:**
-_Describe the feature you'd like to see added to ApnaBazar._
+_Describe the feature you'd like to see added to SnapShop AI._
 
 ---
 

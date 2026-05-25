@@ -1,5 +1,11 @@
 // supabase/functions/whatsapp-agent/index.ts
-// WhatsApp AI Sales Agent for ApnaBazar
+// WhatsApp AI Sales Agent for SnapShop AI
+//
+// ⚠️  COMING SOON — FUTURE WORK  ⚠️
+// This is an alpha-stage implementation. It is actively being worked on
+// and is NOT ready for production use. Expect breaking changes, bugs,
+// and incomplete features.
+//
 // Runs as a Supabase Edge Function (Deno runtime)
 // Webhook URL: https://pupjskrkmhzesjfltncb.supabase.co/functions/v1/whatsapp-agent
 
@@ -11,7 +17,7 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
 const WHATSAPP_TOKEN = Deno.env.get('WHATSAPP_TOKEN')!;
 const PHONE_NUMBER_ID = Deno.env.get('PHONE_NUMBER_ID')!;
 const VERIFY_TOKEN = Deno.env.get('VERIFY_TOKEN')!;
-const UPI_ID = Deno.env.get('UPI_ID') || 'apnabazar@upi';
+const UPI_ID = Deno.env.get('UPI_ID') || 'snapshop@upi';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 

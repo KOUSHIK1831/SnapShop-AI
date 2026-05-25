@@ -3,6 +3,7 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from 'embla-carousel-react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ const Carousel = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> &
   CarouselProps & { ref?: React.Ref<HTMLDivElement> }) => {
+  const { t } = useTranslation();
   const [carouselRef, api] = useEmblaCarousel(
     {
       ...opts,
@@ -138,7 +140,7 @@ const Carousel = ({
         onKeyDownCapture={handleKeyDown}
         className={cn('relative', className)}
         role="region"
-        aria-roledescription="carousel"
+        aria-roledescription={t('auto.carousel')}
         {...props}
       >
         {children}
@@ -183,12 +185,13 @@ const CarouselItem = ({
   ref?: React.Ref<HTMLDivElement>;
 }) => {
   const { orientation } = useCarousel();
+  const { t } = useTranslation();
 
   return (
     <div
       ref={ref}
       role="group"
-      aria-roledescription="slide"
+      aria-roledescription={t('auto.slide')}
       className={cn(
         'min-w-0 shrink-0 grow-0 basis-full',
         orientation === 'horizontal' ? 'pl-4' : 'pt-4',
@@ -211,6 +214,7 @@ const CarouselPrevious = ({
   ref?: React.Ref<HTMLButtonElement>;
 }) => {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel();
+  const { t } = useTranslation();
 
   return (
     <Button
@@ -229,7 +233,7 @@ const CarouselPrevious = ({
       {...props}
     >
       <ArrowLeft className="size-4" />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">{t('auto.previous_slide')}</span>
     </Button>
   );
 };
@@ -246,6 +250,7 @@ const CarouselNext = ({
   ref?: React.Ref<HTMLButtonElement>;
 }) => {
   const { orientation, scrollNext, canScrollNext } = useCarousel();
+  const { t } = useTranslation();
 
   return (
     <Button
@@ -264,7 +269,7 @@ const CarouselNext = ({
       {...props}
     >
       <ArrowRight className="size-4" />
-      <span className="sr-only">Next slide</span>
+      <span className="sr-only">{t('auto.next_slide')}</span>
     </Button>
   );
 };

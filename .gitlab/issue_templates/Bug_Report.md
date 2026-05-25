@@ -1,7 +1,7 @@
-## 🐞 ApnaBazar Bug Report
+## 🐞 SnapShop AI Bug Report
 
 **Summary:**
-_A concise description of the issue found in ApnaBazar._
+_A concise description of the issue found in SnapShop AI._
 
 ---
 

@@ -22,7 +22,7 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
         {
           element: '#tour-welcome',
           popover: {
-            title: 'Welcome to ApnaBazar!',
+            title: 'Welcome to SnapShop AI!',
             description:
               'Let us show you around your seller dashboard. Everything you need to manage your store is right here.',
             side: 'center',
@@ -70,7 +70,7 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           popover: {
             title: 'Share Feedback',
             description:
-              'Have a suggestion or found a bug? Let us know! Your feedback helps us improve ApnaBazar.',
+              'Have a suggestion or found a bug? Let us know! Your feedback helps us improve SnapShop AI.',
             side: 'bottom',
           },
         },
@@ -79,7 +79,7 @@ export function useWelcomeTour(setActiveTab?: (tab: Tab) => void) {
           popover: {
             title: 'Language Preferences',
             description:
-              'ApnaBazar is available in multiple languages. You can switch between English, Telugu, and Hindi at any time.',
+              'SnapShop AI is available in multiple languages. You can switch between English, Telugu, and Hindi at any time.',
             side: 'bottom',
           },
         },

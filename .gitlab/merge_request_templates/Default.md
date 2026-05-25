@@ -1,6 +1,6 @@
 **Description:**
 
-Briefly describe your changes to ApnaBazar.
+Briefly describe your changes to SnapShop AI.
 
 **Type of Change:**
 
@@ -28,7 +28,7 @@ _Link to code walkthrough_
 
 **Checklist:**
 
-- [ ] Code follows ApnaBazar style guidelines
+- [ ] Code follows SnapShop AI style guidelines
 - [ ] Self-review completed
 - [ ] No console errors
 - [ ] TypeScript types are correct

@@ -1,4 +1,4 @@
-# Evaluation of ApnaBazar as a B.Tech IP-2 Final Report Topic
+# Evaluation of SnapShop AI as a B.Tech IP-2 Final Report Topic
 
 **Based on codebase audit** (7,277 lines of TS/TSX, 91 files)
 
@@ -52,7 +52,7 @@
 - Most localization efforts stop at 2 languages with incomplete coverage
 - This project has all four: AI + e-commerce + 3-language full coverage + WhatsApp commerce
 
-**Risk:** The evaluator may ask "how is this different from Meesho/Shopify?" — be prepared to answer that those are generic multi-seller platforms, while ApnaBazar is specifically built for single-seller rapid digitization in < 2 minutes with no technical setup.
+**Risk:** The evaluator may ask "how is this different from Meesho/Shopify?" — be prepared to answer that those are generic multi-seller platforms, while SnapShop AI is specifically built for single-seller rapid digitization in < 2 minutes with no technical setup.
 
 ---
 
@@ -149,9 +149,9 @@ Ranked by impact on your report's academic rigor:
 
 ---
 
-## 10. Comparison: ApnaBazar vs RAG Project as a Report Topic
+## 10. Comparison: SnapShop AI vs RAG Project as a Report Topic
 
-| Dimension              | ApnaBazar (this project)                                      | Typical RAG project                                                  |
+| Dimension              | SnapShop AI (this project)                                      | Typical RAG project                                                  |
 | ---------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Technical novelty**  | E-commerce × Vision AI × Localization                         | Document retrieval × embeddings                                      |
 | **Real-world impact**  | Direct — helps actual small retailers                         | Indirect — depends on use case                                       |
@@ -161,7 +161,7 @@ Ranked by impact on your report's academic rigor:
 | **Evaluator appeal**   | Tangible product they can visit                               | Abstract system they can't easily demo                               |
 | **Viva defensibility** | "Show me the storefront" — easy to demonstrate                | "Show me a query" — harder to impress                                |
 
-**Verdict:** A RAG project is **academically comparable** but harder to demonstrate impact. ApnaBazar is the stronger choice for an internship report because it shows end-to-end product building skills, which is exactly what an internship is supposed to demonstrate.
+**Verdict:** A RAG project is **academically comparable** but harder to demonstrate impact. SnapShop AI is the stronger choice for an internship report because it shows end-to-end product building skills, which is exactly what an internship is supposed to demonstrate.
 
 ---
 
