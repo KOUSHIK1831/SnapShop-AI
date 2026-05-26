@@ -837,6 +837,8 @@
   "auto.bg_amber_500_10_text_amber_600_528": "bg-amber-500/10 text-amber-600",
   "auto.bg_slate_500_10_text_slate_600_124": "bg-slate-500/10 text-slate-600",
   "auto.bg_green_500_10_text_green_600_70": "bg-green-500/10 text-green-600",
+  "auto.in_stock": "In stock",
+  "auto.out_of_stock": "Out of stock",
   "auto.toggle_password": "toggle-password",
   "auto.toggle_password_signup": "toggle-password-signup"
 }

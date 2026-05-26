@@ -36,6 +36,7 @@ import {
   XCircle,
   Activity,
   Bell,
+  Loader2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -769,7 +770,8 @@ function MonitoringTab({ notificationLogs, auditLogs, profiles, t }: any) {
                     <tr key={log.id} className="hover:bg-muted/10">
                       <td className="py-3 px-4">
                         <span className="text-xs font-medium capitalize">
-                          {log.notification_type.replace(/_/g, ' ')}
+                          {log.notification_type?.replace(/_/g, ' ') ||
+                            'unknown'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-muted-foreground">

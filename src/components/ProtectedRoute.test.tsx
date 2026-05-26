@@ -5,7 +5,7 @@ import ProtectedRoute from './ProtectedRoute';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => '/' + key.split('.').pop(),
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -35,7 +35,7 @@ describe('ProtectedRoute', () => {
             }
           />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Dashboard Content')).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('ProtectedRoute', () => {
         <ProtectedRoute requiredRole="seller">
           <div>Content</div>
         </ProtectedRoute>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(container.querySelector('.animate-spin')).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('ProtectedRoute', () => {
           />
           <Route path="/auth" element={<div>Auth Page</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Auth Page')).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('ProtectedRoute', () => {
           />
           <Route path="/auth" element={<div>Auth Page</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Auth Page')).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe('ProtectedRoute', () => {
           />
           <Route path="/admin" element={<div>Admin Dashboard</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
@@ -152,10 +152,35 @@ describe('ProtectedRoute', () => {
           />
           <Route path="/buyer" element={<div>Buyer Dashboard</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Buyer Dashboard')).toBeInTheDocument();
+  });
+
+  it('redirects seller to /dashboard when role does not match', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'u1', role: 'seller', email_confirmed: true },
+      loading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/protected']}>
+        <Routes>
+          <Route
+            path="/protected"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <div>Admin Content</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/dashboard" element={<div>Seller Dashboard</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Seller Dashboard')).toBeInTheDocument();
   });
 
   it('redirects to home page when role is unknown', () => {
@@ -177,7 +202,7 @@ describe('ProtectedRoute', () => {
           />
           <Route path="/" element={<div>Home Page</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText('Home Page')).toBeInTheDocument();

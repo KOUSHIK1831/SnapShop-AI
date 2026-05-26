@@ -1,53 +1,25 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import Admin from './Admin';
 import en from '../locales/en/translation.json';
 
-// Mock dependencies
+// Unified mock dependencies
 const { toastMock, navigateMock, supabaseMock } = vi.hoisted(() => {
   const toastMock = vi.fn();
   const navigateMock = vi.fn();
-  
-  const createMockResponse = (data: any, count: number = 0) => ({
-    data,
-    error: null,
-    count: count || (Array.isArray(data) ? data.length : 0),
-  });
-
-  const createChain = (table: string) => {
-    const chain: any = {
-      select: vi.fn(() => chain),
-      eq: vi.fn(() => chain),
-      neq: vi.fn(() => chain),
-      order: vi.fn(() => chain),
-      limit: vi.fn(() => chain),
-      single: vi.fn(() => {
-        if (table === 'sellers') return Promise.resolve(createMockResponse({ id: 's1', store_name: 'Ravi Store', store_slug: 'ravi', status: 'active', verification_status: 'approved' }));
-        return Promise.resolve(createMockResponse(null));
-      }),
-      update: vi.fn(() => Promise.resolve({ error: null })),
-      insert: vi.fn(() => Promise.resolve({ error: null })),
-      delete: vi.fn(() => Promise.resolve({ error: null })),
-      then: vi.fn((resolve) => {
-        let data: any = [];
-        if (table === 'profiles') data = [{ id: 'p1', email: 'user@example.com', role: 'buyer', status: 'active', is_blocked: false }];
-        if (table === 'sellers') data = [{ id: 's1', store_name: 'Ravi Store', store_slug: 'ravi', status: 'active', verification_status: 'approved' }];
-        if (table === 'products') data = [{ id: 'pr1', title: 'Product 1', seller_id: 's1' }];
-        if (table === 'orders') data = [{ id: 'o1', status: 'pending', seller_id: 's1' }];
-        if (table === 'feedback') data = [{ id: 'f1', content: 'Great app!', status: 'open', user_id: 'p1' }];
-        
-        return Promise.resolve(createMockResponse(data)).then(resolve);
-      }),
-    };
-    return chain;
-  };
 
   return {
     toastMock,
     navigateMock,
     supabaseMock: {
-      from: vi.fn((table) => createChain(table)),
+      from: vi.fn(),
       channel: vi.fn(() => ({
         on: vi.fn().mockReturnThis(),
         subscribe: vi.fn().mockReturnThis(),
@@ -56,7 +28,12 @@ const { toastMock, navigateMock, supabaseMock } = vi.hoisted(() => {
       removeChannel: vi.fn(),
       storage: {
         from: vi.fn(() => ({
-          createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'http://signed.url' }, error: null }),
+          createSignedUrl: vi
+            .fn()
+            .mockResolvedValue({
+              data: { signedUrl: 'http://signed.url' },
+              error: null,
+            }),
         })),
       },
     },
@@ -71,7 +48,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => navigateMock,
@@ -107,48 +87,305 @@ describe('Admin Portal', () => {
     vi.clearAllMocks();
   });
 
+  const setupDataMocks = (
+    overrides: Record<string, any> = {},
+    errorOverrides: Record<string, any> = {},
+  ) => {
+    const defaultData: Record<string, any> = {
+      profiles: [
+        {
+          id: 'p1',
+          email: 'user@example.com',
+          role: 'buyer',
+          status: 'active',
+          is_blocked: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'p2',
+          email: 'seller@example.com',
+          role: 'seller',
+          status: 'active',
+          is_blocked: false,
+          created_at: new Date().toISOString(),
+        },
+      ],
+      sellers: [
+        {
+          id: 's1',
+          user_id: 'p2',
+          store_name: 'Ravi Store',
+          store_slug: 'ravi',
+          status: 'active',
+          verification_status: 'approved',
+          created_at: new Date().toISOString(),
+          ai_daily_limit: 25,
+        },
+      ],
+      products: [
+        {
+          id: 'pr1',
+          title: 'Product 1',
+          seller_id: 's1',
+          price: 100,
+          stock: 10,
+          category: 'Clothing',
+        },
+      ],
+      orders: [
+        {
+          id: 'o1',
+          status: 'pending',
+          seller_id: 's1',
+          buyer_name: 'Buyer 1',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      feedback: [
+        {
+          id: 'f1',
+          content: 'Great app!',
+          status: 'open',
+          user_id: 'p1',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      notification_logs: [
+        {
+          id: 'n1',
+          notification_type: 'test',
+          recipient_email: 'test@test.com',
+          status: 'sent',
+          last_attempted_at: new Date().toISOString(),
+        },
+      ],
+      system_audit_logs: [
+        {
+          id: 'a1',
+          action: 'test_action',
+          entity_type: 'test',
+          entity_id: 'e1',
+          created_at: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const data = { ...defaultData, ...overrides };
+
+    supabaseMock.from.mockImplementation(table => {
+      const chain: any = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        neq: vi.fn(() => chain),
+        order: vi.fn(() => chain),
+        limit: vi.fn(() => chain),
+        single: vi.fn(() => {
+          const item = data[table]
+            ? Array.isArray(data[table])
+              ? data[table][0]
+              : data[table]
+            : null;
+          return Promise.resolve({
+            data: item,
+            error: errorOverrides[table] || null,
+          });
+        }),
+        update: vi.fn(() => chain),
+        delete: vi.fn(() => chain),
+        insert: vi.fn(() =>
+          Promise.resolve({ error: errorOverrides[table] || null }),
+        ),
+        upsert: vi.fn(() =>
+          Promise.resolve({ error: errorOverrides[table] || null }),
+        ),
+        then: vi.fn(resolve => {
+          return Promise.resolve({
+            data: data[table] || [],
+            error: errorOverrides[table] || null,
+          }).then(resolve);
+        }),
+      };
+      return chain;
+    });
+  };
+
   const renderWithRouter = (entry: string) => {
     return render(
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/admin" element={<Admin />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
   };
 
   it('renders admin portal and statistics', async () => {
+    setupDataMocks();
     renderWithRouter('/admin');
-
     expect(await screen.findByText(/Admin Portal/i)).toBeInTheDocument();
     await waitFor(() => {
-      const stats = screen.getAllByText('1');
-      expect(stats.length).toBeGreaterThan(0);
+      expect(screen.getByText('2')).toBeInTheDocument();
     });
   });
 
-  it('renders users tab', async () => {
-    renderWithRouter('/admin?tab=users');
+  it('toggles user block status', async () => {
+    setupDataMocks();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { container } = renderWithRouter('/admin?tab=users');
 
-    expect(await screen.findByText('user@example.com')).toBeInTheDocument();
-    
-    // Block button is an icon button (UserX icon), not text-based
-    const blockBtn = document.querySelector('.lucide-user-x');
-    expect(blockBtn).toBeInTheDocument();
+    await screen.findByText('user@example.com');
+    const userXIcons = container.querySelectorAll('.lucide-user-x');
+    const btn = userXIcons[0]?.parentElement;
+    if (btn) fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'User Blocked' }),
+      );
+    });
   });
 
-  it('renders feedback tab', async () => {
+  it('handles feedback status update and deletion', async () => {
+    setupDataMocks();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithRouter('/admin?tab=feedback');
 
-    expect(await screen.findByText(/"Great app!"/)).toBeInTheDocument();
+    const select = await screen.findByRole('combobox');
+    fireEvent.change(select, { target: { value: 'resolved' } });
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Feedback updated successfully' }),
+      );
+    });
+
+    const deleteBtns = screen
+      .getAllByRole('button')
+      .filter(b => b.querySelector('.lucide-trash2'));
+    fireEvent.click(deleteBtns[0]);
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Feedback deleted' }),
+      );
+    });
   });
 
-  it('handles seller selection', async () => {
+  it('manages seller details and actions', async () => {
+    setupDataMocks();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const openMock = vi.fn();
+    window.open = openMock;
+
     renderWithRouter('/admin?tab=sellers');
 
     const sellerRow = await screen.findByText('Ravi Store');
     fireEvent.click(sellerRow);
 
     expect(await screen.findByText(/Back to Overview/i)).toBeInTheDocument();
+
+    const blockBtn = await screen.findByText(/Block Store/i);
+    fireEvent.click(blockBtn);
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Store Blocked' }),
+      );
+    });
+
+    const deleteProdBtn = screen.getByText(/Delete/i);
+    fireEvent.click(deleteProdBtn);
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Product deleted' }),
+      );
+    });
+
+    const input = screen.getByDisplayValue('25');
+    fireEvent.change(input, { target: { value: '50' } });
+    const updateBtn = screen.getByText('Update');
+    fireEvent.click(updateBtn);
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Limit updated successfully' }),
+      );
+    });
+
+    const viewBtn = await screen.findByRole('button', {
+      name: /View Public Store/i,
+    });
+    fireEvent.click(viewBtn);
+    expect(openMock).toHaveBeenCalled();
+  });
+
+  it('handles AI limit update error', async () => {
+    setupDataMocks({}, { sellers: { message: 'Update failed' } });
+
+    renderWithRouter('/admin?tab=sellers');
+    fireEvent.click(await screen.findByText('Ravi Store'));
+
+    const input = await screen.findByDisplayValue('25');
+    fireEvent.change(input, { target: { value: '50' } });
+    fireEvent.click(screen.getByText('Update'));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Error',
+          description: 'Update failed',
+        }),
+      );
+    });
+  });
+
+  it('handles seller verification flow and rejected state', async () => {
+    setupDataMocks({
+      sellers: [
+        {
+          id: 's2',
+          store_name: 'Pending Store',
+          verification_status: 'pending',
+        },
+      ],
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderWithRouter('/admin?tab=verifications');
+
+    const store = await screen.findByText('Pending Store');
+    fireEvent.click(store);
+
+    const approveBtn = await screen.findByText(/Approve Seller/i);
+    fireEvent.click(approveBtn);
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalled();
+    });
+  });
+
+  it('renders products without images', async () => {
+    setupDataMocks({
+      products: [{ id: 'pr1', title: 'Product No Image', price: 100 }],
+    });
+
+    renderWithRouter('/admin?tab=sellers');
+    fireEvent.click(await screen.findByText('Ravi Store'));
+
+    expect(await screen.findByText('Product No Image')).toBeInTheDocument();
+    const fallbackIcon = document.querySelector('.lucide-package');
+    expect(fallbackIcon).toBeInTheDocument();
+
+    // Test product search
+    const searchInput = screen.getByPlaceholderText(/Search products/i);
+    fireEvent.change(searchInput, { target: { value: 'NonExistent' } });
+    expect(screen.queryByText('Product No Image')).not.toBeInTheDocument();
+  });
+
+  it('renders monitoring tab', async () => {
+    setupDataMocks();
+    renderWithRouter('/admin?tab=monitoring');
+    expect(
+      await screen.findByText(/Failed Notifications/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Audit Trail/i)).toBeInTheDocument();
   });
 });

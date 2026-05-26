@@ -12,8 +12,8 @@ import {
   Eye,
   EyeOff,
   UserPlus,
-  LogIn } from
-'lucide-react';
+  LogIn,
+} from 'lucide-react';
 
 interface BuyerAuthModalProps {
   isOpen: boolean;
@@ -37,15 +37,15 @@ interface BuyerAuthState {
 }
 
 type BuyerAuthAction =
-{type: 'SET_MODE';payload: ModalMode;} |
-{
-  type: 'SET_FIELD';
-  payload: Partial<Omit<BuyerAuthState, 'mode' | 'submitting' | 'error'>>;
-} |
-{type: 'TOGGLE_PASSWORD';} |
-{type: 'SET_SUBMITTING';payload: boolean;} |
-{type: 'SET_ERROR';payload: string;} |
-{type: 'RESET';};
+  | { type: 'SET_MODE'; payload: ModalMode; error?: string }
+  | {
+      type: 'SET_FIELD';
+      payload: Partial<Omit<BuyerAuthState, 'mode' | 'submitting' | 'error'>>;
+    }
+  | { type: 'TOGGLE_PASSWORD' }
+  | { type: 'SET_SUBMITTING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'RESET' };
 
 const initialState: BuyerAuthState = {
   mode: 'login',
@@ -56,13 +56,13 @@ const initialState: BuyerAuthState = {
   otp: '',
   showPassword: false,
   submitting: false,
-  error: ''
+  error: '',
 };
 
 function reducer(
-state: BuyerAuthState,
-action: BuyerAuthAction)
-: BuyerAuthState {
+  state: BuyerAuthState,
+  action: BuyerAuthAction,
+): BuyerAuthState {
   switch (action.type) {
     case 'SET_MODE':
       return {
@@ -71,7 +71,8 @@ action: BuyerAuthAction)
         email: state.email,
         name: state.name,
         phone: state.phone,
-        password: state.password
+        password: state.password,
+        error: action.error || '',
       };
     case 'SET_FIELD':
       return { ...state, ...action.payload };
@@ -92,7 +93,7 @@ export default function BuyerAuthModal({
   isOpen,
   onClose,
   onSuccess,
-  storeName
+  storeName,
 }: BuyerAuthModalProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { signIn, signUp, verifyOtp, resendOtp } = useAuth();
@@ -109,7 +110,7 @@ export default function BuyerAuthModal({
         if (session?.user && !session.user.email_confirmed_at) {
           dispatch({
             type: 'SET_FIELD',
-            payload: { email: session.user.email || '', mode: 'otp' as any }
+            payload: { email: session.user.email || '', mode: 'otp' as any },
           });
         }
       });
@@ -129,7 +130,7 @@ export default function BuyerAuthModal({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    const timer = setInterval(() => setCooldown(c => c - 1), 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
 
@@ -141,22 +142,24 @@ export default function BuyerAuthModal({
     if (!state.email.trim() || !state.password) {
       dispatch({
         type: 'SET_ERROR',
-        payload: 'Please enter your email and password'
+        payload: 'Please enter your email and password',
       });
       return;
     }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: '' });
     const { error } = await signIn.password(state.email, state.password);
-    
+
     if (error) {
       dispatch({ type: 'SET_SUBMITTING', payload: false });
       dispatch({ type: 'SET_ERROR', payload: error.message });
     } else {
       // Check if user is verified
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       dispatch({ type: 'SET_SUBMITTING', payload: false });
-      
+
       if (session?.user && !session.user.email_confirmed_at) {
         // Not verified, send OTP and switch mode
         try {
@@ -169,8 +172,11 @@ export default function BuyerAuthModal({
         } catch (resendErr) {
           console.warn('Resend OTP failed:', resendErr);
         }
-        dispatch({ type: 'SET_MODE', payload: 'otp' });
-        dispatch({ type: 'SET_ERROR', payload: 'Please verify your email to continue.' });
+        dispatch({
+          type: 'SET_MODE',
+          payload: 'otp',
+          error: 'Please verify your email to continue.',
+        });
       } else {
         onSuccess(state.phone);
       }
@@ -179,14 +185,14 @@ export default function BuyerAuthModal({
 
   const handleSignup = async () => {
     if (
-    !state.name.trim() ||
-    !state.email.trim() ||
-    !state.password ||
-    state.password.length < 6)
-    {
+      !state.name.trim() ||
+      !state.email.trim() ||
+      !state.password ||
+      state.password.length < 6
+    ) {
       dispatch({
         type: 'SET_ERROR',
-        payload: 'Please fill all fields (password min 6 chars)'
+        payload: 'Please fill all fields (password min 6 chars)',
       });
       return;
     }
@@ -197,7 +203,7 @@ export default function BuyerAuthModal({
       state.name,
       state.email,
       state.password,
-      true
+      true,
     );
     dispatch({ type: 'SET_SUBMITTING', payload: false });
 
@@ -221,7 +227,7 @@ export default function BuyerAuthModal({
     const { error } = await verifyOtp({
       email: state.email,
       token: state.otp,
-      type: 'signup'
+      type: 'signup',
     });
 
     dispatch({ type: 'SET_SUBMITTING', payload: false });
@@ -244,8 +250,8 @@ export default function BuyerAuthModal({
       `otp_resend_${state.email}`,
       JSON.stringify({
         count: newCount,
-        nextAllowed
-      })
+        nextAllowed,
+      }),
     );
 
     dispatch({ type: 'SET_SUBMITTING', payload: true });
@@ -265,208 +271,219 @@ export default function BuyerAuthModal({
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">
-                {state.mode === 'otp' ? t("auto.verify_otp") :
-
-                state.mode === 'signup' ? t("auto.create_buyer_account") : t("auth.signIn")
-
-                }
+                {state.mode === 'otp'
+                  ? t('auto.verify_otp')
+                  : state.mode === 'signup'
+                    ? t('auto.create_buyer_account')
+                    : t('auth.signIn')}
               </h2>
-              {storeName &&
-              <p className="text-xs text-muted-foreground mt-0.5">{t("auto.at")}
-                {storeName}
+              {storeName && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('auto.at')}
+                  {storeName}
                 </p>
-              }
+              )}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="size-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
-            
+            className="size-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+          >
             <X className="size-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {state.error &&
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive animate-in slide-in-from-top-1">
+          {state.error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs font-medium text-destructive animate-in slide-in-from-top-1">
               {state.error}
             </div>
-          }
+          )}
 
-          {state.mode !== 'otp' ?
-          <div className="space-y-4">
-              {state.mode === 'signup' &&
-            <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("auto.full_name")}
-
-              </label>
+          {state.mode !== 'otp' ? (
+            <div className="space-y-4">
+              {state.mode === 'signup' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    {t('auto.full_name')}
+                  </label>
                   <div className="relative">
                     <Input
-                  placeholder={t("auto.enter_your_name")}
-                  value={state.name}
-                  onChange={(e) =>
-                  dispatch({
-                    type: 'SET_FIELD',
-                    payload: { name: e.target.value }
-                  })
-                  }
-                  className="pl-3" />
-                
+                      placeholder={t('auto.enter_your_name')}
+                      value={state.name}
+                      onChange={e =>
+                        dispatch({
+                          type: 'SET_FIELD',
+                          payload: { name: e.target.value },
+                        })
+                      }
+                      className="pl-3"
+                    />
                   </div>
                 </div>
-            }
+              )}
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("auto.email_address_451")}
-
-              </label>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {t('auto.email_address_451')}
+                </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
-                  type="email"
-                  placeholder={t("auto.name_example_com")}
-                  value={state.email}
-                  onChange={(e) =>
-                  dispatch({
-                    type: 'SET_FIELD',
-                    payload: { email: e.target.value }
-                  })
-                  }
-                  className="pl-10" />
-                
+                    type="email"
+                    placeholder={t('auto.name_example_com')}
+                    value={state.email}
+                    onChange={e =>
+                      dispatch({
+                        type: 'SET_FIELD',
+                        payload: { email: e.target.value },
+                      })
+                    }
+                    className="pl-10"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("auth.password")}
-
-              </label>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {t('auth.password')}
+                </label>
                 <div className="relative">
                   <button
-                  onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground hover:text-foreground transition-colors z-10">
-                  
-                    {state.showPassword ?
-                  <EyeOff className="size-4" /> :
-
-                  <Eye className="size-4" />
-                  }
+                    onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
+                    title={t('auto.toggle_password')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground hover:text-foreground transition-colors z-10"
+                  >
+                    {state.showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                   <Input
-                  type={state.showPassword ? t("auto.text") : t("auto.password")}
-                  placeholder={t("auto.min_6_characters")}
-                  value={state.password}
-                  onChange={(e) =>
-                  dispatch({
-                    type: 'SET_FIELD',
-                    payload: { password: e.target.value }
-                  })
-                  }
-                  className="pr-10" />
-                
+                    type={
+                      state.showPassword ? t('auto.text') : t('auto.password')
+                    }
+                    placeholder={t('auto.min_6_characters')}
+                    value={state.password}
+                    onChange={e =>
+                      dispatch({
+                        type: 'SET_FIELD',
+                        payload: { password: e.target.value },
+                      })
+                    }
+                    className="pr-10"
+                  />
                 </div>
               </div>
 
               <Button
-              className="w-full bg-gradient-brand hover:opacity-90 h-11 text-sm font-bold"
-              onClick={state.mode === 'signup' ? handleSignup : handleLogin}
-              disabled={state.submitting}>
-              
-                {state.submitting ?
-              <Loader2 className="size-4 animate-spin mr-2" /> :
-              state.mode === 'signup' ?
-              <UserPlus className="size-4 mr-2" /> :
-
-              <LogIn className="size-4 mr-2" />
-              }
-                {state.mode === 'signup' ? t("auth.signUp") : t("auth.signIn")}
+                className="w-full bg-gradient-brand hover:opacity-90 h-11 text-sm font-bold"
+                onClick={state.mode === 'signup' ? handleSignup : handleLogin}
+                disabled={state.submitting}
+              >
+                {state.submitting ? (
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                ) : state.mode === 'signup' ? (
+                  <UserPlus className="size-4 mr-2" />
+                ) : (
+                  <LogIn className="size-4 mr-2" />
+                )}
+                {state.mode === 'signup' ? t('auth.signUp') : t('auth.signIn')}
               </Button>
 
               <div className="text-center pt-2">
                 <button
-                onClick={() =>
-                dispatch({
-                  type: 'SET_MODE',
-                  payload: state.mode === 'login' ? t("auto.signup") : t("auto.login")
-                })
-                }
-                className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors">
-                
-                  {state.mode === 'login' ? t("auto.don_t_have_an_account_sign_up") : t("auto.already_have_an_account_sign_i")
-
-                }
+                  onClick={() =>
+                    dispatch({
+                      type: 'SET_MODE',
+                      payload:
+                        state.mode === 'login'
+                          ? t('auto.signup')
+                          : t('auto.login'),
+                    })
+                  }
+                  className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {state.mode === 'login'
+                    ? t('auto.don_t_have_an_account_sign_up')
+                    : t('auto.already_have_an_account_sign_i')}
                 </button>
               </div>
-            </div> :
-
-          <div className="space-y-6">
+            </div>
+          ) : (
+            <div className="space-y-6">
               <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">{t("auto.we_ve_sent_a_verification_emai")}
-                {' '}
+                <p className="text-sm text-muted-foreground">
+                  {t('auto.we_ve_sent_a_verification_emai')}{' '}
                   <span className="font-bold text-foreground">
                     {state.email}
                   </span>
                   .
                 </p>
-                <p className="text-xs text-muted-foreground">{t("auto.please_check_your_inbox_and_sp")}
-
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('auto.please_check_your_inbox_and_sp')}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center block">{t("auto.enter_6_digit_otp")}
-
-              </label>
+                <label
+                  htmlFor="otp-input"
+                  className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center block"
+                >
+                  {t('auto.enter_6_digit_otp')}
+                </label>
                 <Input
-                className="text-center text-2xl font-black tracking-[1em] h-14"
-                maxLength={6}
-                value={state.otp}
-                onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  payload: { otp: e.target.value.replace(/\D/g, '') }
-                })
-                }
-                autoFocus />
-              
+                  id="otp-input"
+                  className="text-center text-2xl font-black tracking-[1em] h-14"
+                  maxLength={6}
+                  value={state.otp}
+                  onChange={e =>
+                    dispatch({
+                      type: 'SET_FIELD',
+                      payload: { otp: e.target.value.replace(/\D/g, '') },
+                    })
+                  }
+                  autoFocus
+                />
               </div>
 
               <div className="space-y-3">
                 <Button
-                className="w-full bg-primary h-11 text-sm font-bold"
-                onClick={handleVerifyOtp}
-                disabled={state.submitting || state.otp.length !== 6}>
-                
-                  {state.submitting ?
-                <Loader2 className="size-4 animate-spin mr-2" /> : t("auto.verify_continue")
-
-
-                }
+                  className="w-full bg-primary h-11 text-sm font-bold"
+                  onClick={handleVerifyOtp}
+                  disabled={state.submitting}
+                >
+                  {state.submitting ? (
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                  ) : (
+                    t('auto.verify_continue')
+                  )}
                 </Button>
 
                 <div className="text-center">
                   <button
-                  onClick={handleResendOtp}
-                  disabled={
-                  cooldown > 0 ||
-                  state.submitting ||
-                  resendCount >= MAX_RESENDS
-                  }
-                  className="text-xs font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline">
-                  
-                    {cooldown > 0 ?
-                  `Resend OTP in ${cooldown}s` :
-                  resendCount >= MAX_RESENDS ? t("auto.max_resends_reached") : t("auto.resend_verification_email")
-
-                  }
+                    onClick={handleResendOtp}
+                    disabled={
+                      cooldown > 0 ||
+                      state.submitting ||
+                      resendCount >= MAX_RESENDS
+                    }
+                    className="text-xs font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {cooldown > 0
+                      ? `Resend OTP in ${cooldown}s`
+                      : resendCount >= MAX_RESENDS
+                        ? t('auto.max_resends_reached')
+                        : t('auto.resend_verification_email')}
                   </button>
                 </div>
               </div>
             </div>
-          }
+          )}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
