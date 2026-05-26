@@ -9,19 +9,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: [
-      'src/**/*.{test,spec}.{ts,tsx}',
-      'supabase/functions/**/*.{test,spec}.ts',
+      'tests/src/**/*.{test,spec}.{ts,tsx}',
+      'tests/supabase/functions/**/*.{test,spec}.ts',
     ],
     coverage: {
       enabled: true,
       provider: 'v8',
       reporter: ['text', 'json'],
-      include: [
-        'src/**/*.{ts,tsx}',
-        'supabase/functions/**/*.ts',
-      ],
+      include: ['src/**/*.{ts,tsx}', 'supabase/functions/**/*.ts'],
       exclude: [
-        'src/**/*.{test,spec}.{ts,tsx}',
+        'tests/**/*.{test,spec}.{ts,tsx}',
         'src/**/*.d.ts',
         'src/test/**',
         'src/main.tsx',
@@ -33,7 +30,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@capacitor/app': path.resolve(__dirname, './src/test/__mocks__/@capacitor/app.ts'),
+      '@capacitor/app': path.resolve(
+        __dirname,
+        './src/test/__mocks__/@capacitor/app.ts',
+      ),
     },
   },
 });

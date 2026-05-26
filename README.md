@@ -28,17 +28,22 @@ Public URL - https://apna-bazar-cs.vercel.app
 
 ## 🏗️ Tech Stack
 
-| Layer              | Technology                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| **Framework**      | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)             |
-| **Build Tool**     | [Vite 5](https://vitejs.dev/)                                                              |
-| **Styling**        | [Tailwind CSS 3](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)           |
-| **Backend / BaaS** | [Supabase](https://supabase.com/) — Auth, PostgreSQL DB, Edge Functions, Storage, Realtime |
-| **AI**             | Google Gemini 2.5 Flash (via Supabase Edge Function)                                       |
-| **Routing**        | [React Router v6](https://reactrouter.com/)                                                |
-| **State & Data**   | [TanStack React Query](https://tanstack.com/query)                                         |
-| **Mobile**         | [Capacitor](https://capacitorjs.com/) (Android)                                            |
-| **Testing**        | [Vitest](https://vitest.dev/) (Unit) + [Playwright](https://playwright.dev/) (E2E)         |
+| Layer                     | Technology                 | Purpose                                          |
+| ------------------------- | -------------------------- | ------------------------------------------------ |
+| Framework                 | React 18 + TypeScript      | UI architecture and type safety                  |
+| Build Tool                | Vite 5                     | Fast development bundler                         |
+| Styling                   | Tailwind CSS 3 + shadcn/ui | Design system and reusable components            |
+| Backend / BaaS            | Supabase                   | Auth, PostgreSQL database, storage, and realtime |
+| AI                        | Google Gemini 2.5 Flash    | Large language model processing                  |
+| Backend Compute           | Supabase Edge Functions    | Serverless hosting for Gemini AI scripts         |
+| Routing                   | React Router v6            | Client-side app navigation                       |
+| State & Data              | TanStack React Query       | Server state management and API caching          |
+| Mobile                    | Capacitor                  | Native Android shell deployment                  |
+| Testing                   | Vitest + Playwright        | Unit testing and E2E browser testing             |
+| Version Control           | GitHub / GitLab            | Source code repository and team collaboration    |
+| Infrastructure / Deploy   | Vercel                     | Automated production builds and global hosting   |
+| Observability (Errors)    | Sentry                     | Live exception capture and performance tracing   |
+| Observability (Analytics) | PostHog                    | Product analytics, flags, and session replays    |
 
 ---
 
@@ -47,7 +52,10 @@ Public URL - https://apna-bazar-cs.vercel.app
 ```text
 hackathon-cs/
 ├── android/                    # Capacitor Android project files
-├── e2e/                        # Playwright end-to-end tests (auth, upload, storefront, i18n)
+├── tests/                      # Unified test suites
+│   ├── e2e/                    # Playwright end-to-end specs
+│   ├── src/                    # Vitest unit tests mirroring source layout
+│   └── supabase/               # Supabase function tests
 ├── public/                     # Static assets
 ├── scripts/                    # Utility scripts (AI evaluation, benchmark, i18n extraction)
 ├── src/
@@ -72,7 +80,6 @@ hackathon-cs/
 │   │   ├── StoreSetup.tsx
 │   │   ├── ThemeProvider.tsx / ThemeToggle.tsx
 │   │   ├── UploadZone.tsx      # Multi-file upload with compression
-│   │   └── *.test.tsx          # Vitest test files co-located
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useAuth.tsx         # Supabase Auth wrapper
 │   │   ├── useSeller.tsx       # Seller data CRUD (5 entities)
@@ -213,9 +220,11 @@ The app will be available at `http://localhost:5173`.
 ## 🧪 Testing & Evaluation
 
 - **Unit Testing (Vitest)**: Co-located tests for components, hooks, utils (compressImage, useSeller, edge function parsing, i18n coverage). Over 20 test files across the project.
+- **Coverage**: The current Vitest suite is running at 100% coverage for the tracked source and test surface.
 - **E2E Testing (Playwright)**: 4 spec files covering Auth, Upload, Storefront, and i18n flows (`npx playwright test`).
 - **AI Benchmarking**: `scripts/evaluate-ai.ts` measures Gemini extraction accuracy across categories, price, and tags (80% category accuracy achieved).
 - **Performance Benchmarking**: `scripts/benchmark.ts` measures compression ratio, upload latency, AI processing time (P50/P95), and full pipeline time vs manual entry.
+- **CI/CD**: The GitLab CI/CD pipeline is green and passing.
 
 ---
 
@@ -285,6 +294,7 @@ SnapShop AI provides **100% localization support** for three languages across th
 - **Telugu (తెలుగు)** (`te`) — Natural translations for South Indian retailers.
 
 **Implementation Details:**
+
 - **Dynamic Switching**: Users can instantly toggle languages using the **LanguageSwitcher** in the navbar.
 - **Full Coverage**: Every label, placeholder, toast notification, and instruction is localized (750+ keys per language).
 - **Logic Integrity**: Technical strings, CSS classes, and internal logic remain in English to ensure system stability while the UI adapts.
