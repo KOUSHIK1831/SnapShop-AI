@@ -831,5 +831,12 @@
   "auto.border_border_50_hover_border_594": "border-border/50 hover:border-primary/50 bg-card text-foreground",
   "auto.bg_red_100_text_red_700_dark_b_116": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400",
   "auto.payment": "Payment:",
-  "auto.payment_proof_submitted": "✓ Payment Proof Submitted"
+  "auto.payment_proof_submitted": "✓ Payment Proof Submitted",
+  "auto.border_green_500_50_bg_green_5_307": "border-green-500/50 bg-green-50/50",
+  "auto.border_border_group_hover_bord_717": "border-border group-hover:border-primary/50",
+  "auto.bg_amber_500_10_text_amber_600_528": "bg-amber-500/10 text-amber-600",
+  "auto.bg_slate_500_10_text_slate_600_124": "bg-slate-500/10 text-slate-600",
+  "auto.bg_green_500_10_text_green_600_70": "bg-green-500/10 text-green-600",
+  "auto.toggle_password": "toggle-password",
+  "auto.toggle_password_signup": "toggle-password-signup"
 }

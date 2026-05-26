@@ -12,8 +12,8 @@ import {
   LineChart,
   Line,
   AreaChart,
-  Area } from
-'recharts';
+  Area,
+} from 'recharts';
 import {
   format,
   startOfDay,
@@ -27,22 +27,22 @@ import {
   isSameMonth,
   eachDayOfInterval,
   eachWeekOfInterval,
-  eachMonthOfInterval } from
-'date-fns';
+  eachMonthOfInterval,
+} from 'date-fns';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle } from
-'@/components/ui/card';
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   TrendingUp,
   ShoppingCart,
   IndianRupee,
-  CreditCard } from
-'lucide-react';
+  CreditCard,
+} from 'lucide-react';
 
 interface AnalyticsProps {
   orders: Order[];
@@ -55,19 +55,19 @@ export default function Analytics({ orders }: AnalyticsProps) {
   // Filter for successful orders only (not cancelled)
   const validOrders = useMemo(
     () =>
-    orders.filter((o) => o.status !== 'cancelled' && o.pay_status !== 'failed'),
-    [orders]
+      orders.filter(o => o.status !== 'cancelled' && o.pay_status !== 'failed'),
+    [orders],
   );
 
   const stats = useMemo(() => {
     const totalRevenue = validOrders.reduce(
       (sum, o) => sum + o.unit_price * o.quantity,
-      0
+      0,
     );
     const totalOrders = validOrders.length;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     const onlinePayments = validOrders.filter(
-      (o) => o.pay_method === 'online'
+      o => o.pay_method === 'online',
     ).length;
 
     return { totalRevenue, totalOrders, avgOrderValue, onlinePayments };
@@ -79,21 +79,21 @@ export default function Analytics({ orders }: AnalyticsProps) {
     if (period === 'daily') {
       const days = eachDayOfInterval({
         start: subDays(now, 6),
-        end: now
+        end: now,
       });
 
-      return days.map((day) => {
-        const dayOrders = validOrders.filter((o) =>
-        isSameDay(new Date(o.created_at), day)
+      return days.map(day => {
+        const dayOrders = validOrders.filter(o =>
+          isSameDay(new Date(o.created_at), day),
         );
         return {
           name: format(day, 'EEE'),
           fullDate: format(day, 'MMM dd'),
           sales: dayOrders.reduce(
             (sum, o) => sum + o.unit_price * o.quantity,
-            0
+            0,
           ),
-          orders: dayOrders.length
+          orders: dayOrders.length,
         };
       });
     }
@@ -102,23 +102,23 @@ export default function Analytics({ orders }: AnalyticsProps) {
       const weeks = eachWeekOfInterval(
         {
           start: subWeeks(now, 3),
-          end: now
+          end: now,
         },
-        { weekStartsOn: 1 }
+        { weekStartsOn: 1 },
       );
 
-      return weeks.map((week) => {
-        const weekOrders = validOrders.filter((o) =>
-        isSameWeek(new Date(o.created_at), week, { weekStartsOn: 1 })
+      return weeks.map(week => {
+        const weekOrders = validOrders.filter(o =>
+          isSameWeek(new Date(o.created_at), week, { weekStartsOn: 1 }),
         );
         return {
           name: `Week ${format(week, 'w')}`,
           fullDate: `From ${format(week, 'MMM dd')}`,
           sales: weekOrders.reduce(
             (sum, o) => sum + o.unit_price * o.quantity,
-            0
+            0,
           ),
-          orders: weekOrders.length
+          orders: weekOrders.length,
         };
       });
     }
@@ -126,21 +126,21 @@ export default function Analytics({ orders }: AnalyticsProps) {
     if (period === 'monthly') {
       const months = eachMonthOfInterval({
         start: subMonths(now, 5),
-        end: now
+        end: now,
       });
 
-      return months.map((month) => {
-        const monthOrders = validOrders.filter((o) =>
-        isSameMonth(new Date(o.created_at), month)
+      return months.map(month => {
+        const monthOrders = validOrders.filter(o =>
+          isSameMonth(new Date(o.created_at), month),
         );
         return {
           name: format(month, 'MMM'),
           fullDate: format(month, 'MMMM yyyy'),
           sales: monthOrders.reduce(
             (sum, o) => sum + o.unit_price * o.quantity,
-            0
+            0,
           ),
-          orders: monthOrders.length
+          orders: monthOrders.length,
         };
       });
     }
@@ -157,32 +157,32 @@ export default function Analytics({ orders }: AnalyticsProps) {
           value={`₹${stats.totalRevenue.toLocaleString()}`}
           icon={IndianRupee}
           description={t('auto.total_sales_value')}
-          color="blue" />
-        
+          color="blue"
+        />
 
         <MetricCard
           title={t('admin.stats.totalOrders')}
           value={stats.totalOrders}
           icon={ShoppingCart}
           description={t('auto.total_successful_orders')}
-          color="green" />
-        
+          color="green"
+        />
 
         <MetricCard
           title={t('auto.avg_order_value')}
           value={`₹${Math.round(stats.avgOrderValue).toLocaleString()}`}
           icon={TrendingUp}
           description={t('auto.revenue_per_order')}
-          color="amber" />
-        
+          color="amber"
+        />
 
         <MetricCard
           title={t('auto.online_payments')}
           value={stats.onlinePayments}
           icon={CreditCard}
           description={t('auto.orders_paid_online')}
-          color="purple" />
-        
+          color="purple"
+        />
       </div>
 
       {/* Main Chart */}
@@ -198,17 +198,17 @@ export default function Analytics({ orders }: AnalyticsProps) {
           </div>
           <Tabs
             value={period}
-            onValueChange={(v) => setPeriod(v as any)}
-            className="w-full sm:w-auto">
-            
+            onValueChange={v => setPeriod(v as any)}
+            className="w-full sm:w-auto"
+          >
             <TabsList className="grid grid-cols-3 w-full sm:w-[240px]">
-              <TabsTrigger value="daily" className="text-xs">
+              <TabsTrigger value={t('auto.daily')} className="text-xs">
                 {t('auto.daily_344')}
               </TabsTrigger>
-              <TabsTrigger value="weekly" className="text-xs">
+              <TabsTrigger value={t('auto.weekly')} className="text-xs">
                 {t('auto.weekly_280')}
               </TabsTrigger>
-              <TabsTrigger value="monthly" className="text-xs">
+              <TabsTrigger value={t('auto.monthly')} className="text-xs">
                 {t('auto.monthly_911')}
               </TabsTrigger>
             </TabsList>
@@ -219,41 +219,43 @@ export default function Analytics({ orders }: AnalyticsProps) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chartData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="5%"
-                      stopColor="hsl(var(--primary))"
-                      stopOpacity={0.1} />
-                    
+                      stopColor={t('auto.hsl_var_primary')}
+                      stopOpacity={0.1}
+                    />
+
                     <stop
                       offset="95%"
-                      stopColor="hsl(var(--primary))"
-                      stopOpacity={0} />
-                    
+                      stopColor={t('auto.hsl_var_primary')}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
-                  stroke="hsl(var(--border))" />
-                
+                  stroke={t('auto.hsl_var_border')}
+                />
+
                 <XAxis
-                  dataKey="name"
+                  dataKey={t('auto.name')}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  dy={10} />
-                
+                  dy={10}
+                />
 
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  tickFormatter={(value) => `₹${value}`} />
-                
+                  tickFormatter={value => `₹${value}`}
+                />
 
                 <Tooltip
                   content={({ active, payload }) => {
@@ -273,22 +275,22 @@ export default function Analytics({ orders }: AnalyticsProps) {
                             {payload[0].payload.orders}
                             {t('auto.orders_placed')}
                           </p>
-                        </div>);
-
+                        </div>
+                      );
                     }
                     return null;
-                  }} />
-                
+                  }}
+                />
 
                 <Area
                   type="monotone"
-                  dataKey="sales"
-                  stroke="hsl(var(--primary))"
+                  dataKey={t('auto.sales')}
+                  stroke={t('auto.hsl_var_primary')}
                   strokeWidth={2}
                   fillOpacity={1}
-                  fill="url(#colorSales)"
-                  animationDuration={1000} />
-                
+                  fill={t('auto.url_colorsales')}
+                  animationDuration={1000}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -303,11 +305,11 @@ export default function Analytics({ orders }: AnalyticsProps) {
             </CardTitle>
             <CardDescription>
               {t('auto.number_of_orders_per')}
-              {period === 'daily' ?
-              t('auto.day') :
-              period === 'weekly' ?
-              t('auto.week') :
-              t('auto.month')}
+              {period === 'daily'
+                ? t('auto.day')
+                : period === 'weekly'
+                  ? t('auto.week')
+                  : t('auto.month')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -317,26 +319,27 @@ export default function Analytics({ orders }: AnalyticsProps) {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="hsl(var(--border))" />
-                  
+                    stroke={t('auto.hsl_var_border')}
+                  />
+
                   <XAxis
-                    dataKey="name"
+                    dataKey={t('auto.name')}
                     axisLine={false}
                     tickLine={false}
                     tick={{
                       fill: 'hsl(var(--muted-foreground))',
-                      fontSize: 11
-                    }} />
-                  
+                      fontSize: 11,
+                    }}
+                  />
 
                   <YAxis
                     axisLine={false}
                     tickLine={false}
                     tick={{
                       fill: 'hsl(var(--muted-foreground))',
-                      fontSize: 11
-                    }} />
-                  
+                      fontSize: 11,
+                    }}
+                  />
 
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
@@ -348,18 +351,18 @@ export default function Analytics({ orders }: AnalyticsProps) {
                               {payload[0].value}
                               {t('dashboard.tabs.orders')}
                             </p>
-                          </div>);
-
+                          </div>
+                        );
                       }
                       return null;
-                    }} />
-                  
+                    }}
+                  />
 
                   <Bar
-                    dataKey="orders"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]} />
-                  
+                    dataKey={t('auto.orders')}
+                    fill={t('auto.hsl_var_primary')}
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -389,9 +392,9 @@ export default function Analytics({ orders }: AnalyticsProps) {
                 </div>
               </div>
               <p className="text-sm font-bold">
-                {chartData.length > 0 ?
-                [...chartData].sort((a, b) => b.sales - a.sales)[0].name :
-                '—'}
+                {chartData.length > 0
+                  ? [...chartData].sort((a, b) => b.sales - a.sales)[0].name
+                  : '—'}
               </p>
             </div>
 
@@ -426,8 +429,8 @@ export default function Analytics({ orders }: AnalyticsProps) {
           </CardContent>
         </Card>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function MetricCard({ title, value, icon: Icon, description, color }: any) {
@@ -435,7 +438,7 @@ function MetricCard({ title, value, icon: Icon, description, color }: any) {
     blue: 'bg-blue-500/10 text-blue-500',
     green: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
-    purple: 'bg-purple-500/10 text-purple-500'
+    purple: 'bg-purple-500/10 text-purple-500',
   };
 
   return (
@@ -449,8 +452,8 @@ function MetricCard({ title, value, icon: Icon, description, color }: any) {
             <h3 className="text-2xl font-bold mt-1 tabular-nums">{value}</h3>
           </div>
           <div
-            className={`p-2.5 rounded-xl ${colorMap[color] || 'bg-primary/10 text-primary'}`}>
-            
+            className={`p-2.5 rounded-xl ${colorMap[color] || 'bg-primary/10 text-primary'}`}
+          >
             <Icon className="size-5" />
           </div>
         </div>
@@ -458,6 +461,6 @@ function MetricCard({ title, value, icon: Icon, description, color }: any) {
           {description}
         </p>
       </CardContent>
-    </Card>);
-
+    </Card>
+  );
 }
