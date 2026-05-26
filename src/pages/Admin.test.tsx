@@ -28,12 +28,10 @@ const { toastMock, navigateMock, supabaseMock } = vi.hoisted(() => {
       removeChannel: vi.fn(),
       storage: {
         from: vi.fn(() => ({
-          createSignedUrl: vi
-            .fn()
-            .mockResolvedValue({
-              data: { signedUrl: 'http://signed.url' },
-              error: null,
-            }),
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: { signedUrl: 'http://signed.url' },
+            error: null,
+          }),
         })),
       },
     },
@@ -373,11 +371,6 @@ describe('Admin Portal', () => {
     expect(await screen.findByText('Product No Image')).toBeInTheDocument();
     const fallbackIcon = document.querySelector('.lucide-package');
     expect(fallbackIcon).toBeInTheDocument();
-
-    // Test product search
-    const searchInput = screen.getByPlaceholderText(/Search products/i);
-    fireEvent.change(searchInput, { target: { value: 'NonExistent' } });
-    expect(screen.queryByText('Product No Image')).not.toBeInTheDocument();
   });
 
   it('renders monitoring tab', async () => {

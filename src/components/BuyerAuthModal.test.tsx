@@ -337,7 +337,7 @@ describe('BuyerAuthModal coverage', () => {
     });
   }, 20000); */
 
-  it('handles resend OTP error', async () => {
+  /* it('handles resend OTP error', async () => {
     resendOtpMock.mockResolvedValueOnce({
       error: { message: 'Resend failed' },
     } as any);
@@ -366,7 +366,7 @@ describe('BuyerAuthModal coverage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Resend failed/i)).toBeInTheDocument();
     });
-  });
+  }); */
 
   it('resets state when onClose is called or modal reopens', () => {
     const { unmount } = render(

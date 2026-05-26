@@ -23,6 +23,12 @@ export interface NetworkInfo {
 const FAST_MBPS = 20;
 const MEDIUM_MBPS = 5;
 
+const NETWORK_STATUS_UNKNOWN: NetworkStatus = 'unknown';
+const NETWORK_STATUS_FAST: NetworkStatus = 'fast';
+const NETWORK_STATUS_MEDIUM: NetworkStatus = 'medium';
+const NETWORK_STATUS_SLOW: NetworkStatus = 'slow';
+const NETWORK_STATUS_OFFLINE: NetworkStatus = 'offline';
+
 const POLL_MS = import.meta.env.DEV ? 7_000 : 15_000;
 const SPEED_TEST_TIMEOUT_MS = 10_000;
 
@@ -44,10 +50,10 @@ function isBrowserOnline(): boolean {
 }
 
 function classifyMbps(mbps: number | null): NetworkStatus {
-  if (mbps == null) return 'unknown';
-  if (mbps > FAST_MBPS) return 'fast';
-  if (mbps > MEDIUM_MBPS) return 'medium';
-  return 'slow';
+  if (mbps == null) return NETWORK_STATUS_UNKNOWN;
+  if (mbps > FAST_MBPS) return NETWORK_STATUS_FAST;
+  if (mbps > MEDIUM_MBPS) return NETWORK_STATUS_MEDIUM;
+  return NETWORK_STATUS_SLOW;
 }
 
 function toMbps(v: number | undefined): number | null {
@@ -60,7 +66,7 @@ function readMbps(test: SpeedTestInstance): number | null {
 }
 
 const makeOffline = (): NetworkInfo => ({
-  status: 'offline',
+  status: NETWORK_STATUS_OFFLINE,
   downloadMbps: null,
   connected: false,
   isOnline: false,
@@ -68,7 +74,7 @@ const makeOffline = (): NetworkInfo => ({
 });
 
 const makeUnknown = (): NetworkInfo => ({
-  status: 'unknown',
+  status: NETWORK_STATUS_UNKNOWN,
   downloadMbps: null,
   connected: false,
   isOnline: isBrowserOnline(),

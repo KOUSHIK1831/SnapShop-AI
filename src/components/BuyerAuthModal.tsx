@@ -22,6 +22,8 @@ interface BuyerAuthModalProps {
   storeName?: string;
 }
 
+const OTP_INPUT_ID = 'otp-input';
+
 type ModalMode = 'login' | 'signup' | 'otp';
 
 interface BuyerAuthState {
@@ -429,13 +431,13 @@ export default function BuyerAuthModal({
 
               <div className="space-y-2">
                 <label
-                  htmlFor="otp-input"
+                  htmlFor={OTP_INPUT_ID}
                   className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center block"
                 >
                   {t('auto.enter_6_digit_otp')}
                 </label>
                 <Input
-                  id="otp-input"
+                  id={OTP_INPUT_ID}
                   className="text-center text-2xl font-black tracking-[1em] h-14"
                   maxLength={6}
                   value={state.otp}

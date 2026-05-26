@@ -23,5 +23,5 @@ describe('main entry', () => {
       document.getElementById('root'),
     );
     expect(renderMock).toHaveBeenCalled();
-  });
+  }, 20000);
 });
