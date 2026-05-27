@@ -10,19 +10,19 @@ Public URL - https://apna-bazar-cs.vercel.app
 
 ## ✨ Features
 
-| Feature                          | Description                                                                                                                                                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🤖 AI Product Digitization**   | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with robust error handling (Zod validation, auto-retry, fallback) |
-| **👤 HITL Review Step**          | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock before saving to DB                                                                                             |
-| **📱 Instant Storefront & App**  | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Mobile via Capacitor (Android).                                                                                        |
-| **🔐 Role-Based Access Control** | Admin, Seller, and Buyer roles with Supabase Auth, RBAC route guards, and strict RLS policies.                                                                                                                |
-| **🛒 Order & Stock Management**  | End-to-end flow: size variants, stock tracking, low-stock alerts, order → stock decrement, status transitions (pending→confirmed→completed/cancelled)                                                         |
-| **📊 Seller Dashboard**          | Analytics (revenue, order volume, insights), inventory editor, realtime order notifications                                                                                                                   |
-| **💬 WhatsApp Integration**      | WhatsApp AI sales agent edge function + direct seller contact from product storefront                                                                                                                         |
-| **🌍 Multi-language Support**    | Full i18n for **English**, **Hindi (हिन्दी)**, and **Telugu (తెలుగు)** with language persistence                                                                                                              |
-| **📊 Admin Dashboard**           | Platform-wide metrics, user management, seller verification/blocking, feedback handling                                                                                                                       |
-| **📈 Analytics & Benchmarks**    | PostHog event tracking, AI accuracy evaluation (80% category accuracy), performance benchmarks documented                                                                                                     |
-| **📱 Mobile Support**            | Capacitor Android build, bottom tab navigation, native back-button handling                                                                                                                                   |
+| Feature                          | Description                                                                                                                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🤖 AI Product Digitization**   | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with multi-size variant support. |
+| **👤 HITL Review Step**          | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock, and size variants before saving to DB.                                        |
+| **📱 Instant Storefront & App**  | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Localized URLs for international reach. Mobile via Capacitor (Android).               |
+| **🔐 Role-Based Access Control** | Admin, Seller, and Buyer roles with Supabase Auth, RBAC route guards, and strict RLS policies.                                                                               |
+| **🛒 Order & Stock Management**  | End-to-end flow: size variants, stock tracking, low-stock alerts, order → stock decrement, status transitions (pending→accepted→shipped→delivered)                           |
+| **📊 Seller Dashboard**          | Analytics (revenue, order volume, insights), inventory editor, realtime order notifications.                                                                                 |
+| **💬 WhatsApp Sales Agent**      | Fully autonomous Anthropic Claude 3.5 Sonnet sales agent with tool-use (get_products, place_order) for 24/7 automated selling.                                               |
+| **🌍 Multi-language Support**    | Full i18n for **English**, **Hindi (हिन्दी)**, and **Telugu (తెలుగు)** with localized routing and language persistence.                                                      |
+| **📊 Admin Dashboard**           | Platform-wide metrics, user management, seller verification/blocking, feedback handling.                                                                                     |
+| **📈 Analytics & Benchmarks**    | PostHog event tracking, AI accuracy evaluation (80% category accuracy), performance benchmarks documented.                                                                   |
+| **📱 Mobile Support**            | Capacitor Android build, bottom tab navigation, native back-button handling.                                                                                                 |
 
 ---
 
@@ -96,7 +96,7 @@ hackathon-cs/
 │   │   ├── teluguKeyboard.ts   # Telugu input layout
 │   │   ├── utils.ts            # Image compression, helpers
 │   │   └── *.test.ts           # Co-located tests
-│   ├── locales/en|hi|te/       # i18n translation JSON (750+ keys)
+│   ├── locales/en|hi|te/       # i18n translation JSON (800+ keys)
 │   ├── pages/                  # Route pages
 │   │   ├── Index.tsx           # Landing page
 │   │   ├── Auth.tsx            # Login / Sign-up with role picker
@@ -220,7 +220,7 @@ The app will be available at `http://localhost:5173`.
 ## 🧪 Testing & Evaluation
 
 - **Unit Testing (Vitest)**: Co-located tests for components, hooks, utils (compressImage, useSeller, edge function parsing, i18n coverage). Over 20 test files across the project.
-- **Coverage**: The current Vitest suite is running at 100% coverage for the tracked source and test surface.
+- **Coverage**: The current Vitest suite provides comprehensive coverage for all core business logic, hooks, and utility functions.
 - **E2E Testing (Playwright)**: 4 spec files covering Auth, Upload, Storefront, and i18n flows (`npx playwright test`).
 - **AI Benchmarking**: `scripts/evaluate-ai.ts` measures Gemini extraction accuracy across categories, price, and tags (80% category accuracy achieved).
 - **Performance Benchmarking**: `scripts/benchmark.ts` measures compression ratio, upload latency, AI processing time (P50/P95), and full pipeline time vs manual entry.
@@ -296,7 +296,7 @@ SnapShop AI provides **100% localization support** for three languages across th
 **Implementation Details:**
 
 - **Dynamic Switching**: Users can instantly toggle languages using the **LanguageSwitcher** in the navbar.
-- **Full Coverage**: Every label, placeholder, toast notification, and instruction is localized (750+ keys per language).
+- **Full Coverage**: Every label, placeholder, toast notification, and instruction is localized (800+ keys per language).
 - **Logic Integrity**: Technical strings, CSS classes, and internal logic remain in English to ensure system stability while the UI adapts.
 - **Persistence**: Language preferences are saved in `localStorage`, maintaining the user's choice across sessions.
 - **AI Integration**: The AI digitization pipeline can interpret and generate content in the user's preferred language.
@@ -312,3 +312,4 @@ We welcome contributions to SnapShop AI! Whether you're fixing a bug, adding a f
 ## 📄 License
 
 This project is licensed under the **GNU Affero General Public License (AGPL) v3**. See the [LICENSE](LICENSE) file for the full license text.
+.

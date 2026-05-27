@@ -50,14 +50,14 @@ Local clothing sellers in India lack affordable digital storefronts. Existing so
 
 ### Objectives
 
-1. AI-powered product digitization from photos (title, price, category, tags, size, discount)
+1. AI-powered product digitization from photos (title, price, category, tags, multi-size variants, discount)
 2. Instant shareable storefront per seller (`/store/:slug`)
-3. WhatsApp-based buyer contact bridge
-4. Multi-language UI (English, Hindi, Telugu)
-5. Inventory management with low-stock alerts
-6. Role-based access control (Seller, Buyer, Admin)
-7. Order lifecycle management (pending → confirmed → completed → cancelled)
-8. Admin oversight and platform management
+3. WhatsApp-based autonomous AI sales agent (Anthropic Claude 3.5 Sonnet)
+4. Multi-language UI (English, Hindi, Telugu) with localized routing
+5. Inventory management with size-specific stock tracking and low-stock alerts
+6. Role-based access control (Seller, Buyer, Admin) with Supabase Auth
+7. End-to-end order lifecycle (pending → accepted → confirmed → shipped → delivered)
+8. Multi-modal AI evaluation (image + metadata) for accuracy assessment
 
 ---
 
@@ -71,7 +71,7 @@ Local clothing sellers in India lack affordable digital storefronts. Existing so
 | **Styling**       | Tailwind CSS 3 + shadcn/ui                                     | 3.4.17 / 50+ primitives |
 | **Backend/BaaS**  | Supabase (Auth, PostgreSQL, Storage, Edge Functions, Realtime) | 2.99.1                  |
 | **AI Model**      | Google Gemini 2.5 Flash (via Lovable AI Gateway)               | —                       |
-| **WhatsApp AI**   | Anthropic Claude Opus 4-5                                      | —                       |
+| **WhatsApp AI**   | Anthropic Claude 3.5 Sonnet                                    | —                       |
 | **Routing**       | React Router DOM                                               | 6.30.1                  |
 | **Data Fetching** | TanStack React Query                                           | 5.83.0                  |
 | **Forms**         | React Hook Form + Zod                                          | 7.61.1 / 3.25.76        |
@@ -769,7 +769,7 @@ pending ──► confirmed ──► completed
 **Technology Stack:**
 
 - Runtime: Deno (Supabase Edge Function)
-- AI: Anthropic Claude Opus 4-5 (`claude-opus-4-5`)
+- AI: Anthropic Claude 3.5 Sonnet (`claude-3-5-sonnet-20240620`)
 - WhatsApp API: Meta Cloud API v25.0
 - Database: Supabase PostgreSQL (`conversations` table)
 - Auth: Meta Webhook verification token
@@ -918,7 +918,7 @@ for (const key of keys) {
 
 ### 10.5 Coverage Verification
 
-Test file `translations.test.ts` verifies that every key in `en` exists in both `hi` and `te`. **100% coverage across all 3 languages.**
+Test file `translations.test.ts` verifies that every key in `en` exists in both `hi` and `te`. **comprehensive coverage across all 3 languages.**
 
 ---
 
@@ -1548,18 +1548,18 @@ Compare to manual entry: ~3-5 minutes to type title, description, price, categor
 
 ### 22.1 Likely Viva Questions & Answers
 
-| Question                                                          | Answer                                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **"Who owns the backend? Can you show it?"**                      | "I do. I migrated everything to my own Supabase project (`pupjskrkmhzesjfltncb`). Here's the dashboard showing tables, edge functions, and storage."                                                                                                                                                                                |
-| **"What happens if Gemini returns garbage?"**                     | "Zod validation and `parseAIResponse()` in the edge function catches malformed JSON and auto-retries with a modified prompt (max 3 attempts). After failure, it returns a `FALLBACK_PRODUCT` with a default title 'Untitled Product' and price ₹499. The seller always sees a review card before the product goes live."            |
-| **"How do you measure AI accuracy?"**                             | "I built a test set of 5 labeled clothing images (expanding to 30-50) and measured: category accuracy (80%), price in-range rate (80%), title similarity via string matching (13%), and tag overlap via Jaccard coefficient (17%). Results are logged in `ai-eval/results.json`."                                                   |
-| **"Why no payment gateway?"**                                     | "Current scope uses WhatsApp as the commerce bridge — buyer contacts seller after placing order. Payment integration with Razorpay/Stripe is documented as future work in Phase 3."                                                                                                                                                 |
-| **"How secure is this?"**                                         | "JWT verification on the digitize edge function (`verify_jwt = true`), RLS on all 7 database tables (24+ policies), rate limiting on edge function (10 req/min/IP), XSS sanitization of all AI-generated text fields, input validation on all user inputs (email, phone, file size, etc.), and a user/seller blocking system."      |
-| **"Why Supabase and not a custom backend?"**                      | "Supabase provides serverless PostgreSQL, Auth, Storage, and Edge Functions out of the box — reduces infrastructure overhead. Edge Functions provide cold-start proximity to the database. The migration path to a custom Node.js backend is straightforward since all DB access is through the typed Supabase client."             |
-| **"What's the most technically complex part?"**                   | "The AI pipeline: client-side canvas compression (resize + quality reduction), Supabase Storage upload, Edge Function invocation with JWT verification, Gemini API call with base64 image, response parsing with XML sanitization, and the HITL review stage — all connected in a state machine with error handling at every step." |
-| **"How does the WhatsApp agent work?"**                           | "It's a Supabase Edge Function using Anthropic Claude Opus 4-5 with an agentic loop. The AI has 4 tools (get_products, place_order, get_datetime, generate_upi_payment). It keeps calling Claude until it produces a final response (max 10 iterations). Conversation history is stored in the database for context."               |
-| **"How did you handle i18n?"**                                    | "We built a custom React Context (`LanguageContext`) without any external library. 207 translation keys × 3 languages (English, Hindi, Telugu) = 621 translation strings with 100% coverage verified by a Vitest test. Language choice is persisted in localStorage."                                                               |
-| **"What's the difference between SnapShop AI and Shopify/Meesho?"** | "Shopify and Meesho are generic multi-seller platforms requiring technical setup. SnapShop AI is built specifically for single-seller rapid digitization — upload photos, AI extracts product data, instant storefront in under 2 minutes with no technical skills required."                                                         |
+| Question                                                            | Answer                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **"Who owns the backend? Can you show it?"**                        | "I do. I migrated everything to my own Supabase project (`pupjskrkmhzesjfltncb`). Here's the dashboard showing tables, edge functions, and storage."                                                                                                                                                                                |
+| **"What happens if Gemini returns garbage?"**                       | "Zod validation and `parseAIResponse()` in the edge function catches malformed JSON and auto-retries with a modified prompt (max 3 attempts). After failure, it returns a `FALLBACK_PRODUCT` with a default title 'Untitled Product' and price ₹499. The seller always sees a review card before the product goes live."            |
+| **"How do you measure AI accuracy?"**                               | "I built a test set of 5 labeled clothing images (expanding to 30-50) and measured: category accuracy (80%), price in-range rate (80%), title similarity via string matching (13%), and tag overlap via Jaccard coefficient (17%). Results are logged in `ai-eval/results.json`."                                                   |
+| **"Why no payment gateway?"**                                       | "Current scope uses WhatsApp as the commerce bridge — buyer contacts seller after placing order. Payment integration with Razorpay/Stripe is documented as future work in Phase 3."                                                                                                                                                 |
+| **"How secure is this?"**                                           | "JWT verification on the digitize edge function (`verify_jwt = true`), RLS on all 7 database tables (24+ policies), rate limiting on edge function (10 req/min/IP), XSS sanitization of all AI-generated text fields, input validation on all user inputs (email, phone, file size, etc.), and a user/seller blocking system."      |
+| **"Why Supabase and not a custom backend?"**                        | "Supabase provides serverless PostgreSQL, Auth, Storage, and Edge Functions out of the box — reduces infrastructure overhead. Edge Functions provide cold-start proximity to the database. The migration path to a custom Node.js backend is straightforward since all DB access is through the typed Supabase client."             |
+| **"What's the most technically complex part?"**                     | "The AI pipeline: client-side canvas compression (resize + quality reduction), Supabase Storage upload, Edge Function invocation with JWT verification, Gemini API call with base64 image, response parsing with XML sanitization, and the HITL review stage — all connected in a state machine with error handling at every step." |
+| **"How does the WhatsApp agent work?"**                             | "It's a Supabase Edge Function using Anthropic Claude 3.5 Sonnet with an agentic loop. The AI has 4 tools (get_products, place_order, get_datetime, generate_upi_payment). It keeps calling Claude until it produces a final response (max 10 iterations). Conversation history is stored in the database for context."             |
+| **"How did you handle i18n?"**                                      | "We built a custom React Context (`LanguageContext`) without any external library. 207 translation keys × 3 languages (English, Hindi, Telugu) = 621 translation strings with comprehensive coverage verified by a Vitest test. Language choice is persisted in localStorage."                                                      |
+| **"What's the difference between SnapShop AI and Shopify/Meesho?"** | "Shopify and Meesho are generic multi-seller platforms requiring technical setup. SnapShop AI is built specifically for single-seller rapid digitization — upload photos, AI extracts product data, instant storefront in under 2 minutes with no technical skills required."                                                       |
 
 ---
 

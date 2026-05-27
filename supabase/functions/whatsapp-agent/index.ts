@@ -274,7 +274,7 @@ async function runAgent(
   // Agentic loop — keep calling Claude until stop_reason is "end_turn"
   for (let i = 0; i < 10; i++) {
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-3-5-sonnet-20240620',
       max_tokens: 1024,
       system: buildSystemPrompt(storeName, storeSlug),
       tools: TOOLS,
