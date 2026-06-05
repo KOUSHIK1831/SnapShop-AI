@@ -2,6 +2,8 @@
   "name": "snapshop-ai",
   "private": true,
   "version": "0.0.0",
+  "description": "SnapShop AI - A localized e-commerce platform with AI-driven inventory digitization",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite",
