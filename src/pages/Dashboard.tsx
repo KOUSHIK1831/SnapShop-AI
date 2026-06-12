@@ -32,8 +32,8 @@ import {
   Wrench,
   User,
   MessageCircle,
-  ChevronRight } from
-'lucide-react';
+  ChevronRight,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -47,24 +47,24 @@ import { cn } from '@/lib/utils';
 
 export type Tab = 'products' | 'tools' | 'profile';
 export type SubTab =
-'orders' |
-'upload' |
-'inventory' |
-'analytics' |
-'settings' |
-'whatsapp-agent';
+  | 'orders'
+  | 'upload'
+  | 'inventory'
+  | 'analytics'
+  | 'settings'
+  | 'whatsapp-agent';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') as Tab || 'products';
-  const subTab = searchParams.get('sub') as SubTab || null;
+  const activeTab = (searchParams.get('tab') as Tab) || 'products';
+  const subTab = (searchParams.get('sub') as SubTab) || null;
 
   const setActiveTab = (tab: Tab) => setSearchParams({ tab });
   const setSubTab = (sub: SubTab | null) => {
-    if (sub) setSearchParams({ tab: activeTab, sub });else
-    setSearchParams({ tab: activeTab });
+    if (sub) setSearchParams({ tab: activeTab, sub });
+    else setSearchParams({ tab: activeTab });
   };
 
   const { toast } = useToast();
@@ -82,7 +82,7 @@ export default function Dashboard() {
     updateSellerProfile,
     updateProduct,
     deleteProduct,
-    updateOrderStatus
+    updateOrderStatus,
   } = useSeller();
   const [copied, setCopied] = useState(false);
   const { startTour } = useWelcomeTour(setActiveTab);
@@ -95,8 +95,8 @@ export default function Dashboard() {
       toast({
         title: 'Access Restricted',
         description:
-        'Please complete your store setup and wait for admin approval to unlock all features.',
-        variant: 'default'
+          'Please complete your store setup and wait for admin approval to unlock all features.',
+        variant: 'default',
       });
     }
   }, [seller, isApproved, activeTab, toast]);
@@ -105,25 +105,25 @@ export default function Dashboard() {
     let channel: any = null;
     if (seller?.id && isApproved) {
       fetchProducts();
-      channel = supabase.
-      channel('orders-realtime').
-      on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `seller_id=eq.${seller.id}`
-        },
-        () => {
-          toast({
-            title: t('orders.newOrder'),
-            description: t('orders.newOrderDesc')
-          });
-          fetchOrders();
-        }
-      ).
-      subscribe();
+      channel = supabase
+        .channel('orders-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'orders',
+            filter: `seller_id=eq.${seller.id}`,
+          },
+          () => {
+            toast({
+              title: t('orders.newOrder'),
+              description: t('orders.newOrderDesc'),
+            });
+            fetchOrders();
+          },
+        )
+        .subscribe();
     }
     return () => {
       if (channel) channel.unsubscribe();
@@ -136,15 +136,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     const lowStock = products.filter(
-      (p) =>
-      p.stock !== undefined &&
-      p.stock > 0 &&
-      p.stock <= (p.low_stock_threshold || 5)
+      p =>
+        p.stock !== undefined &&
+        p.stock > 0 &&
+        p.stock <= (p.low_stock_threshold || 5),
     );
     if (lowStock.length > 0 && seller?.store_name) {
       toast({
         title: 'Low Stock Alert',
-        description: `${lowStock.length} product(s) running low on stock.`
+        description: `${lowStock.length} product(s) running low on stock.`,
       });
     }
   }, [products, seller?.store_name, toast]);
@@ -152,12 +152,12 @@ export default function Dashboard() {
   const copyStoreLink = () => {
     if (seller?.store_slug) {
       navigator.clipboard.writeText(
-        `${window.location.origin}/store/${seller.store_slug}`
+        `${window.location.origin}/store/${seller.store_slug}`,
       );
       setCopied(true);
       toast({
         title: t('dashboard.copied'),
-        description: t('settings.shareLink')
+        description: t('settings.shareLink'),
       });
       setTimeout(() => setCopied(false), 2000);
     }
@@ -173,23 +173,24 @@ export default function Dashboard() {
             t={t}
             signOut={signOut}
             startTour={startTour}
-            showHeaderOnly />
-          
+            showHeaderOnly
+          />
+
           <StoreSetup
-            onComplete={async (data) => {
+            onComplete={async data => {
               const result = await createSeller(data);
               if (result?.error)
-              toast({
-                title: 'Error creating store',
-                description:
-                (result.error as any).message || String(result.error),
-                variant: 'destructive'
-              });
-            }} />
-          
+                toast({
+                  title: 'Error creating store',
+                  description:
+                    (result.error as any).message || String(result.error),
+                  variant: 'destructive',
+                });
+            }}
+          />
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   return (
@@ -202,122 +203,123 @@ export default function Dashboard() {
         startTour={startTour}
         copied={copied}
         copyStoreLink={copyStoreLink}
-        navigate={navigate} />
-      
+        navigate={navigate}
+      />
 
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
         <VerificationStatusBanner
           seller={seller}
-          onSubmit={submitForVerification} />
-        
+          onSubmit={submitForVerification}
+        />
 
         <div className="animate-fade-in">
-          {activeTab === 'products' &&
-          <>
-              <DashboardStats
-              productsCount={products.length}
-              seller={seller}
-              t={t}
-              isApproved={isApproved} />
-            
-              <ProductsList
-              products={products}
-              t={t}
-              onUpload={() =>
-              setSearchParams({ tab: 'tools', sub: 'upload' })
-              }
-              onUpdate={updateProduct}
-              onDelete={deleteProduct} />
-            
-            </>
-          }
-
-          {activeTab === 'tools' &&
-          <div className="space-y-6">
-              {!subTab ?
+          {activeTab === 'products' && (
             <>
-                  <h2 className="text-2xl font-bold text-foreground mb-6">{t("auto.store_management")}
+              <DashboardStats
+                productsCount={products.length}
+                seller={seller}
+                t={t}
+                isApproved={isApproved}
+              />
 
-              </h2>
+              <ProductsList
+                products={products}
+                t={t}
+                onUpload={() =>
+                  setSearchParams({ tab: 'tools', sub: 'upload' })
+                }
+                onUpdate={updateProduct}
+                onDelete={deleteProduct}
+              />
+            </>
+          )}
+
+          {activeTab === 'tools' && (
+            <div className="space-y-6">
+              {!subTab ? (
+                <>
+                  <h2 className="text-2xl font-bold text-foreground mb-6">
+                    {t('auto.store_management')}
+                  </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <ToolCard
-                  icon={ShoppingBag}
-                  label={t('dashboard.tabs.orders')}
-                  description={t("auto.manage_and_track_customer_orde")}
-                  onClick={() => setSubTab('orders')}
-                  color="green"
-                  t={t} />
-                
+                      icon={ShoppingBag}
+                      label={t('dashboard.tabs.orders')}
+                      description={t('auto.manage_and_track_customer_orde')}
+                      onClick={() => setSubTab('orders')}
+                      color="green"
+                      t={t}
+                    />
+
                     <ToolCard
-                  icon={Upload}
-                  label={t('dashboard.tabs.upload')}
-                  description={t("auto.digitize_new_products_with_ai")}
-                  onClick={() => setSubTab('upload')}
-                  color="blue"
-                  t={t} />
-                
+                      icon={Upload}
+                      label={t('dashboard.tabs.upload')}
+                      description={t('auto.digitize_new_products_with_ai')}
+                      onClick={() => setSubTab('upload')}
+                      color="blue"
+                      t={t}
+                    />
+
                     <ToolCard
-                  icon={ClipboardList}
-                  label={t("admin.inventory")}
-                  description={t("auto.quickly_edit_stock_and_prices")}
-                  onClick={() => setSubTab('inventory')}
-                  color="amber"
-                  t={t} />
-                
+                      icon={ClipboardList}
+                      label={t('admin.inventory')}
+                      description={t('auto.quickly_edit_stock_and_prices')}
+                      onClick={() => setSubTab('inventory')}
+                      color="amber"
+                      t={t}
+                    />
+
                     <ToolCard
-                  icon={MessageCircle}
-                  label={t("auto.whatsapp_agent")}
-                  description={t("auto.whatsapp_agent_desc")}
-                  onClick={() => setSubTab('whatsapp-agent')}
-                  color="purple"
-                  comingSoon
-                  t={t} />
-                
+                      icon={MessageCircle}
+                      label={t('auto.whatsapp_agent')}
+                      description={t('auto.whatsapp_agent_desc')}
+                      onClick={() => setSubTab('whatsapp-agent')}
+                      color="purple"
+                      comingSoon
+                      t={t}
+                    />
                   </div>
-                </> :
-
-            <div className="space-y-4">
+                </>
+              ) : (
+                <div className="space-y-4">
                   <button
-                onClick={() => setSubTab(null)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-                
-                    <ChevronRight className="size-4 rotate-180" />{t("auto.back_to_manage")}
-
-              </button>
-                  {subTab === 'orders' &&
-              <Orders
-                orders={orders}
-                onUpdateStatus={updateOrderStatus} />
-
-              }
-                  {subTab === 'upload' &&
-              <UploadZone
-                sellerId={seller.id}
-                onComplete={fetchProducts}
-                usageToday={ai_usage_today}
-                dailyLimit={seller.ai_daily_limit} />
-
-              }
-                  {subTab === 'inventory' &&
-              <InventoryEditor
-                products={products}
-                onUpdate={updateProduct}
-                onDelete={deleteProduct} />
-
-              }
-                  {subTab === 'whatsapp-agent' &&
-              <WhatsAppAgentSetup
-                seller={seller}
-                t={t} />
-
-              }
+                    onClick={() => setSubTab(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+                  >
+                    <ChevronRight className="size-4 rotate-180" />
+                    {t('auto.back_to_manage')}
+                  </button>
+                  {subTab === 'orders' && (
+                    <Orders
+                      orders={orders}
+                      onUpdateStatus={updateOrderStatus}
+                    />
+                  )}
+                  {subTab === 'upload' && (
+                    <UploadZone
+                      sellerId={seller.id}
+                      onComplete={fetchProducts}
+                      usageToday={ai_usage_today}
+                      dailyLimit={seller.ai_daily_limit}
+                    />
+                  )}
+                  {subTab === 'inventory' && (
+                    <InventoryEditor
+                      products={products}
+                      onUpdate={updateProduct}
+                      onDelete={deleteProduct}
+                    />
+                  )}
+                  {subTab === 'whatsapp-agent' && (
+                    <WhatsAppAgentSetup seller={seller} t={t} />
+                  )}
                 </div>
-            }
+              )}
             </div>
-          }
+          )}
 
-          {activeTab === 'profile' &&
-          <div className="space-y-8">
+          {activeTab === 'profile' && (
+            <div className="space-y-8">
               <div className="flex flex-col items-center justify-center p-8 bg-card border border-border/50 rounded-3xl shadow-sm">
                 <div className="size-24 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <User className="size-12 text-primary" />
@@ -329,47 +331,49 @@ export default function Dashboard() {
 
                 <div className="flex gap-4 mt-6">
                   <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSubTab('analytics')}
-                  className={cn(
-                    (subTab === 'analytics' || !subTab) &&
-                    'bg-primary/5 border-primary text-primary'
-                  )}>
-                  
-                    <BarChart3 className="size-4 mr-2" />{t("auto.analytics")}
-                </Button>
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubTab('analytics')}
+                    className={cn(
+                      (subTab === 'analytics' || !subTab) &&
+                        'bg-primary/5 border-primary text-primary',
+                    )}
+                  >
+                    <BarChart3 className="size-4 mr-2" />
+                    {t('auto.analytics')}
+                  </Button>
                   <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSubTab('settings')}
-                  className={cn(
-                    subTab === 'settings' &&
-                    'bg-primary/5 border-primary text-primary'
-                  )}>
-                  
-                    <Settings className="size-4 mr-2" />{t("auto.settings")}
-                </Button>
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubTab('settings')}
+                    className={cn(
+                      subTab === 'settings' &&
+                        'bg-primary/5 border-primary text-primary',
+                    )}
+                  >
+                    <Settings className="size-4 mr-2" />
+                    {t('auto.settings')}
+                  </Button>
                 </div>
               </div>
 
               <div className="animate-fade-in">
-                {(subTab === 'analytics' || !subTab) &&
-              <Analytics orders={orders} />
-              }
-                {subTab === 'settings' &&
-              <StoreSettings
-                seller={seller}
-                onUpdate={updateSellerProfile} />
-
-              }
+                {(subTab === 'analytics' || !subTab) && (
+                  <Analytics orders={orders} />
+                )}
+                {subTab === 'settings' && (
+                  <StoreSettings
+                    seller={seller}
+                    onUpdate={updateSellerProfile}
+                  />
+                )}
               </div>
             </div>
-          }
+          )}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function LoadingSkeleton() {
@@ -379,16 +383,16 @@ function LoadingSkeleton() {
         <Skeleton className="h-12 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
-        <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center">
-          <Store className="size-4 text-white" />
+        <div className="size-8 bg-primary rounded-lg flex items-center justify-center">
+          <Store className="size-4 text-primary-foreground" />
         </div>
         <h1 className="text-xl font-semibold text-foreground">
           {t('common.appName')}
@@ -397,26 +401,26 @@ function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <ThemeToggle />
         <LanguageSwitcher />
-        {!showHeaderOnly &&
-        <>
+        {!showHeaderOnly && (
+          <>
             <FeedbackModal />
             <Button
-            variant="ghost"
-            size="sm"
-            onClick={startTour}
-            className="text-muted-foreground hover:text-primary">
-            
+              variant="ghost"
+              size="sm"
+              onClick={startTour}
+              className="text-muted-foreground hover:text-primary"
+            >
               <HelpCircle className="size-4" />
             </Button>
           </>
-        }
+        )}
         <Button variant="ghost" size="sm" onClick={signOut}>
           <LogOut className="size-4 mr-2" />
           {t('common.signOut')}
         </Button>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function DashboardHeader({
@@ -426,7 +430,7 @@ function DashboardHeader({
   startTour,
   copied,
   copyStoreLink,
-  navigate
+  navigate,
 }: any) {
   return (
     <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-50">
@@ -434,8 +438,8 @@ function DashboardHeader({
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
-              <div className="size-8 shrink-0 bg-gradient-brand rounded-lg flex items-center justify-center">
-                <Store className="size-4 text-white" />
+              <div className="size-8 shrink-0 bg-primary rounded-lg flex items-center justify-center">
+                <Store className="size-4 text-primary-foreground" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-sm font-semibold text-foreground leading-tight">
@@ -456,16 +460,16 @@ function DashboardHeader({
                 variant="ghost"
                 size="sm"
                 onClick={startTour}
-                title={t('auto.help_tour')}>
-                
+                title={t('auto.help_tour')}
+              >
                 <HelpCircle className="size-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={signOut}
-                title={t('common.signOut')}>
-                
+                title={t('common.signOut')}
+              >
                 <LogOut className="size-3.5" />
               </Button>
             </div>
@@ -476,13 +480,13 @@ function DashboardHeader({
                 variant="outline"
                 size="sm"
                 onClick={copyStoreLink}
-                className="shrink-0 border-border/50 text-xs">
-                
-                {copied ?
-                <Check className="mr-1.5 size-3.5" /> :
-
-                <Copy className="mr-1.5 size-3.5" />
-                }
+                className="shrink-0 border-border/50 text-xs"
+              >
+                {copied ? (
+                  <Check className="mr-1.5 size-3.5" />
+                ) : (
+                  <Copy className="mr-1.5 size-3.5" />
+                )}
                 <span>
                   {copied ? t('dashboard.copied') : t('dashboard.copyLink')}
                 </span>
@@ -491,8 +495,8 @@ function DashboardHeader({
                 variant="outline"
                 size="sm"
                 onClick={() => navigate(`/store/${seller.store_slug}`)}
-                className="shrink-0 border-border/50 text-xs">
-                
+                className="shrink-0 border-border/50 text-xs"
+              >
                 <ExternalLink className="mr-1.5 size-3.5" />
                 <span>{t('dashboard.viewStore')}</span>
               </Button>
@@ -500,44 +504,44 @@ function DashboardHeader({
           </div>
         </div>
       </div>
-    </header>);
-
+    </header>
+  );
 }
 
 function DashboardStats({ productsCount, seller, t, isApproved }: any) {
   return (
     <div
       id="tour-welcome"
-      className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
-      
+      className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in"
+    >
       <StatCard
         icon={Package}
         value={isApproved ? productsCount : '—'}
-        label={t('dashboard.totalProducts')} />
-      
+        label={t('dashboard.totalProducts')}
+      />
+
       <StatCard
         icon={isApproved ? Upload : Lock}
         value={
-        !isApproved ?
-        t('auto.locked') :
-        productsCount > 0 ?
-        t('dashboard.active') :
-        t('dashboard.ready')
+          !isApproved
+            ? t('auto.locked')
+            : productsCount > 0
+              ? t('dashboard.active')
+              : t('dashboard.ready')
         }
         label={t('dashboard.aiAgent')}
-        color={!isApproved ? t("auto.amber") : t("auto.green")} />
-      
-      
+        color={!isApproved ? t('auto.amber') : t('auto.green')}
+      />
 
       <StatCard
         icon={Store}
         value={`/store/${seller.store_slug}`}
         label={t('dashboard.storeUrl')}
         color="amber"
-        truncate />
-      
-    </div>);
-
+        truncate
+      />
+    </div>
+  );
 }
 
 function ToolCard({
@@ -548,68 +552,56 @@ function ToolCard({
   color,
   active,
   comingSoon,
-  t
+  t,
 }: any) {
-  const colorMap: any = {
-    blue: 'text-blue-500 bg-blue-500/10',
-    green: 'text-green-500 bg-green-500/10',
-    amber: 'text-amber-500 bg-amber-500/10',
-    purple: 'text-purple-500 bg-purple-500/10'
-  };
-
   return (
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center p-5 rounded-2xl border transition-all duration-300 text-left gap-4 relative',
-        active ? t("auto.border_primary_bg_primary_5_sh") : t("auto.border_border_50_bg_card_hover")
-      )}>
-      
-      <div
-        className={cn(
-          'size-12 shrink-0 rounded-xl flex items-center justify-center',
-          colorMap[color]
-        )}>
-        
-        <Icon className="size-6" />
+        'flex items-center p-5 rounded-xl border transition-all duration-300 text-left gap-4 relative group hover:shadow-surface-lg',
+        active
+          ? t('auto.border_primary_bg_primary_5_sh')
+          : t('auto.border_border_50_bg_card_hover'),
+      )}
+    >
+      <div className="size-12 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
+        <Icon className="size-6 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-bold text-foreground">{label}</p>
+        <p className="font-semibold text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground line-clamp-1">
           {description}
         </p>
       </div>
-      {comingSoon &&
-      <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wider text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-          {t("auto.coming_soon") || "Coming Soon"}
+      {comingSoon && (
+        <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wider text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+          {t('auto.coming_soon') || 'Coming Soon'}
         </span>
-      }
-      <ChevronRight className="size-4 ml-auto text-muted-foreground/50 shrink-0" />
-    </button>);
-
+      )}
+      <ChevronRight className="size-4 ml-auto text-muted-foreground/30 shrink-0 group-hover:text-muted-foreground/60 transition-colors duration-300" />
+    </button>
+  );
 }
 
 function StatCard({ icon: Icon, value, label, color, truncate }: any) {
   const { t } = useTranslation();
   return (
-    <div className="border border-border/50 rounded-xl p-5 bg-card shadow-surface hover:shadow-surface-lg transition-shadow">
+    <div className="border border-border/40 rounded-xl p-5 bg-card shadow-surface hover:shadow-surface-lg transition-all duration-300">
       <div className="flex items-center gap-3">
-        <div
-          className={`size-10 rounded-xl flex items-center justify-center ${color === 'green' ? t("auto.bg_green_500_10_text_green_500") : color === 'amber' ? t("auto.bg_amber_500_10_text_amber_500") : t("auto.bg_primary_10_text_primary")}`}>
-          
-          <Icon className="size-5" />
+        <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Icon className="size-5 text-primary" />
         </div>
         <div className="min-w-0">
           <p
-            className={`text-2xl font-bold text-foreground ${truncate ? t("auto.text_sm_truncate_max_w_140px") : t("auto.tabular_nums")}`}>
-            
+            className={`text-2xl font-bold text-foreground ${truncate ? t('auto.text_sm_truncate_max_w_140px') : t('auto.tabular_nums')}`}
+          >
             {value}
           </p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
@@ -627,13 +619,13 @@ function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
         </p>
         <Button
           onClick={onUpload}
-          className="bg-gradient-brand hover:opacity-90 transition-opacity">
-          
+          className="bg-primary hover:bg-primary/90 transition-opacity"
+        >
           <Upload className="size-4 mr-2" />
           {t('dashboard.uploadProducts')}
         </Button>
-      </div>);
-
+      </div>
+    );
   }
   return (
     <>
@@ -645,34 +637,34 @@ function ProductsList({ products, t, onUpload, onUpdate, onDelete }: any) {
           size="sm"
           variant="outline"
           onClick={onUpload}
-          className="w-full border-border/50 sm:w-auto">
-          
+          className="w-full border-border/50 sm:w-auto"
+        >
           <Upload className="size-3.5 mr-1.5" />
           {t('dashboard.addProducts')}
         </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product: any) =>
-        <ProductCard
-          key={product.id}
-          product={product}
-          editable
-          onUpdate={onUpdate}
-          onDelete={onDelete} />
-
-        )}
+        {products.map((product: any) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            editable
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />
+        ))}
       </div>
-    </>);
-
+    </>
+  );
 }
 
 function VerificationStatusBanner({
   seller,
-  onSubmit
-
-
-
-}: {seller: any;onSubmit: any;}) {
+  onSubmit,
+}: {
+  seller: any;
+  onSubmit: any;
+}) {
   const [showResubmit, setShowResubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -694,18 +686,18 @@ function VerificationStatusBanner({
             {t('auto.our_admins_are_reviewing_your')}
           </p>
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   if (seller.verification_status === 'rejected') {
-    const lastSubmitted = seller.last_submitted_at ?
-    new Date(seller.last_submitted_at) :
-    null;
+    const lastSubmitted = seller.last_submitted_at
+      ? new Date(seller.last_submitted_at)
+      : null;
     const now = new Date();
-    const hoursDiff = lastSubmitted ?
-    (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60) :
-    24;
+    const hoursDiff = lastSubmitted
+      ? (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60)
+      : 24;
     const canResubmit = hoursDiff >= 24;
     const hoursLeft = Math.ceil(24 - hoursDiff);
 
@@ -725,67 +717,68 @@ function VerificationStatusBanner({
                 "{seller.admin_feedback || 'Documentation incomplete'}"
               </span>
             </p>
-            {!canResubmit &&
-            <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
+            {!canResubmit && (
+              <p className="text-[10px] text-red-600 mt-2 font-medium flex items-center gap-1">
                 <Clock className="size-3" />
                 {t('auto.you_can_resubmit_in')}
                 {hoursLeft}
                 {t('auto.hours')}
               </p>
-            }
+            )}
           </div>
-          {canResubmit && !showResubmit &&
-          <Button
-            size="sm"
-            onClick={() => setShowResubmit(true)}
-            variant="outline"
-            className="border-red-200 text-red-600 hover:bg-red-50">
-            
+          {canResubmit && !showResubmit && (
+            <Button
+              size="sm"
+              onClick={() => setShowResubmit(true)}
+              variant="outline"
+              className="border-red-200 text-red-600 hover:bg-red-50"
+            >
               {t('auto.update_resubmit')}
             </Button>
-          }
+          )}
         </div>
 
-        {showResubmit &&
-        <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
+        {showResubmit && (
+          <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2">
             <StoreSetup
-            onComplete={async (data) => {
-              setIsSubmitting(true);
-              const { error } = await onSubmit({
-                gstin: data.gstin,
-                registered_business_name: data.registered_business_name,
-                documents: data.verification_documents
-              });
-              setIsSubmitting(false);
-              if (error)
-              toast({
-                title: 'Error',
-                description: error.message,
-                variant: 'destructive'
-              });else
-              {
-                toast({
-                  title: 'Resubmitted!',
-                  description:
-                  'Your details have been sent for re-verification.'
+              onComplete={async data => {
+                setIsSubmitting(true);
+                const { error } = await onSubmit({
+                  gstin: data.gstin,
+                  registered_business_name: data.registered_business_name,
+                  documents: data.verification_documents,
                 });
-                setShowResubmit(false);
-              }
-            }} />
-          
+                setIsSubmitting(false);
+                if (error)
+                  toast({
+                    title: 'Error',
+                    description: error.message,
+                    variant: 'destructive',
+                  });
+                else {
+                  toast({
+                    title: 'Resubmitted!',
+                    description:
+                      'Your details have been sent for re-verification.',
+                  });
+                  setShowResubmit(false);
+                }
+              }}
+            />
+
             <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowResubmit(false)}
-            className="w-full mt-2"
-            disabled={isSubmitting}>
-            
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowResubmit(false)}
+              className="w-full mt-2"
+              disabled={isSubmitting}
+            >
               {t('auto.cancel')}
             </Button>
           </div>
-        }
-      </div>);
-
+        )}
+      </div>
+    );
   }
 
   return null;

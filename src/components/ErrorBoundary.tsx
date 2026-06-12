@@ -33,17 +33,22 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      return <ErrorFallback
-        error={this.state.error}
-        onReset={this.handleReset}
-      />;
+      return (
+        <ErrorFallback error={this.state.error} onReset={this.handleReset} />
+      );
     }
 
     return this.props.children;
   }
 }
 
-function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () => void }) {
+function ErrorFallback({
+  error,
+  onReset,
+}: {
+  error: Error | null;
+  onReset: () => void;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -63,10 +68,7 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
             {error?.toString()}
           </pre>
         )}
-        <Button
-          onClick={onReset}
-          className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
-        >
+        <Button onClick={onReset} className="w-full">
           <RefreshCcw className="size-4 mr-2" />
           {t('auto.refresh_application')}
         </Button>

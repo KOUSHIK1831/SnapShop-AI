@@ -237,7 +237,7 @@ export default function FeedbackModal() {
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !content.trim()}
-                className="w-full bg-gradient-brand text-white shadow-lg shadow-primary/20"
+                className="w-full"
               >
                 {isSubmitting ? t('common.saving') : t('feedback.submit')}
               </Button>

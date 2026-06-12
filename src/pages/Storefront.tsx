@@ -702,61 +702,64 @@ function StorefrontContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                {' '}
                 {filteredProducts.map(product => (
                   <div
                     key={product.id}
-                    className="group bg-card rounded-xl border border-border/50 overflow-hidden shadow-surface hover:shadow-surface-lg transition-all duration-300"
+                    className="group bg-card rounded-xl border border-border/40 overflow-hidden shadow-surface hover:shadow-surface-lg transition-all duration-300"
                   >
-                    {' '}
                     {product.image_url && (
-                      <div className="aspect-[4/5] overflow-hidden bg-secondary">
-                        {' '}
+                      <div className="aspect-[4/5] overflow-hidden bg-muted/50">
                         <img
                           src={product.image_url}
                           alt={product.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading={t('auto.lazy')}
-                        />{' '}
+                        />
                       </div>
-                    )}{' '}
-                    <div className="p-5">
-                      {' '}
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-foreground leading-tight">
+                    )}
+                    <div className="p-5 space-y-3">
+                      <div className="flex justify-between items-start gap-3">
+                        <h3 className="font-medium text-foreground leading-snug">
                           {product.title}
                         </h3>
-                        <div className="text-right shrink-0 ml-2">
+                        <div className="text-right shrink-0">
                           {(product.discount_percent ?? 0) > 0 ? (
-                            <>
-                              <div className="font-bold text-primary tabular-nums text-lg">
+                            <div>
+                              <div className="font-bold text-foreground tabular-nums text-lg leading-none">
                                 ₹
                                 {Math.round(
                                   product.price *
                                     (1 - (product.discount_percent ?? 0) / 100),
                                 )}
                               </div>
-                              <div className="flex items-center gap-1 justify-end">
+                              <div className="flex items-center gap-1 justify-end mt-1">
                                 <span className="text-xs text-muted-foreground line-through">
                                   ₹{product.price}
                                 </span>
-                                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">
                                   {product.discount_percent}
                                   {t('auto.off')}
                                 </span>
                               </div>
-                            </>
+                            </div>
                           ) : (
-                            <span className="font-bold text-primary tabular-nums text-lg">
+                            <span className="font-bold text-foreground tabular-nums text-lg leading-none">
                               ₹{product.price}
                             </span>
                           )}
                         </div>
                       </div>
+
+                      {product.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                          {product.description}
+                        </p>
+                      )}
+
                       {product.size_variants &&
                       product.size_variants.length > 0 ? (
-                        <div className="mb-4 space-y-2">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div>
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                             {t('auto.select_size')}
                           </p>
                           <div className="flex flex-wrap gap-1.5">
@@ -768,22 +771,16 @@ function StorefrontContent() {
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                                   selectedSize === v.size
                                     ? t(
-                                        'auto.border_primary_bg_primary_text_644',
+                                        'auto.border_primary_bg_primary_text_230',
                                       )
                                     : v.stock === 0
-                                      ? t(
-                                          'auto.border_border_50_bg_muted_30_t_903',
-                                        )
-                                      : t(
-                                          'auto.border_border_50_hover_border_594',
-                                        )
+                                      ? t('auto.border_border_40_bg_muted_30_t')
+                                      : t('auto.border_border_40_hover_border')
                                 }`}
                               >
                                 {v.size}
                                 {v.stock > 0 && v.stock <= 5 && (
-                                  <span
-                                    className={`ml-1.5 text-[9px] font-bold ${selectedSize === v.size ? t('auto.text_white') : t('auto.text_amber_600')}`}
-                                  >
+                                  <span className="ml-1 text-[9px] text-muted-foreground">
                                     ({v.stock})
                                   </span>
                                 )}
@@ -792,63 +789,52 @@ function StorefrontContent() {
                           </div>
                         </div>
                       ) : product.size ? (
-                        <p className="text-xs text-muted-foreground mb-2">
+                        <p className="text-xs text-muted-foreground">
                           {t('auto.size_426')}{' '}
                           <span className="font-medium text-foreground">
                             {product.size}
                           </span>
                         </p>
                       ) : null}
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                          {product.description}
-                        </p>
-                      )}{' '}
+
                       {product.tags && product.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-4">
-                          {' '}
+                        <div className="flex flex-wrap gap-1.5">
                           {product.tags.map(tag => (
                             <Badge
                               key={tag}
                               variant="secondary"
-                              className="text-[10px] uppercase tracking-wider font-semibold"
+                              className="text-[10px] uppercase tracking-wider font-medium"
                             >
-                              {' '}
-                              {tag}{' '}
+                              {tag}
                             </Badge>
-                          ))}{' '}
+                          ))}
                         </div>
-                      )}{' '}
+                      )}
+
                       {product.stock !== undefined &&
                         (!product.size_variants ||
                           product.size_variants.length === 0) && (
-                          <div className="mb-3">
-                            {' '}
-                            <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                product.stock === 0
-                                  ? t('auto.bg_red_100_text_red_700_dark_b_116')
-                                  : product.stock <=
-                                      (product.low_stock_threshold || 5)
-                                    ? t(
-                                        'auto.bg_amber_100_text_amber_700_da_980',
-                                      )
-                                    : t(
-                                        'auto.bg_green_100_text_green_700_da_769',
-                                      )
-                              }`}
-                            >
-                              {product.stock === 0
-                                ? t('auto.out_of_stock')
-                                : `${t('auto.in_stock')} (${product.stock})`}{' '}
-                            </span>{' '}
-                          </div>
-                        )}{' '}
-                      <div className="flex gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                              product.stock === 0
+                                ? t('auto.bg_red_50_text_red_600_dark_bg')
+                                : product.stock <=
+                                    (product.low_stock_threshold || 5)
+                                  ? t('auto.bg_amber_50_text_amber_600_dar')
+                                  : t('auto.bg_green_50_text_green_600_dar')
+                            }`}
+                          >
+                            {product.stock === 0
+                              ? t('auto.out_of_stock')
+                              : `In stock (${product.stock})`}
+                          </span>
+                        )}
+
+                      <div className="flex gap-2 pt-1">
                         <Button
                           size="sm"
                           data-testid={`buy-now-btn-${product.id}`}
-                          className="flex-1 bg-gradient-brand hover:opacity-90 transition-opacity"
+                          className="flex-1 bg-primary hover:bg-primary/90 transition-opacity text-sm"
                           onClick={() => handleOrder(product)}
                         >
                           <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />
@@ -858,20 +844,20 @@ function StorefrontContent() {
                           size="sm"
                           variant="outline"
                           data-testid={`whatsapp-btn-${product.id}`}
-                          className="border-border/50"
+                          className="border-border/40"
                           onClick={() => handleWhatsAppChat(product)}
                           title={t('orders.whatsapp')}
                         >
                           <MessageCircle className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {' '}
-                        {t('auto.place_your_order_and_the_selle')}{' '}
-                      </p>{' '}
-                    </div>{' '}
+
+                      <p className="text-xs text-muted-foreground">
+                        {t('auto.place_your_order_and_the_selle')}
+                      </p>
+                    </div>
                   </div>
-                ))}{' '}
+                ))}
               </div>
             )}{' '}
           </main>{' '}
@@ -880,9 +866,9 @@ function StorefrontContent() {
             {' '}
             <div className="flex items-center justify-center gap-2 mb-2">
               {' '}
-              <div className="w-5 h-5 bg-gradient-brand rounded-md flex items-center justify-center">
+              <div className="w-5 h-5 bg-primary rounded-md flex items-center justify-center">
                 {' '}
-                <Store className="w-2.5 h-2.5 text-white" />{' '}
+                <Store className="w-2.5 h-2.5 text-primary-foreground" />{' '}
               </div>{' '}
               <span className="text-xs font-semibold text-foreground">
                 {t('storefront.poweredBy')}

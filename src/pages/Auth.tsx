@@ -517,8 +517,8 @@ export default function Auth() {
 function AuthHeader({ t }: { t: any }) {
   return (
     <div className="mb-8 text-center">
-      <div className="mx-auto size-12 bg-gradient-brand rounded-xl flex items-center justify-center mb-4">
-        <Store className="size-6 text-white" />
+      <div className="mx-auto size-12 bg-primary rounded-xl flex items-center justify-center mb-4">
+        <Store className="size-6 text-primary-foreground" />
       </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         {t('common.appName')}
@@ -1037,7 +1037,7 @@ function OtpForm({
       <Button
         type="submit"
         disabled={submitting || value.length !== 6}
-        className="w-full h-11 bg-gradient-brand hover:opacity-90 transition-opacity"
+        className="w-full"
       >
         {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
         {t('auto.verify_continue')}

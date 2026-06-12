@@ -496,7 +496,7 @@ function UploadProcessing({ step, currentFile, processed, total }: any) {
       </p>
       <div className="mt-4 w-full max-w-xs bg-secondary rounded-full h-2 overflow-hidden">
         <div
-          className="h-full bg-gradient-brand rounded-full transition-all duration-500"
+          className="h-full bg-primary rounded-full transition-all duration-500"
           style={{ width: `${total > 0 ? (processed / total) * 100 : 0}%` }}
         />
       </div>

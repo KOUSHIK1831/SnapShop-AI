@@ -4,18 +4,42 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight,
-  Zap,
   Store,
   Upload,
-  Sparkles,
-  Shield,
+  Zap,
   Globe,
-  User,
+  Shield,
+  Users,
+  IndianRupee,
 } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import ScrollReveal from '@/components/ScrollReveal';
+import Tilt3D from '@/components/Tilt3D';
+import { useEffect } from 'react';
+
+const products = [
+  {
+    img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=60&w=400&h=500',
+    name: 'Kanjivaram Silk Saree',
+    price: '₹3,299',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1583391733956-6c78276477e0?auto=format&fit=crop&q=60&w=400&h=500',
+    name: 'Cotton Kurta Set',
+    price: '₹1,299',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1608236415052-3b79e1634f33?auto=format&fit=crop&q=60&w=400&h=500',
+    name: 'Handloom Dupatta',
+    price: '₹899',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1593032452242-3492e56f3f4f?auto=format&fit=crop&q=60&w=400&h=500',
+    name: 'Lehenga Choli',
+    price: '₹5,499',
+  },
+];
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -23,8 +47,6 @@ export default function Index() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    // Supabase may redirect to the root URL with recovery tokens or errors in the hash
-    // when the /reset-password path isn't in the allowlist. Catch it here and redirect.
     const hash = window.location.hash.substring(1);
     if (hash) {
       const params = new URLSearchParams(hash);
@@ -51,26 +73,25 @@ export default function Index() {
   }, [user, loading, navigate]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center">
-              <Store className="size-4 text-white" />
+    <div className="min-h-[100dvh] bg-background">
+      <nav className="border-b border-border/40 bg-background/90 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="size-8 bg-primary rounded-lg flex items-center justify-center">
+              <Store className="size-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-foreground tracking-tight">
+            <span className="text-base font-semibold text-foreground tracking-tight">
               {t('common.appName')}
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <LanguageSwitcher />
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/auth')}
-              className="border-border/50"
+              className="border-border/60"
             >
               {t('auth.signIn')}
             </Button>
@@ -78,146 +99,254 @@ export default function Index() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden min-h-[75vh] flex items-center">
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1590736704728-f4730bb30770?auto=format&fit=crop&q=80&w=2000"
-            alt={t('auto.indian_market')}
-            className="size-full object-cover"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+      <section className="relative overflow-hidden min-h-[90dvh] flex items-center">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          <div className="absolute top-1/2 -right-32 size-96 bg-primary/[0.06] rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 size-80 bg-primary/[0.04] rounded-full blur-3xl" />
         </div>
-
-        <div className="max-w-6xl mx-auto px-6 py-24 relative z-10 text-center sm:text-left flex flex-col items-center sm:items-start">
-          <div className="max-w-2xl animate-slide-up flex flex-col items-center sm:items-start">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 text-primary-foreground dark:text-primary rounded-full text-xs font-semibold mb-6 backdrop-blur-md border border-white/10">
-              <Sparkles className="size-3.5 text-primary" />
-              {t('auto.ai_powered_seller_platform')}
-            </div>
-            <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-foreground leading-[1.05] mb-6">
-              {t('landing.hero.title')} <br className="hidden md:block" />
-              <span className="text-gradient">
-                {t('landing.hero.titleHighlight')}
-              </span>
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-12 max-w-lg mx-auto sm:mx-0">
-              {t('landing.hero.subtitle')}
-            </p>
-
-            {/* Massive Circular Upload Button (Action) centered as per UX principle */}
-            <div className="flex flex-col items-center justify-center gap-4 mb-8">
-              <button
-                onClick={() => navigate('/auth')}
-                className="group relative size-32 sm:size-40 bg-gradient-brand rounded-full flex flex-col items-center justify-center text-white shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping group-hover:animate-none" />
-                <Upload className="size-8 sm:size-10 mb-2" />
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-                  {t('landing.hero.cta')}
+        <div className="max-w-6xl mx-auto px-6 w-full">
+          <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
+            <div className="flex-1 pt-16 md:pt-24 pb-16">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-semibold tracking-tight text-foreground leading-[1.05] mb-6 animate-fade-in">
+                {t('landing.hero.title')}{' '}
+                <span className="text-primary">
+                  {t('landing.hero.titleHighlight')}
                 </span>
-              </button>
-              <p className="text-xs text-muted-foreground animate-pulse">
-                {t('auto.start_your_journey_today')}
+              </h1>
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl mb-10 animate-slide-up">
+                {t('landing.hero.subtitle')}
+              </p>
+              <div className="flex flex-col sm:flex-row items-start gap-4 animate-slide-up">
+                <Button
+                  size="lg"
+                  onClick={() => navigate('/auth')}
+                  className="h-12 px-8 text-base shadow-lg shadow-primary/20"
+                >
+                  {t('landing.hero.cta')}
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => navigate('/auth')}
+                  className="h-12 px-8 text-base border-border/60"
+                >
+                  {t('auto.browse_stores')}
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 w-full hidden md:block">
+              <Tilt3D intensity={7} glare>
+                <div className="relative aspect-[3/4] max-w-md mx-auto rounded-2xl overflow-hidden border border-border/40 shadow-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1582418702059-97ebafb35d09?auto=format&fit=crop&q=80&w=800&h=1067"
+                    alt={t('auto.fashion_model_wearing_traditio')}
+                    className="size-full object-cover"
+                  />
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+                </div>
+              </Tilt3D>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-card border-t border-border/40">
+        <div className="max-w-6xl mx-auto px-6 py-24">
+          <ScrollReveal>
+            <div className="max-w-2xl mb-16">
+              <h2 className="text-3xl font-semibold text-foreground mb-4 tracking-tight">
+                {t('landing.features.title')}
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">
+                {t('auto.from_uploading_photos_to_a_liv')}
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="border-t border-border/50 bg-card/50">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-semibold text-foreground mb-3">
-              {t('landing.features.title')}
-            </h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              {t('auto.from_uploading_photos_to_a_liv')}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Upload,
-                title: t('landing.features.upload.title'),
-                description: t('landing.features.upload.desc'),
-                color: 'text-primary',
-                bg: 'bg-primary/10',
-              },
-              {
-                icon: Zap,
-                title: t('landing.features.ai.title'),
-                description: t('landing.features.ai.desc'),
-                color: 'text-amber-500',
-                bg: 'bg-amber-500/10',
-              },
-              {
-                icon: Globe,
-                title: t('landing.features.store.title'),
-                description: t('landing.features.store.desc'),
-                color: 'text-green-500',
-                bg: 'bg-green-500/10',
-              },
-            ].map(feature => (
-              <div
-                key={feature.title}
-                className="group p-6 rounded-xl border border-border/50 bg-card hover:shadow-surface-lg hover:border-border transition-all duration-300"
-              >
-                <div
-                  className={`size-11 ${feature.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
-                >
-                  <feature.icon className={`size-5 ${feature.color}`} />
+          </ScrollReveal>
+          <div className="space-y-24">
+            <ScrollReveal delay={100}>
+              <div className="flex flex-col md:flex-row gap-12 md:gap-20 items-center">
+                <div className="flex-1">
+                  <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center mb-5">
+                    <Upload className="size-6 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-foreground tracking-tight mb-3">
+                    {t('landing.features.upload.title')}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed max-w-md">
+                    {t('landing.features.upload.desc')}
+                  </p>
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
+                <div className="flex-1 w-full">
+                  <Tilt3D intensity={5} glare>
+                    <div className="aspect-[4/3] rounded-2xl border border-border/40 overflow-hidden bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] shadow-surface-lg">
+                      <img
+                        src="https://images.unsplash.com/photo-1590736704728-f4730bb30770?auto=format&fit=crop&q=60&w=800&h=600"
+                        alt={t('auto.upload_products_with_ai')}
+                        className="size-full object-cover"
+                      />
+                    </div>
+                  </Tilt3D>
+                </div>
               </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={200}>
+              <div className="flex flex-col md:flex-row-reverse gap-12 md:gap-20 items-center">
+                <div className="flex-1">
+                  <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center mb-5">
+                    <Zap className="size-6 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-foreground tracking-tight mb-3">
+                    {t('landing.features.ai.title')}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed max-w-md">
+                    {t('landing.features.ai.desc')}
+                  </p>
+                </div>
+                <div className="flex-1 w-full">
+                  <Tilt3D intensity={5} glare>
+                    <div className="aspect-[4/3] rounded-2xl border border-border/40 overflow-hidden bg-gradient-to-br from-primary/[0.06] to-primary/[0.01] shadow-surface-lg">
+                      <img
+                        src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=60&w=800&h=600"
+                        alt={t('auto.ai_powered_digitization')}
+                        className="size-full object-cover"
+                      />
+                    </div>
+                  </Tilt3D>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+
+          <ScrollReveal delay={150}>
+            <div className="mt-24 pt-24 border-t border-border/40">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="col-span-1 md:col-span-2 rounded-2xl border border-border/40 bg-gradient-to-br from-primary/[0.06] to-primary/[0.02] p-8 md:p-12 flex flex-col justify-center min-h-[280px] group hover:shadow-surface-lg transition-all duration-300">
+                  <Globe className="size-8 text-primary mb-4" />
+                  <p className="text-lg font-semibold text-foreground mb-2">
+                    {t('auto.reach_customers_across_india')}
+                  </p>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-lg">
+                    {t('auto.your_store_is_accessible_in_mu')}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-card p-8 flex flex-col justify-center min-h-[280px] group hover:shadow-surface-lg transition-all duration-300">
+                  <IndianRupee className="size-8 text-primary mb-4" />
+                  <p className="text-3xl font-bold text-foreground mb-1">
+                    {t('auto.zero_setup_fee')}
+                  </p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t('auto.start_selling_without_any_upfr')}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-card p-8 flex flex-col justify-center min-h-[280px] group hover:shadow-surface-lg transition-all duration-300">
+                  <Users className="size-8 text-primary mb-4" />
+                  <p className="text-3xl font-bold text-foreground mb-1">
+                    {t('auto.direct_to_customer')}
+                  </p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t('auto.orders_go_straight_to_your_what')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <section className="border-t border-border/40">
+        <div className="max-w-6xl mx-auto px-6 py-24">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-semibold text-foreground mb-4 tracking-tight">
+                {t('auto.featured_products_in_your_cata')}
+              </h2>
+              <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                {t('auto.every_product_you_upload_gets')}
+              </p>
+            </div>
+          </ScrollReveal>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {products.map((product, i) => (
+              <ScrollReveal key={i} delay={100 * (i + 1)}>
+                <Tilt3D intensity={6} glare>
+                  <div className="group rounded-2xl border border-border/40 overflow-hidden bg-card shadow-surface-lg transition-shadow duration-500">
+                    <div className="aspect-[4/5] overflow-hidden">
+                      <img
+                        src={product.img}
+                        alt={product.name}
+                        className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        loading={t('auto.lazy')}
+                      />
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {product.name}
+                      </p>
+                      <p className="text-lg font-bold text-primary mt-1">
+                        {product.price}
+                      </p>
+                    </div>
+                  </div>
+                </Tilt3D>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Trust section */}
-      <section className="border-t border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-center">
-            {[
-              { icon: Shield, label: t('auto.secure_private') },
-              { icon: Zap, label: t('auto.setup_in_2_minutes') },
-              { icon: Globe, label: t('auto.share_anywhere') },
-            ].map(item => (
-              <div
-                key={item.label}
-                className="flex items-center gap-2 text-muted-foreground"
-              >
-                <item.icon className="size-4" />
-                <span className="text-sm font-medium">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ScrollReveal>
+        <section className="border-t border-border/40">
+          <div className="max-w-6xl mx-auto px-6 py-24 text-center">
+            <h2 className="text-3xl font-semibold text-foreground mb-4 tracking-tight">
+              {t('auto.start_your_digital_store_today')}
+            </h2>
+            <p className="text-muted-foreground max-w-lg mx-auto mb-10 leading-relaxed">
+              {t('auto.join_hundreds_of_small_retaile')}
+            </p>
+            <Button
+              size="lg"
+              onClick={() => navigate('/auth')}
+              className="h-12 px-10 text-base shadow-lg shadow-primary/20"
+            >
+              {t('auto.get_started')}
 
-      {/* Footer */}
-      <footer className="border-t border-border/50 bg-card/50">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex justify-between items-center">
+              <ArrowRight className="ml-2 size-4" />
+            </Button>
+            <div className="flex items-center justify-center gap-8 mt-16 text-sm text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-2">
+                <Shield className="size-4" />
+                {t('auto.secure_private')}
+              </span>
+              <span className="flex items-center gap-2">
+                <Zap className="size-4" />
+                {t('auto.setup_in_2_minutes')}
+              </span>
+              <span className="flex items-center gap-2">
+                <Globe className="size-4" />
+                {t('auto.hindi_telugu_english')}
+              </span>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
+
+      <footer className="border-t border-border/40 bg-card">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-6 bg-gradient-brand rounded-md flex items-center justify-center">
-              <Store className="size-3 text-white" />
+            <div className="size-6 bg-primary rounded-md flex items-center justify-center">
+              <Store className="size-3 text-primary-foreground" />
             </div>
             <span className="text-sm font-semibold text-foreground">
               {t('common.appName')}
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            © 2026 {t('common.appName')}. {t('landing.footer')}
+            &copy; 2026 {t('common.appName')}. {t('landing.footer')}
           </p>
         </div>
       </footer>

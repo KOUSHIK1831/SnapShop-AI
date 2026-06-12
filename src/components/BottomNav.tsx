@@ -16,8 +16,8 @@ import {
   Package,
   LucideIcon,
   Wrench,
-  ShieldAlert } from
-'lucide-react';
+  ShieldAlert,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -41,56 +41,61 @@ export default function BottomNav() {
   const currentTab = searchParams.get('tab');
 
   const sellerItems: NavItem[] = [
-  {
-    icon: LayoutGrid,
-    label: t('dashboard.tabs.products'),
-    path: '/dashboard',
-    tab: 'products'
-  },
-  { icon: Wrench, label: t('auto.manage'), path: '/dashboard', tab: 'tools' },
-  { icon: User, label: t('auto.profile'), path: '/dashboard', tab: 'profile' }];
-
+    {
+      icon: LayoutGrid,
+      label: t('dashboard.tabs.products'),
+      path: '/dashboard',
+      tab: 'products',
+    },
+    { icon: Wrench, label: t('auto.manage'), path: '/dashboard', tab: 'tools' },
+    {
+      icon: User,
+      label: t('auto.profile'),
+      path: '/dashboard',
+      tab: 'profile',
+    },
+  ];
 
   const buyerItems: NavItem[] = [
-  { icon: Store, label: t('auto.shops'), path: '/buyer', tab: 'shops' },
-  {
-    icon: Package,
-    label: t('auto.my_orders'),
-    path: '/buyer',
-    tab: 'orders'
-  },
-  { icon: User, label: t('auto.profile'), path: '/buyer', tab: 'profile' }];
-
+    { icon: Store, label: t('auto.shops'), path: '/buyer', tab: 'shops' },
+    {
+      icon: Package,
+      label: t('auto.my_orders'),
+      path: '/buyer',
+      tab: 'orders',
+    },
+    { icon: User, label: t('auto.profile'), path: '/buyer', tab: 'profile' },
+  ];
 
   const adminItems: NavItem[] = [
-  { icon: Store, label: t('auto.sellers'), path: '/admin', tab: 'sellers' },
-  {
-    icon: LayoutDashboard,
-    label: t('auto.verifications'),
-    path: '/admin',
-    tab: 'verifications'
-  },
-  { icon: Users, label: t('auto.users'), path: '/admin', tab: 'users' },
-  {
-    icon: MessageSquare,
-    label: t('auto.feedback'),
-    path: '/admin',
-    tab: 'feedback'
-  },
-  {
-    icon: ShieldAlert,
-    label: 'Monitoring',
-    path: '/admin',
-    tab: 'monitoring'
-  }];
-
+    { icon: Store, label: t('auto.sellers'), path: '/admin', tab: 'sellers' },
+    {
+      icon: LayoutDashboard,
+      label: t('auto.verifications'),
+      path: '/admin',
+      tab: 'verifications',
+    },
+    { icon: Users, label: t('auto.users'), path: '/admin', tab: 'users' },
+    {
+      icon: MessageSquare,
+      label: t('auto.feedback'),
+      path: '/admin',
+      tab: 'feedback',
+    },
+    {
+      icon: ShieldAlert,
+      label: 'Monitoring',
+      path: '/admin',
+      tab: 'monitoring',
+    },
+  ];
 
   const items =
-  role === 'seller' ?
-  sellerItems :
-  role === 'admin' ?
-  adminItems :
-  buyerItems;
+    role === 'seller'
+      ? sellerItems
+      : role === 'admin'
+        ? adminItems
+        : buyerItems;
 
   const handleNavigate = (item: NavItem) => {
     if (location.pathname === item.path) {
@@ -106,13 +111,13 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border/50 px-2 py-1 pb-safe">
       <div className="flex items-center justify-around max-w-2xl mx-auto">
-        {items.map((item) => {
+        {items.map(item => {
           const isActive =
-          location.pathname === item.path && (
-          item.tab ?
-          currentTab === item.tab ||
-          !currentTab && item.tab === items[0].tab :
-          true);
+            location.pathname === item.path &&
+            (item.tab
+              ? currentTab === item.tab ||
+                (!currentTab && item.tab === items[0].tab)
+              : true);
 
           return (
             <button
@@ -120,16 +125,30 @@ export default function BottomNav() {
               data-tour={item.tab}
               onClick={() => handleNavigate(item)}
               className={cn(
-                'flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200',
-                isActive ? t("auto.text_primary") : t("auto.text_muted_foreground")
-              )}>
-              
-              <item.icon className={cn('size-5')} />
-              <span className="text-[10px] font-medium mt-1">{item.label}</span>
-            </button>);
-
+                'flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 relative',
+                isActive
+                  ? t('auto.text_primary')
+                  : t('auto.text_muted_foreground_hover_te'),
+              )}
+            >
+              <div className="relative">
+                <item.icon className={cn('size-5')} />
+                {isActive && (
+                  <span className="absolute -top-0.5 -right-0.5 size-1.5 bg-primary rounded-full" />
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-[10px] font-medium mt-1',
+                  isActive && 'font-semibold',
+                )}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
         })}
       </div>
-    </nav>);
-
+    </nav>
+  );
 }

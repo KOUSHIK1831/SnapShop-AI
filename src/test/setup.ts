@@ -48,6 +48,23 @@ class ResizeObserverMock {
 
 window.ResizeObserver = ResizeObserverMock;
 
+class IntersectionObserverMock {
+  constructor(
+    callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
+    this.callback = callback;
+    this.options = options;
+  }
+  callback: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.IntersectionObserver = IntersectionObserverMock as any;
+
 // Radix UI needs PointerEvent
 if (!window.PointerEvent) {
   class PointerEvent extends MouseEvent {

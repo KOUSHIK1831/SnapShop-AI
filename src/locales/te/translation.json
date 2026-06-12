@@ -496,7 +496,7 @@
   "auto.file_upload": "file-upload",
   "auto.pointer_events_none": "pointer-events-none",
   "auto.bg_muted_text_muted_foreground": "bg-muted text-muted-foreground",
-  "auto.bg_primary_text_primary_foregr": "bg-primary text-primary-foreground hover:bg-primary/90 bg-gradient-brand hover:opacity-90 transition-opacity",
+  "auto.bg_primary_text_primary_foregr": "bg-primary text-primary-foreground hover:bg-primary/90 transition-opacity",
   "auto.blocked": "బ్లాక్ చేయబడింది",
   "auto.breadcrumb": "breadcrumb",
   "auto.a": "a",
@@ -790,5 +790,12 @@
   "auto.whatsapp_agent_slug": "స్లగ్",
   "auto.whatsapp_agent_activate": "ఏజెంట్‌ను సక్రియం చేయండి",
   "auto.whatsapp_agent_preview": "ప్రివ్యూ",
-  "auto.whatsapp_agent_disabled": "ఏజెంట్ అభివృద్ధిలో ఉన్నందున ఈ బటన్‌లు నిలిపివేయబడ్డాయి మరియు ప్రొడక్షన్ కోసం సిద్ధంగా లేవు."
+  "auto.whatsapp_agent_disabled": "ఏజెంట్ అభివృద్ధిలో ఉన్నందున ఈ బటన్‌లు నిలిపివేయబడ్డాయి మరియు ప్రొడక్షన్ కోసం సిద్ధంగా లేవు.",
+  "auto.reach_customers_across_india": "భారతదేశం అంతటా వినియోగదారులను చేరుకోండి",
+  "auto.your_store_is_accessible_in_mu": "మీ స్టోర్ ఇంగ్లీష్, హిందీ మరియు తెలుగులో అందుబాటులో ఉంది. త్వరలో మరిన్ని భాషలు వస్తున్నాయి.",
+  "auto.zero_setup_fee": "సెటప్ రుసుము లేదు",
+  "auto.start_selling_without_any_upfr": "ముందస్తు పెట్టుబడి లేకుండా విక్రయించడం ప్రారంభించండి. మీరు పెరిగినప్పుడు మాత్రమే చెల్లించండి.",
+  "auto.direct_to_customer": "నేరుగా వినియోగదారునికి",
+  "auto.orders_go_straight_to_your_what": "ఆర్డర్లు నేరుగా మీ WhatsAppకు వస్తాయి. మధ్యవర్తులు లేరు, కమీషన్ లేదు.",
+  "auto.preview_placeholder": "ప్రివ్యూ"
 }

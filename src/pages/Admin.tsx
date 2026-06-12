@@ -898,8 +898,8 @@ function AdminHeader({ t, signOut }: { t: any; signOut: () => void }) {
     <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="size-8 bg-gradient-brand rounded-lg flex items-center justify-center">
-            <LayoutDashboard className="size-4 text-white" />
+          <div className="size-8 bg-primary rounded-lg flex items-center justify-center">
+            <LayoutDashboard className="size-4 text-primary-foreground" />
           </div>
           <h1 className="text-sm font-semibold text-foreground">
             {t('admin.portal')}

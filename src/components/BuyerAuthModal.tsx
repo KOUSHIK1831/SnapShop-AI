@@ -381,7 +381,7 @@ export default function BuyerAuthModal({
               </div>
 
               <Button
-                className="w-full bg-gradient-brand hover:opacity-90 h-11 text-sm font-bold"
+                className="w-full h-11 text-sm font-bold"
                 onClick={state.mode === 'signup' ? handleSignup : handleLogin}
                 disabled={state.submitting}
               >

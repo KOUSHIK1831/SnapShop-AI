@@ -496,7 +496,7 @@
   "auto.file_upload": "file-upload",
   "auto.pointer_events_none": "pointer-events-none",
   "auto.bg_muted_text_muted_foreground": "bg-muted text-muted-foreground",
-  "auto.bg_primary_text_primary_foregr": "bg-primary text-primary-foreground hover:bg-primary/90 bg-gradient-brand hover:opacity-90 transition-opacity",
+  "auto.bg_primary_text_primary_foregr": "bg-primary text-primary-foreground hover:bg-primary/90 transition-opacity",
   "auto.blocked": "ब्लॉक किया गया",
   "auto.breadcrumb": "breadcrumb",
   "auto.a": "a",
@@ -790,5 +790,12 @@
   "auto.whatsapp_agent_slug": "स्लग",
   "auto.whatsapp_agent_activate": "एजेंट सक्रिय करें",
   "auto.whatsapp_agent_preview": "पूर्वावलोकन",
-  "auto.whatsapp_agent_disabled": "एजेंट विकास में होने के कारण ये बटन अक्षम हैं और प्रोडक्शन के लिए तैयार नहीं हैं।"
+  "auto.whatsapp_agent_disabled": "एजेंट विकास में होने के कारण ये बटन अक्षम हैं और प्रोडक्शन के लिए तैयार नहीं हैं।",
+  "auto.reach_customers_across_india": "पूरे भारत में ग्राहकों तक पहुंचें",
+  "auto.your_store_is_accessible_in_mu": "आपकी दुकान अंग्रेजी, हिंदी और तेलुगु में उपलब्ध है। जल्द ही और भाषाएं आ रही हैं।",
+  "auto.zero_setup_fee": "कोई सेटअप शुल्क नहीं",
+  "auto.start_selling_without_any_upfr": "बिना किसी अग्रिम निवेश के बेचना शुरू करें। जब आप बढ़ें तभी भुगतान करें।",
+  "auto.direct_to_customer": "सीधे ग्राहक तक",
+  "auto.orders_go_straight_to_your_what": "ऑर्डर सीधे आपके WhatsApp पर आते हैं। कोई बिचौलिया नहीं, कोई कमीशन नहीं।",
+  "auto.preview_placeholder": "पूर्वावलोकन"
 }
