@@ -509,6 +509,26 @@ export default function Auth() {
             )}
           </CardContent>
         </Card>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/manual?type=buyer')}
+            className="gap-2"
+          >
+            <ShoppingBag className="size-4" />
+            Buyer Manual
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/manual?type=seller')}
+            className="gap-2"
+          >
+            <Store className="size-4" />
+            Seller Manual
+          </Button>
+        </div>
       </div>
     </div>
   );

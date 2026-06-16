@@ -24,7 +24,6 @@ import {
   Check,
   ShoppingBag,
   ClipboardList,
-  HelpCircle,
   Ban,
   Clock,
   Lock,
@@ -40,8 +39,8 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 import AppTour from '@/components/AppTour';
 import FeedbackModal from '@/components/FeedbackModal';
+import NavMenu from '@/components/NavMenu';
 import { useWelcomeTour } from '@/hooks/useWelcomeTour';
-import { NetworkStrengthIndicator } from '@/components/NetworkStrengthIndicator';
 import WhatsAppAgentSetup from '@/components/WhatsAppAgentSetup';
 import { cn } from '@/lib/utils';
 
@@ -174,6 +173,7 @@ export default function Dashboard() {
             signOut={signOut}
             startTour={startTour}
             showHeaderOnly
+            navigate={navigate}
           />
 
           <StoreSetup
@@ -388,6 +388,7 @@ function LoadingSkeleton() {
 }
 
 function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
@@ -403,15 +404,12 @@ function DashboardNav({ t, signOut, startTour, showHeaderOnly = false }: any) {
         <LanguageSwitcher />
         {!showHeaderOnly && (
           <>
-            <FeedbackModal />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={startTour}
-              className="text-muted-foreground hover:text-primary"
-            >
-              <HelpCircle className="size-4" />
-            </Button>
+            <NavMenu
+              role="seller"
+              onStartTour={startTour}
+              onFeedback={() => setFeedbackOpen(true)}
+            />
+            <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
           </>
         )}
         <Button variant="ghost" size="sm" onClick={signOut}>
@@ -432,6 +430,7 @@ function DashboardHeader({
   copyStoreLink,
   navigate,
 }: any) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <header className="border-b border-border/50 bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6">
@@ -452,18 +451,17 @@ function DashboardHeader({
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <NetworkStrengthIndicator />
               <ThemeToggle />
               <LanguageSwitcher variant="compact" />
-              <FeedbackModal />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startTour}
-                title={t('auto.help_tour')}
-              >
-                <HelpCircle className="size-4" />
-              </Button>
+              <NavMenu
+                role="seller"
+                onStartTour={startTour}
+                onFeedback={() => setFeedbackOpen(true)}
+              />
+              <FeedbackModal
+                open={feedbackOpen}
+                onOpenChange={setFeedbackOpen}
+              />
               <Button
                 variant="ghost"
                 size="sm"

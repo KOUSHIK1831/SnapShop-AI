@@ -127,8 +127,8 @@ export default function BottomNav() {
               className={cn(
                 'flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 relative',
                 isActive
-                  ? t('auto.text_primary')
-                  : t('auto.text_muted_foreground_hover_te'),
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-primary',
               )}
             >
               <div className="relative">

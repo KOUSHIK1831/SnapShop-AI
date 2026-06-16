@@ -14,6 +14,7 @@ import BuyerDashboard from './pages/BuyerDashboard';
 import TrackOrder from './pages/TrackOrder';
 import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
+import VolunteerManualPage from './pages/volunteer/VolunteerManualPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import OfflineBanner from './components/OfflineBanner';
 import BottomNav from './components/BottomNav';
@@ -70,6 +71,7 @@ const App = () => {
                       }
                     />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/manual" element={<VolunteerManualPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <BottomNav />

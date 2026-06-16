@@ -11,6 +11,7 @@ import {
   Shield,
   Users,
   IndianRupee,
+  BookOpen,
 } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -88,6 +89,15 @@ export default function Index() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <LanguageSwitcher />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/manual')}
+              className="size-8"
+              title="User Manual"
+            >
+              <BookOpen className="size-4" />
+            </Button>
             <Button
               variant="outline"
               size="sm"

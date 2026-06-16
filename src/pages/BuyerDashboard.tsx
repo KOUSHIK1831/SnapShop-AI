@@ -26,11 +26,13 @@ import {
   CreditCard,
   Banknote,
   Calendar,
+  BookOpen,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { NetworkStrengthIndicator } from '@/components/NetworkStrengthIndicator';
+import NavMenu from '@/components/NavMenu';
+import FeedbackModal from '@/components/FeedbackModal';
 import { cn } from '@/lib/utils';
 
 interface ShopListing {
@@ -137,6 +139,7 @@ export default function BuyerDashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tab = (searchParams.get('tab') as Tab) || 'shops';
@@ -264,13 +267,17 @@ export default function BuyerDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <NetworkStrengthIndicator />
             <ThemeToggle />
             <LanguageSwitcher />
             <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
               <User className="size-4" />
               <span>{user?.name || user?.email?.split('@')[0]}</span>
             </div>
+            <NavMenu
+              role={user?.role}
+              onFeedback={() => setFeedbackOpen(true)}
+            />
+            <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
             <Button
               variant="outline"
               size="sm"
