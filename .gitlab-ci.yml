@@ -2,14 +2,9 @@
 # Optimized for performance and comprehensive validation
 
 stages:
-  - lint
-  - format
-  - type-check
-  - test
-  - coverage
-  - build
-  - security
   - validate
+  - test
+  - build
 
 # Global cache for npm dependencies
 cache:
@@ -26,7 +21,7 @@ before_script:
   - npm ci --cache .npm --prefer-offline
 
 lint:
-  stage: lint
+  stage: validate
   script:
     - echo "Running ESLint..."
     - npm run lint
@@ -35,7 +30,7 @@ lint:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 format:
-  stage: format
+  stage: validate
   script:
     - echo "Running Prettier format check..."
     - npm run format:check
@@ -44,7 +39,7 @@ format:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 type-check:
-  stage: type-check
+  stage: validate
   script:
     - echo "Running TypeScript type checks..."
     - npm run type-check
@@ -62,7 +57,7 @@ test:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 coverage:
-  stage: coverage
+  stage: test
   script:
     - echo "Running tests with coverage..."
     - npm run test:coverage
@@ -92,7 +87,7 @@ build:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 gitleaks:
-  stage: security
+  stage: validate
   image:
     name: zricethezav/gitleaks:latest
     entrypoint: ['']
