@@ -381,7 +381,12 @@ export type Database = {
     Enums: {
       delivery_type: 'courier' | 'self_delivery';
       payment_method: 'cod' | 'online';
-      payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'awaiting_verification';
+      payment_status:
+        | 'pending'
+        | 'paid'
+        | 'failed'
+        | 'refunded'
+        | 'awaiting_verification';
     };
     CompositeTypes: {
       [_ in never]: never;

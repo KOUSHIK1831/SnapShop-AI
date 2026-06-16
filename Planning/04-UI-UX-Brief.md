@@ -8,17 +8,17 @@ Clean, modern, accessible. Dark-mode first with light-mode support. Professional
 
 ## Color Palette
 
-| Role | Color (Dark Mode) | Hex |
-|------|-------------------|-----|
-| **Primary / Brand** | Gradient brand | `#6C47FF` → `#A855F7` (purple gradient) |
-| **Background** | Dark charcoal | `#0A0A0B` / `#09090B` |
-| **Card / Surface** | Dark surface | `#18181B` |
-| **Border** | Subtle border | `#27272A` |
-| **Text** | Light | `#FAFAFA` |
-| **Muted Text** | Muted gray | `#A1A1AA` |
-| **Accent / Success** | Green | `#22C55E` |
-| **Warning** | Amber | `#F59E0B` |
-| **Error / Destructive** | Red | `#EF4444` |
+| Role                    | Color (Dark Mode) | Hex                                     |
+| ----------------------- | ----------------- | --------------------------------------- |
+| **Primary / Brand**     | Gradient brand    | `#6C47FF` → `#A855F7` (purple gradient) |
+| **Background**          | Dark charcoal     | `#0A0A0B` / `#09090B`                   |
+| **Card / Surface**      | Dark surface      | `#18181B`                               |
+| **Border**              | Subtle border     | `#27272A`                               |
+| **Text**                | Light             | `#FAFAFA`                               |
+| **Muted Text**          | Muted gray        | `#A1A1AA`                               |
+| **Accent / Success**    | Green             | `#22C55E`                               |
+| **Warning**             | Amber             | `#F59E0B`                               |
+| **Error / Destructive** | Red               | `#EF4444`                               |
 
 ## Typography
 

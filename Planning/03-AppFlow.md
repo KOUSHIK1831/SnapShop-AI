@@ -4,17 +4,17 @@
 
 ## Pages List
 
-| Path | Page | Access |
-|------|------|--------|
-| `/` | Landing page | Public |
-| `/auth` | Login / Sign-up | Public |
-| `/dashboard` | Seller dashboard | 🔒 Seller |
-| `/admin` | Admin dashboard | 🔒 Admin |
-| `/buyer` | Buyer dashboard | 🔒 Buyer |
-| `/store/:slug` | Public storefront | Public |
-| `/track-order/:orderId` | Order tracking | 🔒 Buyer |
-| `/reset-password` | Password reset | Public |
-| `*` | 404 Not Found | Public |
+| Path                    | Page              | Access    |
+| ----------------------- | ----------------- | --------- |
+| `/`                     | Landing page      | Public    |
+| `/auth`                 | Login / Sign-up   | Public    |
+| `/dashboard`            | Seller dashboard  | 🔒 Seller |
+| `/admin`                | Admin dashboard   | 🔒 Admin  |
+| `/buyer`                | Buyer dashboard   | 🔒 Buyer  |
+| `/store/:slug`          | Public storefront | Public    |
+| `/track-order/:orderId` | Order tracking    | 🔒 Buyer  |
+| `/reset-password`       | Password reset    | Public    |
+| `*`                     | 404 Not Found     | Public    |
 
 ## Navigation Type
 

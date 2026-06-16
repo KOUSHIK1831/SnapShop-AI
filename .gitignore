@@ -37,3 +37,4 @@ doctor-report.json
 report.json
 react-doctor.config.json
 refactor_*.py
+coverage/
