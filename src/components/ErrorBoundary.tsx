@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { captureError } from '@/lib/sentry.ts';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
@@ -24,6 +25,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[SnapShop AI Error] Uncaught error:', error, errorInfo);
+    captureError(error, { componentStack: errorInfo.componentStack ?? '' });
   }
 
   private handleReset = () => {
