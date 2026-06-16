@@ -17,6 +17,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import ScrollReveal from '@/components/ScrollReveal';
 import Tilt3D from '@/components/Tilt3D';
 import { useEffect } from 'react';
+import { captureError } from '@/lib/sentry.ts';
 
 const products = [
   {
@@ -87,6 +88,14 @@ export default function Index() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <LanguageSwitcher />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => captureError(new Error('Production Sentry Test'))}
+              className="border-destructive/60 text-destructive text-xs"
+            >
+              Test Sentry
+            </Button>
             <Button
               variant="outline"
               size="sm"
