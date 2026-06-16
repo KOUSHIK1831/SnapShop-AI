@@ -277,8 +277,8 @@ export default function StoreSettings({
                 height="250"
                 style={{ border: 0 }}
                 allowFullScreen
-                loading={t('auto.lazy')}
-                referrerPolicy={t('auto.no_referrer_when_downgrade')}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
                 title={t('auto.store_location')}
               />
             </div>

@@ -59,7 +59,7 @@ export default function ProductCard({
             src={product.image_url}
             alt={product.title}
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading={t('auto.lazy')}
+            loading="lazy"
           />
         </div>
       )}

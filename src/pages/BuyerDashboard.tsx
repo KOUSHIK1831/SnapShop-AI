@@ -199,7 +199,9 @@ export default function BuyerDashboard() {
     async function loadOrders() {
       const { data } = await supabase
         .from('orders')
-        .select(t('auto.id_status_pay_method_pay_statu'))
+        .select(
+          'id, status, pay_method, pay_status, quantity, created_at, del_type, tracking_provider, tracking_number, delivery_person_name, delivery_person_phone, product:products(title, price, image_url), seller:sellers(store_name, store_slug, contact_number, phone)',
+        )
         .eq('buyer_id', user!.id)
         .order('created_at', { ascending: false });
 

@@ -243,7 +243,7 @@ export default function Analytics({ orders }: AnalyticsProps) {
                 />
 
                 <XAxis
-                  dataKey={t('auto.name')}
+                  dataKey="name"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
@@ -323,7 +323,7 @@ export default function Analytics({ orders }: AnalyticsProps) {
                   />
 
                   <XAxis
-                    dataKey={t('auto.name')}
+                    dataKey="name"
                     axisLine={false}
                     tickLine={false}
                     tick={{

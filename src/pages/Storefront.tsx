@@ -619,8 +619,8 @@ function StorefrontContent() {
               height="200"
               style={{ border: 0 }}
               allowFullScreen
-              loading={t('auto.lazy')}
-              referrerPolicy={t('auto.no_referrer_when_downgrade')}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
               title={t('auto.store_location')}
             />{' '}
           </div>{' '}
@@ -713,7 +713,7 @@ function StorefrontContent() {
                           src={product.image_url}
                           alt={product.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading={t('auto.lazy')}
+                          loading="lazy"
                         />
                       </div>
                     )}

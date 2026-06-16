@@ -308,7 +308,7 @@ describe('useAuth coverage', () => {
       expect(supabase.auth.signUp).toHaveBeenCalledWith(
         expect.objectContaining({
           options: expect.objectContaining({
-            data: expect.objectContaining({ role: 'auto.seller' }),
+            data: expect.objectContaining({ role: 'seller' }),
           }),
         }),
       );
@@ -319,7 +319,7 @@ describe('useAuth coverage', () => {
       expect(supabase.auth.signUp).toHaveBeenCalledWith(
         expect.objectContaining({
           options: expect.objectContaining({
-            data: expect.objectContaining({ role: 'auto.buyer_795' }),
+            data: expect.objectContaining({ role: 'buyer' }),
           }),
         }),
       );

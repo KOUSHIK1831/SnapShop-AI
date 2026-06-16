@@ -169,7 +169,7 @@ describe('BuyerAuthModal coverage', () => {
     render(<BuyerAuthModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
     const passwordInput = screen.getByPlaceholderText(/Min. 6 characters/i);
     expect(passwordInput).toHaveAttribute('type', 'password');
-    const toggleBtn = screen.getByTitle('toggle-password');
+    const toggleBtn = screen.getByTitle('Toggle password visibility');
     fireEvent.click(toggleBtn);
     expect(passwordInput).toHaveAttribute('type', 'text');
   });

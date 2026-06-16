@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -23,7 +22,6 @@ import ThemeProvider from '@/components/ThemeProvider';
 
 const queryClient = new QueryClient();
 const App = () => {
-  const { t } = useTranslation();
   return (
     <ThemeProvider>
       <NetworkProvider>
@@ -37,47 +35,41 @@ const App = () => {
                 <div className="pb-16 sm:pb-0">
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path={t('auto.auth')} element={<Auth />} />
+                    <Route path="/auth" element={<Auth />} />
                     <Route
-                      path={t('auto.dashboard')}
+                      path="/dashboard"
                       element={
-                        <ProtectedRoute requiredRole={t('auto.seller')}>
+                        <ProtectedRoute requiredRole="seller">
                           <Dashboard />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path={t('auto.admin')}
+                      path="/admin"
                       element={
-                        <ProtectedRoute requiredRole={t('auto.admin_413')}>
+                        <ProtectedRoute requiredRole="admin">
                           <Admin />
                         </ProtectedRoute>
                       }
                     />
+                    <Route path="/store/:slug" element={<Storefront />} />
                     <Route
-                      path={t('auto.store_slug')}
-                      element={<Storefront />}
-                    />
-                    <Route
-                      path={t('auto.buyer')}
+                      path="/buyer"
                       element={
-                        <ProtectedRoute requiredRole={t('auto.buyer_795')}>
+                        <ProtectedRoute requiredRole="buyer">
                           <BuyerDashboard />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path={t('auto.track_order_orderid')}
+                      path="/track-order/:orderId"
                       element={
-                        <ProtectedRoute requiredRole={t('auto.buyer_795')}>
+                        <ProtectedRoute requiredRole="buyer">
                           <TrackOrder />
                         </ProtectedRoute>
                       }
                     />
-                    <Route
-                      path={t('auto.reset_password')}
-                      element={<ResetPassword />}
-                    />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <BottomNav />

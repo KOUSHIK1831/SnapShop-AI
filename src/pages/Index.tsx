@@ -280,7 +280,7 @@ export default function Index() {
                         src={product.img}
                         alt={product.name}
                         className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
-                        loading={t('auto.lazy')}
+                        loading="lazy"
                       />
                     </div>
                     <div className="p-4">

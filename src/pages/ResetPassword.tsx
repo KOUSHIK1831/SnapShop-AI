@@ -255,9 +255,7 @@ export default function ResetPassword() {
 
                 <div className="relative">
                   <Input
-                    type={
-                      state.showPassword ? t('auto.text') : t('auto.password')
-                    }
+                    type={state.showPassword ? 'text' : 'password'}
                     placeholder={t('auto.new_password_min_6_chars')}
                     value={state.password}
                     onChange={e =>
@@ -267,7 +265,7 @@ export default function ResetPassword() {
                       })
                     }
                     className="pr-10"
-                    autoComplete={t('auto.new_password')}
+                    autoComplete="new-password"
                     autoFocus
                   />
 
@@ -288,9 +286,7 @@ export default function ResetPassword() {
 
                 <div className="relative">
                   <Input
-                    type={
-                      state.showConfirm ? t('auto.text') : t('auto.password')
-                    }
+                    type={state.showConfirm ? 'text' : 'password'}
                     placeholder={t('auto.confirm_new_password')}
                     value={state.confirm}
                     onChange={e =>
@@ -300,7 +296,7 @@ export default function ResetPassword() {
                       })
                     }
                     className="pr-10"
-                    autoComplete={t('auto.new_password')}
+                    autoComplete="new-password"
                   />
 
                   <button
