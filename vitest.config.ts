@@ -15,7 +15,13 @@ export default defineConfig({
     coverage: {
       enabled: true,
       provider: 'v8',
-      reporter: ['text', 'json'],
+      reporter: ['text', 'json', 'cobertura'],
+      thresholds: {
+        statements: 30,
+        branches: 20,
+        functions: 30,
+        lines: 30,
+      },
       include: ['src/**/*.{ts,tsx}', 'supabase/functions/**/*.ts'],
       exclude: [
         'tests/**/*.{test,spec}.{ts,tsx}',
