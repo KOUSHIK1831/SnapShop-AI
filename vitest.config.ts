@@ -8,16 +8,16 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: [
-      'tests/src/**/*.{test,spec}.{ts,tsx}',
-      'tests/supabase/functions/**/*.{test,spec}.ts',
-    ],
     pool: 'forks',
     poolOptions: {
       forks: {
         singleFork: true,
       },
     },
+    include: [
+      'tests/src/**/*.{test,spec}.{ts,tsx}',
+      'tests/supabase/functions/**/*.{test,spec}.ts',
+    ],
     coverage: {
       enabled: true,
       provider: 'v8',
