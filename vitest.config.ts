@@ -12,6 +12,12 @@ export default defineConfig({
       'tests/src/**/*.{test,spec}.{ts,tsx}',
       'tests/supabase/functions/**/*.{test,spec}.ts',
     ],
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     coverage: {
       enabled: true,
       provider: 'v8',
