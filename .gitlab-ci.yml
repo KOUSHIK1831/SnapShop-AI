@@ -17,7 +17,7 @@ cache:
 image: node:22-alpine
 
 variables:
-  NODE_OPTIONS: "--max-old-space-size=3072"
+  NODE_OPTIONS: '--max-old-space-size=3072'
 
 before_script:
   - apk add --no-cache git
