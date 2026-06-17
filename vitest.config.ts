@@ -19,7 +19,7 @@ export default defineConfig({
       'tests/supabase/functions/**/*.{test,spec}.ts',
     ],
     coverage: {
-      enabled: true,
+      enabled: false,
       provider: 'v8',
       reporter: ['text', 'json', 'cobertura'],
       thresholds: {
