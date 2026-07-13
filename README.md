@@ -313,3 +313,7 @@ We welcome contributions to SnapShop AI! Whether you're fixing a bug, adding a f
 
 This project is licensed under the **GNU Affero General Public License (AGPL) v3**. See the [LICENSE](LICENSE) file for the full license text.
 .
+
+---
+
+> _Built with ❤️ for local businesses_
