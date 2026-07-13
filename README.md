@@ -317,3 +317,11 @@ This project is licensed under the **GNU Affero General Public License (AGPL) v3
 ---
 
 > _Built with ❤️ for local businesses_
+
+## Contributors
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+## Contributors
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
