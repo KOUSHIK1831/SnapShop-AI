@@ -359,7 +359,7 @@ export default function Orders({ orders, onUpdateStatus }: OrdersProps) {
                     {order.status === 'pending' && (
                       <Button
                         size="sm"
-                        className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-10 font-bold"
+                        className="w-full h-10 font-bold"
                         onClick={() =>
                           handleStatusUpdate(order.id, 'preparing')
                         }

@@ -1,0 +1,10 @@
+[changelog]
+header = "# Changelog\n\nAll notable changes to SnapShop AI will be documented in this file.\n\n"
+body = "## {{ version }} - {{ timestamp }}\n"
+trim = true
+postprocessors = []
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false

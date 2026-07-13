@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ReviewCard from '@/components/ReviewCard';
 import en from '@/locales/en/translation.json';
 
@@ -20,6 +20,7 @@ const mockProduct = {
 };
 
 describe('ReviewCard', () => {
+  afterEach(cleanup);
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -274,7 +275,7 @@ describe('ReviewCard', () => {
       />,
     );
     expect(screen.getByText(/850/)).toBeInTheDocument();
-    expect(screen.getByText(/1000/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1000/).length).toBeGreaterThan(0);
     expect(screen.getByText(/15/)).toBeInTheDocument();
   });
 

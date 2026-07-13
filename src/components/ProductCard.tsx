@@ -59,7 +59,7 @@ export default function ProductCard({
             src={product.image_url}
             alt={product.title}
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading={t('auto.lazy')}
+            loading="lazy"
           />
         </div>
       )}
@@ -92,7 +92,7 @@ export default function ProductCard({
               <Button
                 size="sm"
                 onClick={handleSave}
-                className="bg-gradient-brand hover:opacity-90 transition-opacity"
+                className="bg-primary hover:bg-primary/90 transition-opacity"
               >
                 <Check className="size-4 mr-1" /> {t('common.save')}
               </Button>

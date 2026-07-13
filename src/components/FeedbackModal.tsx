@@ -73,7 +73,15 @@ function feedbackReducer(
   }
 }
 
-export default function FeedbackModal() {
+interface FeedbackModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export default function FeedbackModal({
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
+}: FeedbackModalProps = {}) {
   const { user } = useAuth();
   const { seller } = useSeller();
   const { t } = useTranslation();
@@ -86,9 +94,15 @@ export default function FeedbackModal() {
     loadingHistory: false,
   });
 
+  const isOpen = externalOpen !== undefined ? externalOpen : state.isOpen;
+  const handleOpenChange = (open: boolean) => {
+    if (externalOnOpenChange) externalOnOpenChange(open);
+    else dispatch({ type: 'SET_OPEN', value: open });
+  };
+
   useEffect(() => {
     let channel: any = null;
-    if (state.isOpen && user) {
+    if (isOpen && user) {
       const fetchMyFeedback = async () => {
         dispatch({ type: 'SET_LOADING', value: true });
         const { data, error } = await supabase
@@ -177,27 +191,26 @@ export default function FeedbackModal() {
     }
   };
 
-  const { content, isSubmitting, isOpen, myFeedback, loadingHistory } = state;
+  const { content, isSubmitting, myFeedback, loadingHistory } = state;
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={open => dispatch({ type: 'SET_OPEN', value: open })}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-primary gap-2"
-          title={t('feedback.title')}
-          id="tour-feedback"
-        >
-          <Bug className="size-4" />
-          <span className="hidden sm:inline text-xs font-medium">
-            {t('admin.feedback')}
-          </span>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-primary gap-2"
+            title={t('feedback.title')}
+            id="tour-feedback"
+          >
+            <Bug className="size-4" />
+            <span className="hidden sm:inline text-xs font-medium">
+              {t('admin.feedback')}
+            </span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
         <Tabs defaultValue={t('auto.send')} className="size-full flex flex-col">
           <div className="p-6 pb-2">
@@ -237,7 +250,7 @@ export default function FeedbackModal() {
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !content.trim()}
-                className="w-full bg-gradient-brand text-white shadow-lg shadow-primary/20"
+                className="w-full"
               >
                 {isSubmitting ? t('common.saving') : t('feedback.submit')}
               </Button>

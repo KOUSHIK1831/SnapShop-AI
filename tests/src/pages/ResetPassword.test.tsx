@@ -358,13 +358,13 @@ describe('ResetPassword', () => {
     const passwordInput = screen.getByPlaceholderText(
       'auto.new_password_min_6_chars',
     );
-    expect(passwordInput).toHaveAttribute('type', 'auto.password');
+    expect(passwordInput).toHaveAttribute('type', 'password');
 
     const toggleButtons = container.querySelectorAll('button[type="button"]');
     const showPasswordBtn = toggleButtons[0];
     fireEvent.click(showPasswordBtn);
 
-    expect(passwordInput).toHaveAttribute('type', 'auto.text');
+    expect(passwordInput).toHaveAttribute('type', 'text');
   });
 
   it('toggles showConfirm visibility', async () => {
@@ -381,13 +381,13 @@ describe('ResetPassword', () => {
     const confirmInput = screen.getByPlaceholderText(
       'auto.confirm_new_password',
     );
-    expect(confirmInput).toHaveAttribute('type', 'auto.password');
+    expect(confirmInput).toHaveAttribute('type', 'password');
 
     const toggleButtons = container.querySelectorAll('button[type="button"]');
     const showConfirmBtn = toggleButtons[1];
     fireEvent.click(showConfirmBtn);
 
-    expect(confirmInput).toHaveAttribute('type', 'auto.text');
+    expect(confirmInput).toHaveAttribute('type', 'text');
   });
 
   it('shows amber password strength bar for length 7-9', async () => {

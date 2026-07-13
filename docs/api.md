@@ -7,14 +7,14 @@
 
 ## Why FastAPI?
 
-| Current (Frontend → Supabase Direct) | Target (Frontend → FastAPI → Supabase) |
-|--------------------------------------|----------------------------------------|
-| Business logic in frontend hooks      | Centralized business logic in API layer |
-| RLS policies for auth                 | JWT verification + middleware           |
-| Edge Functions for AI/WhatsApp        | Unified Python backend                  |
-| No API documentation                  | Auto-generated OpenAPI/Swagger docs     |
-| Difficult to test                     | Easy pytest integration                 |
-| Vendor-locked to Supabase             | Abstracted database layer               |
+| Current (Frontend → Supabase Direct) | Target (Frontend → FastAPI → Supabase)  |
+| ------------------------------------ | --------------------------------------- |
+| Business logic in frontend hooks     | Centralized business logic in API layer |
+| RLS policies for auth                | JWT verification + middleware           |
+| Edge Functions for AI/WhatsApp       | Unified Python backend                  |
+| No API documentation                 | Auto-generated OpenAPI/Swagger docs     |
+| Difficult to test                    | Easy pytest integration                 |
+| Vendor-locked to Supabase            | Abstracted database layer               |
 
 ---
 
@@ -136,106 +136,107 @@ All endpoints prefixed with `/api/v1`.
 
 ### 1. Auth (`/api/v1/auth`)
 
-| Method | Endpoint                 | Description                 | JWT  | Supabase Equivalent                          |
-| ------ | ------------------------ | --------------------------- | ---- | -------------------------------------------- |
-| POST   | `/auth/signup`           | Create new user account     | No   | `supabase.auth.signUp()`                     |
-| POST   | `/auth/login`            | Sign in with email/password | No   | `supabase.auth.signInWithPassword()`         |
-| POST   | `/auth/logout`           | Sign out current session    | Yes  | `supabase.auth.signOut()`                    |
-| GET    | `/auth/session`          | Get current session         | Yes  | `supabase.auth.getSession()`                 |
-| POST   | `/auth/reset-password`   | Request password reset      | No   | `supabase.auth.resetPasswordEmail()`         |
-| POST   | `/auth/refresh`          | Refresh JWT token           | No   | `supabase.auth.refreshSession()`             |
+| Method | Endpoint               | Description                 | JWT | Supabase Equivalent                  |
+| ------ | ---------------------- | --------------------------- | --- | ------------------------------------ |
+| POST   | `/auth/signup`         | Create new user account     | No  | `supabase.auth.signUp()`             |
+| POST   | `/auth/login`          | Sign in with email/password | No  | `supabase.auth.signInWithPassword()` |
+| POST   | `/auth/logout`         | Sign out current session    | Yes | `supabase.auth.signOut()`            |
+| GET    | `/auth/session`        | Get current session         | Yes | `supabase.auth.getSession()`         |
+| POST   | `/auth/reset-password` | Request password reset      | No  | `supabase.auth.resetPasswordEmail()` |
+| POST   | `/auth/refresh`        | Refresh JWT token           | No  | `supabase.auth.refreshSession()`     |
 
 ### 2. Sellers (`/api/v1/sellers`)
 
-| Method | Endpoint               | Description                     | JWT  | Role     | Supabase Equivalent                          |
-| ------ | ---------------------- | ------------------------------- | ---- | -------- | -------------------------------------------- |
-| GET    | `/sellers/me`          | Get own seller profile          | Yes  | Seller   | `sellers.select('*').eq('user_id', user.id)` |
-| POST   | `/sellers/me`          | Create seller profile           | Yes  | Seller   | `sellers.upsert(payload)`                    |
-| PATCH  | `/sellers/me`          | Update seller profile           | Yes  | Seller   | `sellers.update(data).eq('id', seller.id)`   |
-| GET    | `/sellers/{slug}`      | Get seller by store slug (public) | No | Public   | `sellers.select('*').eq('store_slug', slug)` |
-| POST   | `/sellers/me/submit`   | Submit for verification         | Yes  | Seller   | —                                            |
+| Method | Endpoint             | Description                       | JWT | Role   | Supabase Equivalent                          |
+| ------ | -------------------- | --------------------------------- | --- | ------ | -------------------------------------------- |
+| GET    | `/sellers/me`        | Get own seller profile            | Yes | Seller | `sellers.select('*').eq('user_id', user.id)` |
+| POST   | `/sellers/me`        | Create seller profile             | Yes | Seller | `sellers.upsert(payload)`                    |
+| PATCH  | `/sellers/me`        | Update seller profile             | Yes | Seller | `sellers.update(data).eq('id', seller.id)`   |
+| GET    | `/sellers/{slug}`    | Get seller by store slug (public) | No  | Public | `sellers.select('*').eq('store_slug', slug)` |
+| POST   | `/sellers/me/submit` | Submit for verification           | Yes | Seller | —                                            |
 
 ### 3. Products (`/api/v1/products`)
 
-| Method | Endpoint                      | Description                        | JWT  | Role     | Supabase Equivalent                                       |
-| ------ | ----------------------------- | ---------------------------------- | ---- | -------- | --------------------------------------------------------- |
-| GET    | `/products`                   | List own products (dashboard)      | Yes  | Seller   | `products.select('*').eq('seller_id', id)`                |
-| GET    | `/products/{id}`              | Get single product                 | Yes  | Seller   | `products.select('*').eq('id', id)`                       |
-| POST   | `/products`                   | Create product                     | Yes  | Seller   | `products.insert({...})`                                  |
-| PATCH  | `/products/{id}`              | Update product                     | Yes  | Seller   | `products.update(data).eq('id', id)`                      |
-| DELETE | `/products/{id}`              | Delete product                     | Yes  | Seller   | `products.delete().eq('id', id)`                          |
-| GET    | `/sellers/{slug}/products`    | List products for storefront (public) | No | Public   | `products.select('*').eq('seller_id', id)`                |
+| Method | Endpoint                   | Description                           | JWT | Role   | Supabase Equivalent                        |
+| ------ | -------------------------- | ------------------------------------- | --- | ------ | ------------------------------------------ |
+| GET    | `/products`                | List own products (dashboard)         | Yes | Seller | `products.select('*').eq('seller_id', id)` |
+| GET    | `/products/{id}`           | Get single product                    | Yes | Seller | `products.select('*').eq('id', id)`        |
+| POST   | `/products`                | Create product                        | Yes | Seller | `products.insert({...})`                   |
+| PATCH  | `/products/{id}`           | Update product                        | Yes | Seller | `products.update(data).eq('id', id)`       |
+| DELETE | `/products/{id}`           | Delete product                        | Yes | Seller | `products.delete().eq('id', id)`           |
+| GET    | `/sellers/{slug}/products` | List products for storefront (public) | No  | Public | `products.select('*').eq('seller_id', id)` |
 
 ### 4. Orders (`/api/v1/orders`)
 
-| Method | Endpoint                      | Description                          | JWT  | Role     | Supabase Equivalent                                 |
-| ------ | ----------------------------- | ------------------------------------ | ---- | -------- | --------------------------------------------------- |
-| GET    | `/orders`                     | List own orders (seller)             | Yes  | Seller   | `orders.select('*').eq('seller_id', id)`            |
-| POST   | `/orders`                     | Place new order (buyer)              | Yes  | Buyer    | `orders.insert({...})`                              |
-| PATCH  | `/orders/{id}/status`         | Update order status                  | Yes  | Seller   | `orders.update({status}).eq('id', id)`              |
-| GET    | `/orders/{id}`                | Track order by ID (public)           | No   | Public   | `orders.select('*').eq('id', id)`                   |
-| GET    | `/orders/buyer`               | List buyer's orders                  | Yes  | Buyer    | `orders.select('*').eq('buyer_id', id)`             |
+| Method | Endpoint              | Description                | JWT | Role   | Supabase Equivalent                      |
+| ------ | --------------------- | -------------------------- | --- | ------ | ---------------------------------------- |
+| GET    | `/orders`             | List own orders (seller)   | Yes | Seller | `orders.select('*').eq('seller_id', id)` |
+| POST   | `/orders`             | Place new order (buyer)    | Yes | Buyer  | `orders.insert({...})`                   |
+| PATCH  | `/orders/{id}/status` | Update order status        | Yes | Seller | `orders.update({status}).eq('id', id)`   |
+| GET    | `/orders/{id}`        | Track order by ID (public) | No  | Public | `orders.select('*').eq('id', id)`        |
+| GET    | `/orders/buyer`       | List buyer's orders        | Yes | Buyer  | `orders.select('*').eq('buyer_id', id)`  |
 
 ### 5. Files (`/api/v1/files`)
 
-| Method | Endpoint           | Description                    | JWT  | Role     | Supabase Equivalent                               |
-| ------ | ------------------ | ------------------------------ | ---- | -------- | ------------------------------------------------- |
-| POST   | `/files/upload`    | Upload image to storage        | Yes  | Seller   | `storage.from('uploads').upload(path, file)`      |
-| GET    | `/files`           | List own uploaded files        | Yes  | Seller   | `files.select('*').eq('seller_id', id)`           |
-| POST   | `/files`           | Create file record             | Yes  | Seller   | `files.insert({...})`                             |
-| PATCH  | `/files/{id}`      | Update file status             | Yes  | Seller   | `files.update({status}).eq('id', id)`             |
-| GET    | `/files/{id}/url`  | Get public URL of file         | Yes  | Seller   | `storage.from('uploads').getPublicUrl(path)`      |
+| Method | Endpoint          | Description             | JWT | Role   | Supabase Equivalent                          |
+| ------ | ----------------- | ----------------------- | --- | ------ | -------------------------------------------- |
+| POST   | `/files/upload`   | Upload image to storage | Yes | Seller | `storage.from('uploads').upload(path, file)` |
+| GET    | `/files`          | List own uploaded files | Yes | Seller | `files.select('*').eq('seller_id', id)`      |
+| POST   | `/files`          | Create file record      | Yes | Seller | `files.insert({...})`                        |
+| PATCH  | `/files/{id}`     | Update file status      | Yes | Seller | `files.update({status}).eq('id', id)`        |
+| GET    | `/files/{id}/url` | Get public URL of file  | Yes | Seller | `storage.from('uploads').getPublicUrl(path)` |
 
 ### 6. Conversations (`/api/v1/conversations`)
 
-| Method | Endpoint                              | Description                              | JWT  | Role     |
-| ------ | ------------------------------------- | ---------------------------------------- | ---- | -------- |
-| GET    | `/conversations`                      | List all conversations for seller        | Yes  | Seller   |
-| GET    | `/conversations/{phone}`              | Get conversation history with a customer | Yes  | Seller   |
-| DELETE | `/conversations/{phone}`              | Clear conversation history               | Yes  | Seller   |
+| Method | Endpoint                 | Description                              | JWT | Role   |
+| ------ | ------------------------ | ---------------------------------------- | --- | ------ |
+| GET    | `/conversations`         | List all conversations for seller        | Yes | Seller |
+| GET    | `/conversations/{phone}` | Get conversation history with a customer | Yes | Seller |
+| DELETE | `/conversations/{phone}` | Clear conversation history               | Yes | Seller |
 
 ### 7. WhatsApp (`/api/v1/whatsapp`)
 
-| Method | Endpoint                        | Description                               | JWT  | Role     |
-| ------ | ------------------------------- | ----------------------------------------- | ---- | -------- |
-| GET    | `/whatsapp/webhook`             | Webhook verification (Meta challenge)     | No   | Meta     |
-| POST   | `/whatsapp/webhook`             | Incoming WhatsApp message (Meta webhook)  | No   | Meta     |
-| GET    | `/whatsapp/settings`            | Get WhatsApp agent settings for store     | Yes  | Seller   |
-| PATCH  | `/whatsapp/settings`            | Update WhatsApp agent settings            | Yes  | Seller   |
-| POST   | `/whatsapp/send`                | Send manual WhatsApp message              | Yes  | Seller   |
-| GET    | `/whatsapp/stats`               | Get agent stats (conversations, orders)   | Yes  | Seller   |
+| Method | Endpoint             | Description                              | JWT | Role   |
+| ------ | -------------------- | ---------------------------------------- | --- | ------ |
+| GET    | `/whatsapp/webhook`  | Webhook verification (Meta challenge)    | No  | Meta   |
+| POST   | `/whatsapp/webhook`  | Incoming WhatsApp message (Meta webhook) | No  | Meta   |
+| GET    | `/whatsapp/settings` | Get WhatsApp agent settings for store    | Yes | Seller |
+| PATCH  | `/whatsapp/settings` | Update WhatsApp agent settings           | Yes | Seller |
+| POST   | `/whatsapp/send`     | Send manual WhatsApp message             | Yes | Seller |
+| GET    | `/whatsapp/stats`    | Get agent stats (conversations, orders)  | Yes | Seller |
 
 ### 8. AI Digitize (`/api/v1/digitize`)
 
-| Method | Endpoint            | Description                              | JWT  | Role     |
-| ------ | ------------------- | ---------------------------------------- | ---- | -------- |
-| POST   | `/digitize`         | Extract product metadata from image      | Yes  | Seller   |
-| GET    | `/digitize/usage`   | Get AI usage for today                   | Yes  | Seller   |
+| Method | Endpoint          | Description                         | JWT | Role   |
+| ------ | ----------------- | ----------------------------------- | --- | ------ |
+| POST   | `/digitize`       | Extract product metadata from image | Yes | Seller |
+| GET    | `/digitize/usage` | Get AI usage for today              | Yes | Seller |
 
 ### 9. Admin (`/api/v1/admin`)
 
-| Method | Endpoint                       | Description                         | JWT  | Role  |
-| ------ | ------------------------------ | ----------------------------------- | ---- | ----- |
-| GET    | `/admin/sellers`               | List all sellers                    | Yes  | Admin |
-| GET    | `/admin/sellers/{id}`          | Get seller details                  | Yes  | Admin |
-| PATCH  | `/admin/sellers/{id}/verify`   | Approve/reject seller verification  | Yes  | Admin |
-| GET    | `/admin/analytics`             | Platform-wide metrics               | Yes  | Admin |
-| GET    | `/admin/feedback`              | List user feedback                  | Yes  | Admin |
-| POST   | `/admin/feedback/{id}/respond` | Respond to feedback                 | Yes  | Admin |
+| Method | Endpoint                       | Description                        | JWT | Role  |
+| ------ | ------------------------------ | ---------------------------------- | --- | ----- |
+| GET    | `/admin/sellers`               | List all sellers                   | Yes | Admin |
+| GET    | `/admin/sellers/{id}`          | Get seller details                 | Yes | Admin |
+| PATCH  | `/admin/sellers/{id}/verify`   | Approve/reject seller verification | Yes | Admin |
+| GET    | `/admin/analytics`             | Platform-wide metrics              | Yes | Admin |
+| GET    | `/admin/feedback`              | List user feedback                 | Yes | Admin |
+| POST   | `/admin/feedback/{id}/respond` | Respond to feedback                | Yes | Admin |
 
 ### 10. Analytics (`/api/v1/analytics`)
 
-| Method | Endpoint              | Description                       | JWT  | Role     |
-| ------ | --------------------- | --------------------------------- | ---- | -------- |
-| GET    | `/analytics/dashboard`| Seller dashboard metrics          | Yes  | Seller   |
-| GET    | `/analytics/revenue`  | Revenue over time                 | Yes  | Seller   |
-| GET    | `/analytics/orders`   | Order volume analytics            | Yes  | Seller   |
+| Method | Endpoint               | Description              | JWT | Role   |
+| ------ | ---------------------- | ------------------------ | --- | ------ |
+| GET    | `/analytics/dashboard` | Seller dashboard metrics | Yes | Seller |
+| GET    | `/analytics/revenue`   | Revenue over time        | Yes | Seller |
+| GET    | `/analytics/orders`    | Order volume analytics   | Yes | Seller |
 
 ---
 
 ## Migration Phases
 
 ### Phase 1: Scaffold + Auth (Week 1-2)
+
 - [ ] Initialize FastAPI project with `main.py`, `config.py`, `database.py`
 - [ ] Set up JWT verification middleware
 - [ ] Implement auth router (signup, login, logout, session)
@@ -243,6 +244,7 @@ All endpoints prefixed with `/api/v1`.
 - [ ] Deploy to staging
 
 ### Phase 2: Core CRUD (Week 3-4)
+
 - [ ] Seller CRUD endpoints
 - [ ] Product CRUD endpoints
 - [ ] Order lifecycle endpoints
@@ -250,6 +252,7 @@ All endpoints prefixed with `/api/v1`.
 - [ ] Write comprehensive tests
 
 ### Phase 3: AI + WhatsApp (Week 5-6)
+
 - [ ] Migrate digitize edge function to FastAPI
 - [ ] Migrate WhatsApp agent to FastAPI (with Anthropic SDK)
 - [ ] Conversation history endpoints
@@ -257,12 +260,14 @@ All endpoints prefixed with `/api/v1`.
 - [ ] Write tests for AI + WhatsApp flows
 
 ### Phase 4: Admin + Analytics (Week 7-8)
+
 - [ ] Admin endpoints (seller verification, platform metrics)
 - [ ] Analytics endpoints (revenue, order volume, insights)
 - [ ] Rate limiting + security hardening
 - [ ] OpenAPI/Swagger documentation
 
 ### Phase 5: Frontend Migration (Week 9-10)
+
 - [ ] Replace Supabase client calls with API client (fetch/axios)
 - [ ] Update React hooks to call FastAPI endpoints
 - [ ] Remove direct DB access from frontend
@@ -351,16 +356,16 @@ ENVIRONMENT=development
 
 ## Summary
 
-| Category              | Endpoints |
-| --------------------- | --------- |
-| Auth                  | 6         |
-| Sellers               | 5         |
-| Products              | 6         |
-| Orders                | 5         |
-| Files                 | 5         |
-| Conversations         | 3         |
-| WhatsApp              | 6         |
-| AI Digitize           | 2         |
-| Admin                 | 6         |
-| Analytics             | 3         |
-| **Total**             | **47**    |
+| Category      | Endpoints |
+| ------------- | --------- |
+| Auth          | 6         |
+| Sellers       | 5         |
+| Products      | 6         |
+| Orders        | 5         |
+| Files         | 5         |
+| Conversations | 3         |
+| WhatsApp      | 6         |
+| AI Digitize   | 2         |
+| Admin         | 6         |
+| Analytics     | 3         |
+| **Total**     | **47**    |

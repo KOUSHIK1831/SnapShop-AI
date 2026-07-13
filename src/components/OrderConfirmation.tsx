@@ -378,7 +378,7 @@ export default function OrderConfirmation({
             <div className="px-5 py-4 border-t border-border/50 shrink-0">
               <Button
                 onClick={handleAddressSubmit}
-                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-11 font-bold text-base"
+                className="w-full h-11 font-bold text-base"
               >
                 {t('auto.proceed_to_payment')}
 
@@ -536,7 +536,7 @@ export default function OrderConfirmation({
             <div className="px-5 py-4 border-t border-border/50 shrink-0 space-y-3">
               <Button
                 onClick={handlePaymentSubmit}
-                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg"
+                className="w-full h-12 font-bold text-lg"
               >
                 {state.payMethod === 'online' && state.onlineType === 'upi_qr'
                   ? t('auto.view_qr_code')
@@ -683,7 +683,7 @@ export default function OrderConfirmation({
               <Button
                 onClick={handleFinalConfirm}
                 disabled={state.submitting || uploadingProof}
-                className="w-full bg-gradient-brand hover:opacity-90 transition-opacity h-12 font-bold text-lg"
+                className="w-full h-12 font-bold text-lg"
               >
                 {state.submitting || uploadingProof ? (
                   <Loader2 className="size-5 mr-2 animate-spin" />
@@ -776,10 +776,7 @@ export default function OrderConfirmation({
               </Button>
             )}
 
-            <Button
-              onClick={onClose}
-              className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
-            >
+            <Button onClick={onClose} className="w-full">
               {t('auto.continue_shopping')}
             </Button>
           </div>

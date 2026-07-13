@@ -154,8 +154,8 @@ export default function StoreSetup({ onComplete }: StoreSetupProps) {
     <div className="flex min-h-[70vh] items-center justify-center animate-fade-in py-10">
       <Card className="w-full max-w-lg shadow-surface-lg border-border/50">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto size-12 bg-gradient-brand rounded-xl flex items-center justify-center mb-4">
-            <Store className="size-6 text-white" />
+          <div className="mx-auto size-12 bg-primary rounded-xl flex items-center justify-center mb-4">
+            <Store className="size-6 text-primary-foreground" />
           </div>
           <CardTitle className="text-xl font-semibold">
             {t('setup.title')}
@@ -376,11 +376,7 @@ export default function StoreSetup({ onComplete }: StoreSetupProps) {
               </p>
             </div>
 
-            <Button
-              type="submit"
-              disabled={uploading}
-              className="w-full h-11 bg-gradient-brand hover:opacity-90 transition-opacity"
-            >
+            <Button type="submit" disabled={uploading} className="w-full h-11">
               {uploading ? (
                 <>
                   <Loader2 className="size-4 mr-2 animate-spin" />

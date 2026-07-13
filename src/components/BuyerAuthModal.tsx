@@ -354,7 +354,7 @@ export default function BuyerAuthModal({
                 <div className="relative">
                   <button
                     onClick={() => dispatch({ type: 'TOGGLE_PASSWORD' })}
-                    title={t('auto.toggle_password')}
+                    title="Toggle password visibility"
                     className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground hover:text-foreground transition-colors z-10"
                   >
                     {state.showPassword ? (
@@ -364,9 +364,7 @@ export default function BuyerAuthModal({
                     )}
                   </button>
                   <Input
-                    type={
-                      state.showPassword ? t('auto.text') : t('auto.password')
-                    }
+                    type={state.showPassword ? 'text' : 'password'}
                     placeholder={t('auto.min_6_characters')}
                     value={state.password}
                     onChange={e =>
@@ -381,7 +379,7 @@ export default function BuyerAuthModal({
               </div>
 
               <Button
-                className="w-full bg-gradient-brand hover:opacity-90 h-11 text-sm font-bold"
+                className="w-full h-11 text-sm font-bold"
                 onClick={state.mode === 'signup' ? handleSignup : handleLogin}
                 disabled={state.submitting}
               >
@@ -400,10 +398,7 @@ export default function BuyerAuthModal({
                   onClick={() =>
                     dispatch({
                       type: 'SET_MODE',
-                      payload:
-                        state.mode === 'login'
-                          ? t('auto.signup')
-                          : t('auto.login'),
+                      payload: state.mode === 'login' ? 'signup' : 'login',
                     })
                   }
                   className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"

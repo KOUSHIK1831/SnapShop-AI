@@ -170,8 +170,8 @@ export default function ResetPassword() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto size-12 bg-gradient-brand rounded-xl flex items-center justify-center mb-4">
-            <Store className="size-6 text-white" />
+          <div className="mx-auto size-12 bg-primary rounded-xl flex items-center justify-center mb-4">
+            <Store className="size-6 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {t('common.appName')}
@@ -217,10 +217,7 @@ export default function ResetPassword() {
                     {t('auto.password_reset_links_expire_af')}
                   </p>
                 </div>
-                <Button
-                  onClick={() => navigate('/auth')}
-                  className="w-full bg-gradient-brand hover:opacity-90"
-                >
+                <Button onClick={() => navigate('/auth')} className="w-full">
                   {t('auto.back_to_sign_in')}
                 </Button>
               </div>
@@ -258,9 +255,7 @@ export default function ResetPassword() {
 
                 <div className="relative">
                   <Input
-                    type={
-                      state.showPassword ? t('auto.text') : t('auto.password')
-                    }
+                    type={state.showPassword ? 'text' : 'password'}
                     placeholder={t('auto.new_password_min_6_chars')}
                     value={state.password}
                     onChange={e =>
@@ -270,7 +265,7 @@ export default function ResetPassword() {
                       })
                     }
                     className="pr-10"
-                    autoComplete={t('auto.new_password')}
+                    autoComplete="new-password"
                     autoFocus
                   />
 
@@ -291,9 +286,7 @@ export default function ResetPassword() {
 
                 <div className="relative">
                   <Input
-                    type={
-                      state.showConfirm ? t('auto.text') : t('auto.password')
-                    }
+                    type={state.showConfirm ? 'text' : 'password'}
                     placeholder={t('auto.confirm_new_password')}
                     value={state.confirm}
                     onChange={e =>
@@ -303,7 +296,7 @@ export default function ResetPassword() {
                       })
                     }
                     className="pr-10"
-                    autoComplete={t('auto.new_password')}
+                    autoComplete="new-password"
                   />
 
                   <button
@@ -346,7 +339,7 @@ export default function ResetPassword() {
                   disabled={
                     state.submitting || !state.password || !state.confirm
                   }
-                  className="w-full bg-gradient-brand hover:opacity-90 transition-opacity"
+                  className="w-full"
                 >
                   {state.submitting && (
                     <Loader2 className="size-4 mr-2 animate-spin" />

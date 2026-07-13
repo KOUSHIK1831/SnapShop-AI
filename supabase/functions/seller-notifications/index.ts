@@ -20,7 +20,7 @@ async function logNotification(
   email: string,
   type: string,
   status: 'sent' | 'failed',
-  error?: string
+  error?: string,
 ) {
   try {
     await supabase.from('notification_logs').insert({
@@ -38,10 +38,22 @@ async function logNotification(
   }
 }
 
-async function sendEmail(to: string, subject: string, html: string, entityId: string, type: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  entityId: string,
+  type: string,
+) {
   if (!RESEND_API_KEY) {
     console.warn('Resend API key not set. Skipping email.');
-    await logNotification(entityId, to, type, 'failed', 'RESEND_API_KEY missing');
+    await logNotification(
+      entityId,
+      to,
+      type,
+      'failed',
+      'RESEND_API_KEY missing',
+    );
     return;
   }
 
@@ -59,15 +71,27 @@ async function sendEmail(to: string, subject: string, html: string, entityId: st
         html: html,
       }),
     });
-    
+
     if (res.ok) {
       await logNotification(entityId, to, type, 'sent');
     } else {
       const errData = await res.json();
-      await logNotification(entityId, to, type, 'failed', JSON.stringify(errData));
+      await logNotification(
+        entityId,
+        to,
+        type,
+        'failed',
+        JSON.stringify(errData),
+      );
     }
   } catch (err) {
-    await logNotification(entityId, to, type, 'failed', err instanceof Error ? err.message : 'Unknown error');
+    await logNotification(
+      entityId,
+      to,
+      type,
+      'failed',
+      err instanceof Error ? err.message : 'Unknown error',
+    );
   }
 }
 
@@ -77,8 +101,9 @@ Deno.serve(async req => {
     const { record, old_record, type } = payload;
     const newSeller = record as SellerRecord;
 
-    if (type !== 'UPDATE') return new Response('Not an update', { status: 200 });
-    
+    if (type !== 'UPDATE')
+      return new Response('Not an update', { status: 200 });
+
     const oldSeller = old_record as SellerRecord;
     if (newSeller.verification_status === oldSeller.verification_status) {
       return new Response('Status unchanged', { status: 200 });

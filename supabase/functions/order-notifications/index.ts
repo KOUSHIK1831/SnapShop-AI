@@ -25,7 +25,7 @@ async function logNotification(
   email: string,
   type: string,
   status: 'sent' | 'failed',
-  error?: string
+  error?: string,
 ) {
   try {
     await supabase.from('notification_logs').insert({
@@ -43,10 +43,22 @@ async function logNotification(
   }
 }
 
-async function sendEmail(to: string, subject: string, html: string, entityId: string, type: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  entityId: string,
+  type: string,
+) {
   if (!RESEND_API_KEY) {
     console.warn('Resend API key not set. Skipping email.');
-    await logNotification(entityId, to, type, 'failed', 'RESEND_API_KEY missing');
+    await logNotification(
+      entityId,
+      to,
+      type,
+      'failed',
+      'RESEND_API_KEY missing',
+    );
     return;
   }
 
@@ -64,15 +76,27 @@ async function sendEmail(to: string, subject: string, html: string, entityId: st
         html: html,
       }),
     });
-    
+
     if (res.ok) {
       await logNotification(entityId, to, type, 'sent');
     } else {
       const errData = await res.json();
-      await logNotification(entityId, to, type, 'failed', JSON.stringify(errData));
+      await logNotification(
+        entityId,
+        to,
+        type,
+        'failed',
+        JSON.stringify(errData),
+      );
     }
   } catch (err) {
-    await logNotification(entityId, to, type, 'failed', err instanceof Error ? err.message : 'Unknown error');
+    await logNotification(
+      entityId,
+      to,
+      type,
+      'failed',
+      err instanceof Error ? err.message : 'Unknown error',
+    );
   }
 }
 
@@ -88,13 +112,13 @@ Deno.serve(async req => {
       .select('store_name, user_id, phone')
       .eq('id', newOrder.seller_id)
       .single();
-      
+
     const { data: product } = await supabase
       .from('products')
       .select('title')
       .eq('id', newOrder.product_id)
       .single();
-      
+
     const { data: buyerProfile } = await supabase
       .from('profiles')
       .select('email')
@@ -126,7 +150,7 @@ Deno.serve(async req => {
            <p><strong>Payment:</strong> ${newOrder.pay_method} (${newOrder.pay_status})</p>
            <p><a href="${dashboardLink}">View and manage this order in your dashboard.</a></p>`,
           newOrder.id,
-          'new_order_seller'
+          'new_order_seller',
         );
       }
       return new Response('New order notification processed', { status: 200 });
@@ -188,7 +212,13 @@ Deno.serve(async req => {
       }
 
       if (buyerEmail && buyerSubject) {
-        await sendEmail(buyerEmail, buyerSubject, buyerHtml, newOrder.id, nType);
+        await sendEmail(
+          buyerEmail,
+          buyerSubject,
+          buyerHtml,
+          newOrder.id,
+          nType,
+        );
       }
 
       return new Response('Update notification processed', { status: 200 });

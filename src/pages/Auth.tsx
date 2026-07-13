@@ -379,7 +379,7 @@ export default function Auth() {
 
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     const email = mode === 'otp-signup' ? form.signupEmail : forgotEmail;
-    const type = mode === 'otp-signup' ? t('auto.signup') : t('auto.recovery');
+    const type = mode === 'otp-signup' ? 'signup' : 'recovery';
 
     const { error } = await verifyOtp({
       email,
@@ -420,7 +420,7 @@ export default function Auth() {
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     const { error } = await resendOtp(
       email,
-      mode === 'otp-signup' ? t('auto.signup') : t('auto.recovery'),
+      mode === 'otp-signup' ? 'signup' : 'recovery',
     );
     dispatch({ type: 'SET_SUBMITTING', payload: false });
 
@@ -509,6 +509,26 @@ export default function Auth() {
             )}
           </CardContent>
         </Card>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/manual?type=buyer')}
+            className="gap-2"
+          >
+            <ShoppingBag className="size-4" />
+            Buyer Manual
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/manual?type=seller')}
+            className="gap-2"
+          >
+            <Store className="size-4" />
+            Seller Manual
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -517,8 +537,8 @@ export default function Auth() {
 function AuthHeader({ t }: { t: any }) {
   return (
     <div className="mb-8 text-center">
-      <div className="mx-auto size-12 bg-gradient-brand rounded-xl flex items-center justify-center mb-4">
-        <Store className="size-6 text-white" />
+      <div className="mx-auto size-12 bg-primary rounded-xl flex items-center justify-center mb-4">
+        <Store className="size-6 text-primary-foreground" />
       </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         {t('common.appName')}
@@ -603,7 +623,7 @@ function LoginForm({
         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           type="email"
-          autoComplete={t('auto.email')}
+          autoComplete="email"
           placeholder={t('auto.enter_your_email')}
           value={form.loginEmail}
           onChange={e =>
@@ -617,8 +637,8 @@ function LoginForm({
       </div>
       <div className="relative">
         <Input
-          type={showPassword.login ? t('auto.text') : t('auto.password')}
-          autoComplete={t('auto.current_password')}
+          type={showPassword.login ? 'text' : 'password'}
+          autoComplete="current-password"
           placeholder={t('auto.enter_your_password')}
           value={form.loginPassword}
           onChange={e =>
@@ -632,7 +652,7 @@ function LoginForm({
 
         <button
           type="button"
-          data-testid={t('auto.toggle_password')}
+          data-testid="toggle-password"
           onClick={() =>
             dispatch({ type: 'TOGGLE_PASSWORD', payload: 'login' })
           }
@@ -723,7 +743,7 @@ function SignupForm({
         </div>
         <Input
           type="tel"
-          autoComplete={t('auto.tel')}
+          autoComplete="tel"
           placeholder={t('auto.enter_10_digit_phone')}
           value={form.phone}
           onChange={e =>
@@ -739,7 +759,7 @@ function SignupForm({
         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           type="text"
-          autoComplete={t('auto.name')}
+          autoComplete="name"
           placeholder={t('auto.full_name')}
           value={form.signupName}
           onChange={e =>
@@ -755,7 +775,7 @@ function SignupForm({
         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           type="email"
-          autoComplete={t('auto.email')}
+          autoComplete="email"
           placeholder={t('auto.email_address_451')}
           value={form.signupEmail}
           onChange={e =>
@@ -769,8 +789,8 @@ function SignupForm({
       </div>
       <div className="relative">
         <Input
-          type={showPassword.signup ? t('auto.text') : t('auto.password')}
-          autoComplete={t('auto.new_password')}
+          type={showPassword.signup ? 'text' : 'password'}
+          autoComplete="new-password"
           placeholder={t('auto.create_password_min_6_chars_19')}
           value={form.signupPassword}
           onChange={e =>
@@ -784,7 +804,7 @@ function SignupForm({
 
         <button
           type="button"
-          data-testid={t('auto.toggle_password_signup')}
+          data-testid="toggle-password-signup"
           onClick={() =>
             dispatch({ type: 'TOGGLE_PASSWORD', payload: 'signup' })
           }
@@ -852,7 +872,7 @@ function ForgotForm({
         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           type="email"
-          autoComplete={t('auto.email')}
+          autoComplete="email"
           placeholder={t('auto.enter_your_email')}
           value={email}
           onChange={e => onEmailChange(e.target.value)}
@@ -1037,7 +1057,7 @@ function OtpForm({
       <Button
         type="submit"
         disabled={submitting || value.length !== 6}
-        className="w-full h-11 bg-gradient-brand hover:opacity-90 transition-opacity"
+        className="w-full"
       >
         {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
         {t('auto.verify_continue')}

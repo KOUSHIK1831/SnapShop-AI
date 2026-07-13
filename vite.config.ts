@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: '::',
@@ -18,10 +18,25 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? [
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG || '',
+            project: process.env.SENTRY_PROJECT || '',
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            telemetry: false,
+          }),
+        ]
+      : []),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  build: {
+    sourcemap: mode !== 'production' ? 'hidden' : true,
   },
 }));

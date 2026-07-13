@@ -1,4 +1,5 @@
 import {
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -6,7 +7,7 @@ import {
   act,
 } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import Dashboard from '@/pages/Dashboard';
 import en from '@/locales/en/translation.json';
 import { supabase } from '@/integrations/supabase/client';
@@ -156,6 +157,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('Dashboard', () => {
+  afterEach(cleanup);
   beforeEach(() => {
     vi.clearAllMocks();
     sellerState.loading = false;
@@ -376,10 +378,10 @@ describe('Dashboard', () => {
 
   it('starts tour', () => {
     renderDashboard();
-    const tourBtn = screen
-      .getAllByRole('button')
-      .find(b => b.querySelector('.lucide-circle-help'));
-    fireEvent.click(tourBtn!);
+    const menuBtn = screen.getByTitle('Menu');
+    fireEvent.click(menuBtn);
+    const tourBtn = screen.getByText('Help Tour');
+    fireEvent.click(tourBtn);
   });
 
   it('signs out', () => {

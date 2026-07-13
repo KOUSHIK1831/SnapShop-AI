@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailOtpType, MobileOtpType } from '@supabase/supabase-js';
+import { identifyUser, resetUser } from '@/lib/analytics';
+import { setSentryUser } from '@/lib/sentry';
 
 const PHONE_EMAIL_MAP_KEY = 'apnabazar_phone_email_map';
 
@@ -42,7 +44,10 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
-  resendOtp: (email: string, type?: EmailOtpType) => Promise<{ error: Error | null }>;
+  resendOtp: (
+    email: string,
+    type?: EmailOtpType,
+  ) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,7 +282,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+        return;
+      }
       checkUser(session);
     });
 
@@ -345,6 +354,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (state.user) {
+      identifyUser(state.user.id, {
+        email: state.user.email,
+        role: state.user.role,
+      });
+      setSentryUser({
+        id: state.user.id,
+        email: state.user.email,
+        role: state.user.role,
+      });
+    } else if (!state.loading) {
+      resetUser();
+      setSentryUser(null);
+    }
+  }, [state.user, state.loading]);
+
   const signUp = async (
     phone: string,
     name: string,
@@ -360,7 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
             phone: normalizePhone(phone),
-            role: isBuyer ? t('auto.buyer_795') : t('auto.seller'),
+            role: isBuyer ? 'buyer' : 'seller',
           },
         },
       });
@@ -371,15 +397,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       storePhoneEmail(phone, email);
 
-      // If email confirmation is off, a session is returned immediately.
-      // If it's on, data.session will be null.
       if (data.session && data.user) {
         try {
           await supabase.from('profiles').upsert(
             {
               id: data.user.id,
               email,
-              role: isBuyer ? t('auto.buyer_795') : t('auto.seller'),
+              role: isBuyer ? 'buyer' : 'seller',
             },
             { onConflict: 'id' },
           );
@@ -514,7 +538,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    resetUser();
+    setSentryUser(null);
+    dispatch({ type: 'SET_AUTH', payload: { user: null, loading: false } });
+    await supabase.auth.signOut({ scope: 'global' });
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('sb-')) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
   };
 
   const resetPassword = async (email: string) => {

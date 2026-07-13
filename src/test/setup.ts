@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
 import React from 'react';
 import en from '../locales/en/translation.json';
+
+afterEach(() => cleanup());
 
 // Polyfill React.use() for React 18 (shadcn/ui components use React 19 use() API)
 if (!React.use) {
@@ -47,6 +50,23 @@ class ResizeObserverMock {
 }
 
 window.ResizeObserver = ResizeObserverMock;
+
+class IntersectionObserverMock {
+  constructor(
+    callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
+    this.callback = callback;
+    this.options = options;
+  }
+  callback: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.IntersectionObserver = IntersectionObserverMock as any;
 
 // Radix UI needs PointerEvent
 if (!window.PointerEvent) {

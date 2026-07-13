@@ -11,13 +11,37 @@ export function initAnalytics() {
   try {
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
-      capture_pageview: false,
+      capture_pageview: true,
+      capture_performance: true,
+      autocapture: true,
+      session_recording: {
+        maskAllInputs: true,
+        maskAllText: false,
+      },
       loaded: () => {
         initialized = true;
       },
     });
   } catch {
     // Analytics unavailable — silently ignore
+  }
+}
+
+export function identifyUser(userId: string, traits?: Record<string, unknown>) {
+  if (!initialized) return;
+  try {
+    posthog.identify(userId, traits);
+  } catch {
+    // Silently ignore
+  }
+}
+
+export function resetUser() {
+  if (!initialized) return;
+  try {
+    posthog.reset();
+  } catch {
+    // Silently ignore
   }
 }
 

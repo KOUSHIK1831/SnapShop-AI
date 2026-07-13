@@ -1,11 +1,12 @@
 import {
+  cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
   act,
 } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import UploadZone from '@/components/UploadZone';
 import en from '@/locales/en/translation.json';
 
@@ -84,6 +85,7 @@ const mockAIProduct = {
 };
 
 describe('UploadZone', () => {
+  afterEach(cleanup);
   beforeEach(() => {
     vi.resetAllMocks();
 
@@ -172,7 +174,7 @@ describe('UploadZone', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: en['auto.approve'] }));
     });
-    await screen.findByText(/upload.complete/i);
+    await screen.findByText(en['upload.complete']);
     expect(onComplete).toHaveBeenCalled();
   });
 
@@ -320,7 +322,7 @@ describe('UploadZone', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: en['auto.approve'] }));
     });
-    await screen.findByText(/upload.complete/i);
+    await screen.findByText(en['upload.complete']);
     fireEvent.click(screen.getByText(en['auto.upload_more']));
     expect(screen.getByText(en['upload.dragDrop'])).toBeInTheDocument();
   });
@@ -412,7 +414,7 @@ describe('UploadZone', () => {
       fireEvent.click(screen.getByRole('button', { name: en['auto.reject'] }));
     });
 
-    await screen.findByText(/upload.complete/i);
+    await screen.findByText(en['upload.complete']);
     expect(onComplete).toHaveBeenCalled();
   });
 

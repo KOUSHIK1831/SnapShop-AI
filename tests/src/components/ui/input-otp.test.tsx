@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import {
   InputOTP,
   InputOTPGroup,
@@ -8,6 +8,14 @@ import {
 } from '@/components/ui/input-otp';
 
 describe('InputOTP', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders OTP slots', () => {
     const { container } = render(
       <InputOTP maxLength={6}>

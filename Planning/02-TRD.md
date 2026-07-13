@@ -40,12 +40,12 @@
 
 ## Third-Party APIs
 
-| Service | Purpose | Tier |
-|---------|---------|------|
-| Google Gemini 2.5 Flash | AI product digitization (image → structured data) | Paid |
-| Anthropic Claude (opus-4-5) | WhatsApp AI agent brain | Paid |
-| Meta WhatsApp Cloud API v25.0 | WhatsApp messaging | Free tier |
-| PostHog | Product analytics & event tracking | Free tier |
+| Service                       | Purpose                                           | Tier      |
+| ----------------------------- | ------------------------------------------------- | --------- |
+| Google Gemini 2.5 Flash       | AI product digitization (image → structured data) | Paid      |
+| Anthropic Claude (opus-4-5)   | WhatsApp AI agent brain                           | Paid      |
+| Meta WhatsApp Cloud API v25.0 | WhatsApp messaging                                | Free tier |
+| PostHog                       | Product analytics & event tracking                | Free tier |
 
 ## Key Libraries
 

@@ -150,12 +150,15 @@ serve(async req => {
   // Use persistent DB-level rate limiting
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  
-  const { data: allowed, error: limitError } = await supabaseAdmin.rpc('check_rate_limit', {
-    p_key: `digitize_ip_${ip}`,
-    p_max_requests: 10,
-    p_window_seconds: 60
-  });
+
+  const { data: allowed, error: limitError } = await supabaseAdmin.rpc(
+    'check_rate_limit',
+    {
+      p_key: `digitize_ip_${ip}`,
+      p_max_requests: 10,
+      p_window_seconds: 60,
+    },
+  );
 
   if (limitError) {
     console.error('Rate limit RPC error:', limitError);
@@ -176,7 +179,9 @@ serve(async req => {
   let userId: string | null = null;
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    const {
+      data: { user },
+    } = await supabaseAdmin.auth.getUser(token);
     userId = user?.id || null;
   }
 

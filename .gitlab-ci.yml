@@ -16,24 +16,50 @@ cache:
 # Use a specific, stable Node version
 image: node:22-alpine
 
+variables:
+  NODE_OPTIONS: '--max-old-space-size=3072'
+
 before_script:
   - apk add --no-cache git
   - npm ci --cache .npm --prefer-offline
 
-# Fast check for linting and type safety
-lint-and-typecheck:
+lint:
   stage: validate
   script:
     - echo "Running ESLint..."
     - npm run lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+format:
+  stage: validate
+  script:
+    - echo "Running Prettier format check..."
+    - npm run format:check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+type-check:
+  stage: validate
+  script:
     - echo "Running TypeScript type checks..."
     - npm run type-check
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-# Execute unit tests and collect coverage
-unit-tests:
+test:
+  stage: test
+  script:
+    - echo "Running unit tests..."
+    - npm run test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+coverage:
   stage: test
   script:
     - echo "Running tests with coverage..."
@@ -51,8 +77,7 @@ unit-tests:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-# Build the production application
-build-app:
+build:
   stage: build
   script:
     - echo "Building SnapShop AI production bundle..."
@@ -62,4 +87,26 @@ build-app:
       - dist/
     expire_in: 1 month
   rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+gitleaks:
+  stage: validate
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: ['']
+  before_script: []
+  script:
+    - gitleaks detect --source . --no-git --verbose
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+dependency-audit:
+  stage: validate
+  script:
+    - echo "Running npm audit..."
+    - npm audit --audit-level=high || true
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

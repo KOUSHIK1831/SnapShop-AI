@@ -77,7 +77,12 @@ export interface Order {
     | 'completed'
     | 'cancelled';
   pay_method: 'cod' | 'online';
-  pay_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'awaiting_verification';
+  pay_status:
+    | 'pending'
+    | 'paid'
+    | 'failed'
+    | 'refunded'
+    | 'awaiting_verification';
   gateway_payment_id?: string | null;
   payment_proof_url?: string | null;
   buyer_name: string | null;
