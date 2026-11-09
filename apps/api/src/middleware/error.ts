@@ -1,20 +1,10 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
+import { HttpError } from '../lib/http-error';
 import { logger } from '../lib/logger';
 
-/** An error that maps directly onto an RFC 7807 problem response. */
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly title: string,
-    readonly detail?: string,
-    readonly type = 'about:blank',
-  ) {
-    super(title);
-    this.name = 'HttpError';
-  }
-}
+export { HttpError } from '../lib/http-error';
 
 export const notFoundHandler: RequestHandler = (req, res) => {
   res
@@ -64,7 +54,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     return;
   }
 
-  let httpError: HttpError;
+  let httpError: HttpError | null = null;
 
   if (error instanceof HttpError) {
     httpError = error;
@@ -95,6 +85,25 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
       'Service Unavailable',
       'The database is not reachable',
     );
+  } else if (
+    error instanceof SyntaxError &&
+    'status' in error &&
+    (error as { status?: number }).status === 400
+  ) {
+    httpError = new HttpError(400, 'Bad Request', 'Malformed JSON body');
+  } else if (
+    error instanceof Error &&
+    error.message.startsWith('Origin not allowed by CORS')
+  ) {
+    httpError = new HttpError(403, 'Forbidden', error.message);
+  } else if (
+    error instanceof Error &&
+    'status' in error &&
+    typeof (error as { status?: number }).status === 'number' &&
+    (error as { status: number }).status < 500
+  ) {
+    const status = (error as { status: number }).status;
+    httpError = new HttpError(status, 'Request Error', error.message);
   } else {
     logger.error(
       { err: error, url: req.originalUrl },
@@ -116,6 +125,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
       title: httpError.title,
       status: httpError.status,
       ...(httpError.detail ? { detail: httpError.detail } : {}),
+      ...(httpError.code ? { code: httpError.code } : {}),
       instance: req.originalUrl,
       ...(isServerError && shouldExposeStack()
         ? { stack: (error as Error)?.stack }

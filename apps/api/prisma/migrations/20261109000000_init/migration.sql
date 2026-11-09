@@ -20,13 +20,13 @@ CREATE TYPE "ProductStatus" AS ENUM ('draft', 'active', 'archived');
 CREATE TYPE "FileStatus" AS ENUM ('pending', 'processing', 'completed', 'failed');
 
 -- CreateEnum
-CREATE TYPE "DeliveryType" AS ENUM ('courier', 'self_pickup');
+CREATE TYPE "DeliveryType" AS ENUM ('courier', 'self_delivery', 'self_pickup');
 
 -- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('cod', 'upi');
+CREATE TYPE "PaymentMethod" AS ENUM ('cod', 'upi', 'online');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('pending', 'proof_submitted', 'verified', 'rejected', 'paid', 'refunded');
+CREATE TYPE "PaymentStatus" AS ENUM ('pending', 'proof_submitted', 'verified', 'rejected', 'paid', 'failed', 'refunded');
 
 -- CreateEnum
 CREATE TYPE "OrderStatus" AS ENUM ('pending', 'accepted', 'confirmed', 'preparing', 'ready_for_dispatch', 'shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled');
@@ -105,6 +105,7 @@ CREATE TABLE "PasswordResetToken" (
 CREATE TABLE "Seller" (
     "id" UUID NOT NULL,
     "userId" UUID NOT NULL,
+    "onboardedById" UUID,
     "fullName" TEXT,
     "storeName" TEXT,
     "storeSlug" TEXT,
@@ -120,6 +121,11 @@ CREATE TABLE "Seller" (
     "registeredBusinessName" TEXT,
     "sellerUpiId" TEXT,
     "preferredPaymentMethod" TEXT NOT NULL DEFAULT 'both',
+    "razorpayAccountId" TEXT,
+    "adminFeedback" TEXT,
+    "whatsappPhoneNumberId" TEXT,
+    "whatsappAccessToken" TEXT,
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
     "verificationStatus" "VerificationStatus" NOT NULL DEFAULT 'pending',
     "verificationDocuments" TEXT[],
     "status" "SellerStatus" NOT NULL DEFAULT 'active',
@@ -138,8 +144,10 @@ CREATE TABLE "Product" (
     "title" TEXT NOT NULL,
     "description" TEXT,
     "price" DECIMAL(10,2) NOT NULL,
+    "discountPercent" DECIMAL(5,2) NOT NULL DEFAULT 0,
     "category" TEXT,
     "tags" TEXT[],
+    "imageUrl" TEXT,
     "stock" INTEGER NOT NULL DEFAULT 0,
     "lowStockThreshold" INTEGER NOT NULL DEFAULT 5,
     "status" "ProductStatus" NOT NULL DEFAULT 'active',
@@ -272,9 +280,8 @@ CREATE TABLE "Feedback" (
     "id" UUID NOT NULL,
     "userId" UUID,
     "sellerId" UUID,
-    "message" TEXT NOT NULL,
-    "rating" INTEGER,
-    "adminFeedback" TEXT,
+    "content" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'open',
     "adminResponse" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -385,6 +392,9 @@ CREATE UNIQUE INDEX "Seller_storeSlug_key" ON "Seller"("storeSlug");
 
 -- CreateIndex
 CREATE INDEX "Seller_status_verificationStatus_idx" ON "Seller"("status", "verificationStatus");
+
+-- CreateIndex
+CREATE INDEX "Seller_onboardedById_idx" ON "Seller"("onboardedById");
 
 -- CreateIndex
 CREATE INDEX "Product_sellerId_status_idx" ON "Product"("sellerId", "status");

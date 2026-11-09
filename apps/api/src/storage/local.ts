@@ -1,7 +1,8 @@
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { env } from '../config/env';
-import type { PutResult, StorageAdapter } from './types';
+import { signUploadToken } from '../lib/tokens';
+import type { PresignResult, PutResult, StorageAdapter } from './types';
 
 const rootDir = path.resolve(process.cwd(), env.STORAGE_LOCAL_DIR);
 
@@ -13,7 +14,11 @@ function resolveSafe(key: string): string {
   return target;
 }
 
-/** Filesystem driver used for local development and tests. */
+/**
+ * Filesystem driver used for local development and tests. Uploads are
+ * "presigned" with an HMAC token so the browser can PUT straight to the API
+ * without needing a bearer token.
+ */
 export class LocalStorageAdapter implements StorageAdapter {
   async put(
     key: string,
@@ -24,6 +29,21 @@ export class LocalStorageAdapter implements StorageAdapter {
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, body);
     return { key, url: this.publicUrl(key) };
+  }
+
+  async get(key: string): Promise<Buffer> {
+    return readFile(resolveSafe(key));
+  }
+
+  async presignPut(key: string, _contentType: string): Promise<PresignResult> {
+    const token = signUploadToken(key);
+    const base = env.API_PUBLIC_URL.replace(/\/+$/, '');
+    return {
+      url: `${base}/api/v1/files/local-upload?key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`,
+      method: 'PUT',
+      headers: {},
+      expiresIn: 15 * 60,
+    };
   }
 
   publicUrl(key: string): string {
