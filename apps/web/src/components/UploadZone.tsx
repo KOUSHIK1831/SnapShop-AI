@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useCallback, useEffect, useRef, useReducer } from 'react';
 import { apiClient } from '@/lib/apiClient';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadFile } from '@/lib/upload';
 import { useToast } from '@/hooks/use-toast';
 import {
   Upload,
@@ -31,6 +31,12 @@ interface PendingReview {
   product: AIProduct;
   imageUrl: string;
   fileId: string;
+}
+
+interface UploadedFile {
+  fileUrl: string;
+  fileId: string;
+  fileName: string;
 }
 
 interface UploadZoneProps {
@@ -150,7 +156,6 @@ export default function UploadZone({
 
   const handleApproveReview = useCallback(
     async (product: AIProduct, imageUrl: string, fileId: string) => {
-      let saved = false;
       try {
         await apiClient.post('/products', {
           title: product.title,
@@ -159,32 +164,11 @@ export default function UploadZone({
           category: product.category,
           tags: product.tags || [],
           imageUrl,
+          variants: product.size_variants?.map(variant => ({
+            size: variant.size,
+            stock: variant.stock,
+          })),
         });
-        saved = true;
-      } catch {
-        const { error } = await supabase.from('products').insert({
-          seller_id: sellerId,
-          title: product.title,
-          description: product.description,
-          price: product.price,
-          category: product.category,
-          tags: product.tags || [],
-          image_url: imageUrl,
-          size: product.size || null,
-          discount_percent: product.discount_percent || 0,
-        });
-        if (error) {
-          toast({
-            title: 'Error',
-            description: `Failed to save product: ${error.message}`,
-            variant: 'destructive',
-          });
-          return;
-        }
-        saved = true;
-      }
-
-      if (saved) {
         dispatch({ type: 'APPROVE_REVIEW', payload: fileId });
         if (pendingReviews.length === 1) {
           dispatch({ type: 'SET_STEP', payload: 'complete' });
@@ -194,21 +178,37 @@ export default function UploadZone({
             description: `${approvedCount + 1} files processed.`,
           });
         }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error ? error.message : 'Failed to save product.',
+          variant: 'destructive',
+        });
       }
     },
     [sellerId, toast, pendingReviews.length, onComplete, approvedCount],
   );
 
   const handleRejectReview = useCallback(
-    (fileId: string) => {
-      supabase.from('files').update({ status: 'rejected' }).eq('id', fileId);
+    async (fileId: string) => {
+      try {
+        await apiClient.delete(`/files/${fileId}`);
+      } catch (error) {
+        toast({
+          title: 'Could not remove uploaded file',
+          description:
+            error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      }
       dispatch({ type: 'REJECT_REVIEW', payload: fileId });
       if (pendingReviews.length === 1 && approvedCount > 0) {
         dispatch({ type: 'SET_STEP', payload: 'complete' });
         onComplete();
       }
     },
-    [pendingReviews.length, approvedCount, onComplete],
+    [pendingReviews.length, approvedCount, onComplete, toast],
   );
 
   // Remove the problematic useEffect
@@ -252,35 +252,29 @@ export default function UploadZone({
                 console.error(e);
               }
             }
-            const ext = file.name.split('.').pop();
-            const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error: uploadError } = await supabase.storage
-              .from('uploads')
-              .upload(path, fileToUpload);
-            if (uploadError) return null;
-            const { data: urlData } = supabase.storage
-              .from('uploads')
-              .getPublicUrl(path);
-            const { data: fileRecord, error: insertError } = await supabase
-              .from('files')
-              .insert({
-                seller_id: sellerId,
-                file_url: urlData.publicUrl,
-                file_type: file.type,
-                status: 'pending',
-              })
-              .select()
-              .single();
-            if (insertError) return null;
-            return {
-              fileUrl: urlData.publicUrl,
-              fileId: fileRecord.id,
-              fileName: file.name,
-            };
+            const uploadableFile =
+              fileToUpload instanceof File
+                ? fileToUpload
+                : new File([fileToUpload], file.name, {
+                    type: fileToUpload.type || file.type,
+                  });
+            try {
+              const uploaded = await uploadFile(uploadableFile, 'digitization');
+              return {
+                fileUrl: uploaded.publicUrl,
+                fileId: uploaded.fileId,
+                fileName: file.name,
+              } satisfies UploadedFile;
+            } catch (error) {
+              console.error(`Upload failed for ${file.name}:`, error);
+              return null;
+            }
           }),
         );
 
-        const validUploads = uploadedFiles.filter((f): f is any => f !== null);
+        const validUploads = uploadedFiles.filter(
+          (file): file is UploadedFile => file !== null,
+        );
         if (validUploads.length === 0) {
           dispatch({ type: 'SET_STEP', payload: 'error' });
           return;
@@ -295,58 +289,38 @@ export default function UploadZone({
                 type: 'UPDATE_PROGRESS',
                 payload: { processed: i, currentFile: fileInfo.fileName },
               });
-              const { data, error: invokeError } =
-                await supabase.functions.invoke('digitize', {
-                  body: { imageUrl: fileInfo.fileUrl, sellerId },
-                });
-
-              if (invokeError) {
-                console.error('Edge Function Error:', invokeError);
-                if (
-                  invokeError.message?.includes('limit-exceeded') ||
-                  String(invokeError).includes('limit-exceeded')
-                ) {
-                  toast({
-                    title: 'Limit Reached',
-                    description:
-                      'Your daily AI digitization limit has been reached.',
-                    variant: 'destructive',
-                  });
-                  dispatch({ type: 'SET_STEP', payload: 'error' });
-                  return null;
-                }
-              }
-
-              if (invokeError || !data?.product) {
-                console.warn(
-                  'AI Digitization failed for:',
-                  fileInfo.fileName,
-                  invokeError,
-                );
-                return {
-                  product: {
-                    title: fileInfo.fileName.split('.')[0],
-                    description: '',
-                    price: priceOverride ?? 0,
-                    category: 'Uncategorized',
-                    tags: [],
-                    digitization_failed: true,
-                  },
-                  imageUrl: fileInfo.fileUrl,
-                  fileId: fileInfo.fileId,
-                };
-              }
+              const { product } = await apiClient.post<{
+                product: AIProduct;
+              }>('/ai/digitize', {
+                imageUrl: fileInfo.fileUrl,
+                sellerId,
+              });
 
               return {
                 product: {
-                  ...data.product,
-                  price: priceOverride ?? data.product.price ?? 0,
+                  ...product,
+                  price: priceOverride ?? product.price ?? 0,
                 },
                 imageUrl: fileInfo.fileUrl,
                 fileId: fileInfo.fileId,
               };
             } catch (err) {
               console.error('Digitization error:', err);
+              if (
+                err instanceof Error &&
+                err.message
+                  .toLowerCase()
+                  .includes('daily ai digitization limit')
+              ) {
+                toast({
+                  title: 'Limit Reached',
+                  description:
+                    'Your daily AI digitization limit has been reached.',
+                  variant: 'destructive',
+                });
+                dispatch({ type: 'SET_STEP', payload: 'error' });
+                return null;
+              }
               return {
                 product: {
                   title: fileInfo.fileName.split('.')[0],
@@ -374,7 +348,7 @@ export default function UploadZone({
         dispatch({ type: 'SET_STEP', payload: 'error' });
       }
     },
-    [sellerId, overridePrice],
+    [sellerId, overridePrice, remaining, toast],
   );
 
   if (step === 'complete')

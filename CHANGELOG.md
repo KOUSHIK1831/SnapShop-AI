@@ -1,16 +1,15 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+Notable project changes are recorded here. Dates and release tags will be added when versions are published.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## Unreleased
 
-## [Unreleased]
+### Changed
 
-### Added
+- Consolidated web data access through the Express API.
+- Updated setup, architecture, and contributor documentation for the current monorepo.
+- Simplified repository documentation by removing superseded migration plans and duplicate reports.
 
-- `USER_MANUAL.md`: Detailed usage instructions for sellers and buyers.
-- `AGENTS.md`: Documentation for AI agents and models.
-- `SECURITY.md`: Security and vulnerability reporting policy.
-- `CODE_OF_CONDUCT.md`: Contributor standards and expectations.
-- `.editorconfig`: Consistent coding style across editors.
+### Security
+
+- Restricted the demo database seed to non-production environments and require an explicit local administrator password.

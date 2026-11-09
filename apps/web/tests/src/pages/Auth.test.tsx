@@ -15,7 +15,6 @@ const {
   signUpMock,
   toastMock,
   navigateMock,
-  supabaseMock,
   resetPasswordMock,
   verifyOtpMock,
   resendOtpMock,
@@ -27,18 +26,6 @@ const {
   resetPasswordMock: vi.fn(),
   verifyOtpMock: vi.fn(),
   resendOtpMock: vi.fn(),
-  supabaseMock: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi
-        .fn()
-        .mockResolvedValue({ data: { role: 'seller' }, error: null }),
-    })),
-  },
 }));
 
 let mockUser: any = null;
@@ -68,10 +55,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: supabaseMock,
-}));
-
 vi.mock('react-router-dom', async () => {
   const actual =
     await vi.importActual<typeof import('react-router-dom')>(
@@ -89,10 +72,6 @@ describe('Auth page', () => {
     sessionStorage.clear();
     localStorage.clear();
     mockUser = null;
-    supabaseMock.auth.getSession.mockResolvedValue({
-      data: { session: null },
-      error: null,
-    });
     vi.useRealTimers();
   });
 
@@ -107,17 +86,6 @@ describe('Auth page', () => {
 
   it('signs in and navigates to seller dashboard', async () => {
     signInMock.mockResolvedValue({ error: null });
-    supabaseMock.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: {
-            id: 's1',
-            email: 'seller@test.com',
-            email_confirmed_at: new Date().toISOString(),
-          },
-        },
-      },
-    });
 
     render(
       <MemoryRouter>
@@ -160,7 +128,6 @@ describe('Auth page', () => {
 
   it('handles sign-up for buyer correctly', async () => {
     signUpMock.mockResolvedValue({ error: null });
-    supabaseMock.auth.getSession.mockResolvedValue({ data: { session: null } });
 
     render(
       <MemoryRouter>

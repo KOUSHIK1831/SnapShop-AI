@@ -31,16 +31,6 @@ services:
     volumes:
       - minio_data:/data
 
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: snapshop-mailpit
-    restart: unless-stopped
-    ports:
-      - '1025:1025' # SMTP port
-      - '8025:8025' # Web UI
-    environment:
-      MP_MAX_MESSAGES: 500
-
 volumes:
   postgres_data:
   minio_data:

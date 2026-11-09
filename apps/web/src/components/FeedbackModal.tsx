@@ -139,7 +139,9 @@ export default function FeedbackModal({
       try {
         const res = await apiClient.get<{ feedback: any[] }>('/feedback');
         dispatch({ type: 'SET_HISTORY', value: res?.feedback || [] });
-      } catch {}
+      } catch {
+        // The feedback submission already succeeded; history refresh is best-effort.
+      }
     } catch (err: unknown) {
       console.error('Feedback: Detailed error:', err);
       const errorMessage =

@@ -98,7 +98,7 @@ export async function runMigration(inputDir?: string): Promise<{
   ordersMigrated: number;
   orderItemsMigrated: number;
 }> {
-  console.log('--- Starting Supabase to Prisma Migration ---');
+  console.log('--- Starting legacy data import ---');
   let usersCount = 0;
   let sellersCount = 0;
   let productsCount = 0;

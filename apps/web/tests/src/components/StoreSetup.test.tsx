@@ -3,21 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import StoreSetup from '@/components/StoreSetup';
 
-const { supabaseMock } = vi.hoisted(() => ({
-  supabaseMock: {
-    storage: {
-      from: vi.fn(() => ({
-        upload: vi.fn().mockResolvedValue({ data: {}, error: null }),
-        getPublicUrl: vi.fn(() => ({
-          data: { publicUrl: 'http://example.com/file.jpg' },
-        })),
-      })),
-    },
-  },
-}));
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: supabaseMock,
+vi.mock('@/lib/upload', () => ({
+  uploadFile: vi.fn().mockResolvedValue({
+    key: 'seller/document.jpg',
+    publicUrl: 'http://example.com/file.jpg',
+    fileId: 'file-1',
+  }),
 }));
 
 vi.mock('@/hooks/useAuth', () => ({

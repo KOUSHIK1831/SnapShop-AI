@@ -1,24 +1,24 @@
-# AI Agents in SnapShop AI
+# Project guide for coding agents
 
-This document describes the AI agents and models integrated into the SnapShop AI ecosystem.
+SnapShop AI is a pnpm monorepo with a React/Vite client, an Express/Prisma API, shared TypeScript packages, and an Android project shell.
 
-## 1. Inventory Digitization Agent
+## Source of truth
 
-- **Purpose**: To convert physical catalogs, handwritten price lists, or product photos into digital database entries.
-- **Tech Stack**: Supabase Edge Functions + AI Vision models.
-- **Location**: `supabase/functions/digitize/`
+- `apps/api/prisma/schema.prisma` and its migrations define the active database schema.
+- `apps/api/src/routes/` and `apps/api/src/repositories/` implement the HTTP API and data access.
+- `apps/web/src/` implements the web client.
+- `packages/shared/` contains schemas and types used across apps.
+- `README.md` and `docs/development.md` describe setup and supported workflows.
 
-## 2. WhatsApp Business Agent
+All browser data access must go through the Express API. Do not add direct database clients or vendor-specific backend SDKs to the web app. Keep feature code and tests in their owning workspace.
 
-- **Purpose**: To handle customer inquiries, order tracking, and automated seller notifications via WhatsApp.
-- **Tech Stack**: Meta WhatsApp Cloud API + Supabase Edge Functions.
-- **Location**: `supabase/functions/whatsapp-agent/`
+## Product integrations
 
-## 3. Local Language Processing (LLP)
+- Inventory digitization: `apps/api/src/services/ai/digitize.ts`
+- Messaging automation: `apps/api/src/services/whatsapp/agent.ts`
+- Authentication and password recovery: `apps/api/src/services/auth.ts`
+- Localization: `apps/web/src/i18n.ts` and `apps/web/src/locales/`
 
-- **Purpose**: To provide accurate translations and transliterations for regional languages (Telugu, Hindi).
-- **Tech Stack**: Custom i18n logic + AI Translation APIs.
+## Local commands
 
----
-
-_For development details, refer to `CONTRIBUTING.md`._
+Use Node.js 26 and pnpm 11.28.5. Common checks are `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.

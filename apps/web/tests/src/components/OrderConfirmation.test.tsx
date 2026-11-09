@@ -9,18 +9,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock supabase
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    storage: {
-      from: () => ({
-        upload: vi.fn().mockResolvedValue({ error: null }),
-        getPublicUrl: () => ({
-          data: { publicUrl: 'http://test.com/proof.jpg' },
-        }),
-      }),
-    },
-  },
+vi.mock('@/lib/upload', () => ({
+  uploadFile: vi.fn().mockResolvedValue({
+    key: 'payment/proof.jpg',
+    publicUrl: 'http://test.com/proof.jpg',
+    fileId: 'proof-1',
+  }),
 }));
 
 describe('OrderConfirmation', () => {

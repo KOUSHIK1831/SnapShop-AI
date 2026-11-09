@@ -21,7 +21,6 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 type PageState = 'loading' | 'form' | 'success' | 'invalid';
 
@@ -77,7 +76,6 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for REST API token in query params
     const searchParams = new URLSearchParams(window.location.search);
     const queryToken = searchParams.get('token');
     if (queryToken) {
@@ -85,64 +83,8 @@ export default function ResetPassword() {
       dispatch({ type: 'SET_PAGE', payload: 'form' });
       return;
     }
-
-    // Parse tokens from URL hash (Supabase puts them there for recovery links)
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const type = params.get('type');
-    const errorCode = params.get('error_code');
-
-    if (errorCode) {
-      dispatch({ type: 'SET_PAGE', payload: 'invalid' });
-      return;
-    }
-
-    // If recovery tokens are in the hash, exchange them for a session
-    if (accessToken && refreshToken && type === 'recovery') {
-      supabase.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) {
-            dispatch({ type: 'SET_PAGE', payload: 'invalid' });
-          } else {
-            // Clear the hash from the URL
-            window.history.replaceState(null, '', window.location.pathname);
-            dispatch({ type: 'SET_PAGE', payload: 'form' });
-          }
-        });
-      return;
-    }
-
-    // Listen for PASSWORD_RECOVERY event (OTP-based recovery flow)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(event => {
-      if (event === 'PASSWORD_RECOVERY') {
-        dispatch({ type: 'SET_PAGE', payload: 'form' });
-      }
-    });
-
-    // Check if session already exists (came from OTP verify flow)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        dispatch({ type: 'SET_PAGE', payload: 'form' });
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    dispatch({ type: 'SET_PAGE', payload: 'invalid' });
   }, []);
-
-  // Fallback: mark invalid after 4s if still loading
-  useEffect(() => {
-    if (state.page !== 'loading') return;
-    const t = setTimeout(
-      () => dispatch({ type: 'SET_PAGE', payload: 'invalid' }),
-      4000,
-    );
-    return () => clearTimeout(t);
-  }, [state.page]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

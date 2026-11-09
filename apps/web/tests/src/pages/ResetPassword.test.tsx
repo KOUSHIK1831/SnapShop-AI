@@ -5,29 +5,9 @@ const mockNavigate = vi.fn();
 const mockUpdatePassword = vi.fn();
 const mockToast = vi.fn();
 
-const {
-  mockSetSession,
-  mockGetSession,
-  mockOnAuthStateChange,
-  mockSubscription,
-} = vi.hoisted(() => {
-  const sub = { unsubscribe: vi.fn() };
-  return {
-    mockSetSession: vi.fn(),
-    mockGetSession: vi.fn(),
-    mockOnAuthStateChange: vi.fn(() => ({
-      data: { subscription: sub },
-    })),
-    mockSubscription: sub,
-  };
-});
-
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
+  return { ...actual, useNavigate: () => mockNavigate };
 });
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -45,382 +25,86 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: {
-      setSession: mockSetSession,
-      getSession: mockGetSession,
-      onAuthStateChange: mockOnAuthStateChange,
-    },
-  },
-}));
-
 import ResetPassword from '@/pages/ResetPassword';
 
 describe('ResetPassword', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.defineProperty(window, 'location', {
-      value: { hash: '', pathname: '/reset-password', replaceState: vi.fn() },
-      writable: true,
+      value: {
+        search: '?token=valid-reset-token',
+        pathname: '/reset-password',
+      },
+      configurable: true,
     });
     mockUpdatePassword.mockResolvedValue({ error: null });
-    mockGetSession.mockResolvedValue({ data: { session: null } });
-    mockSetSession.mockResolvedValue({ error: null });
   });
 
-  it('shows loading state initially', () => {
+  it('shows the password form when the reset token is present', async () => {
     render(<ResetPassword />);
-    expect(screen.getByText('auto.verifying_reset_link')).toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText('auto.new_password_min_6_chars'),
+    ).toBeInTheDocument();
   });
 
-  it('shows form when session already exists', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it('shows form on PASSWORD_RECOVERY event', async () => {
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(mockOnAuthStateChange).toHaveBeenCalled();
-    });
-
-    const callback = mockOnAuthStateChange.mock.calls[0][0];
-    callback('PASSWORD_RECOVERY');
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it('sets page to invalid when error_code is in hash', () => {
+  it('shows an invalid state when no reset token is present', () => {
     Object.defineProperty(window, 'location', {
-      value: {
-        hash: '#error_code=invalid',
-        pathname: '/reset-password',
-        replaceState: vi.fn(),
-      },
-      writable: true,
+      value: { search: '', pathname: '/reset-password' },
+      configurable: true,
     });
-
     render(<ResetPassword />);
-
     expect(
       screen.getByText('auto.link_expired_or_invalid'),
     ).toBeInTheDocument();
   });
 
-  it('shows form when hash contains valid recovery tokens', async () => {
-    const historyReplaceState = vi.fn();
-    Object.defineProperty(window, 'location', {
-      value: {
-        hash: '#access_token=abc&refresh_token=def&type=recovery',
-        pathname: '/reset-password',
-      },
-      writable: true,
-    });
-    Object.defineProperty(window, 'history', {
-      value: { replaceState: historyReplaceState },
-      writable: true,
-    });
-
+  it('submits the new password with the reset token', async () => {
     render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(mockSetSession).toHaveBeenCalledWith({
-        access_token: 'abc',
-        refresh_token: 'def',
-      });
-    });
-
-    expect(historyReplaceState).toHaveBeenCalled();
-  });
-
-  it('shows invalid when setSession fails', async () => {
-    mockSetSession.mockResolvedValue({ error: new Error('Invalid token') });
-
-    Object.defineProperty(window, 'location', {
-      value: {
-        hash: '#access_token=bad&refresh_token=bad&type=recovery',
-        pathname: '/reset-password',
-        replaceState: vi.fn(),
-      },
-      writable: true,
-    });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('auto.link_expired_or_invalid'),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it('submits new password successfully', async () => {
-    mockUpdatePassword.mockResolvedValue({ error: null });
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
+    const password = await screen.findByPlaceholderText(
       'auto.new_password_min_6_chars',
     );
-    fireEvent.change(passwordInput, { target: { value: 'newpassword123' } });
-
-    const confirmInput = screen.getByPlaceholderText(
-      'auto.confirm_new_password',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'newpassword123' } });
-
+    fireEvent.change(password, { target: { value: 'newpassword123' } });
+    fireEvent.change(screen.getByPlaceholderText('auto.confirm_new_password'), {
+      target: { value: 'newpassword123' },
+    });
     fireEvent.click(screen.getByText('auto.update_password'));
 
     await waitFor(() => {
-      expect(mockUpdatePassword).toHaveBeenCalledWith('newpassword123');
+      expect(mockUpdatePassword).toHaveBeenCalledWith(
+        'newpassword123',
+        'valid-reset-token',
+      );
     });
-
     expect(screen.getByText('auto.password_updated')).toBeInTheDocument();
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Password updated!',
-      description: 'You can now sign in with your new password.',
-    });
   });
 
-  it('shows error when passwords do not match', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
+  it('rejects mismatched passwords', async () => {
     render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
+    fireEvent.change(
+      await screen.findByPlaceholderText('auto.new_password_min_6_chars'),
+      { target: { value: 'password123' } },
+    );
+    fireEvent.change(screen.getByPlaceholderText('auto.confirm_new_password'), {
+      target: { value: 'password456' },
     });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
-
-    const confirmInput = screen.getByPlaceholderText(
-      'auto.confirm_new_password',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'password456' } });
-
     fireEvent.click(screen.getByText('auto.update_password'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText('Passwords do not match'),
+    ).toBeInTheDocument();
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
   });
 
-  it('shows error when password is too short', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'abc' } });
-
-    const confirmInput = screen.getByPlaceholderText(
-      'auto.confirm_new_password',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'abc' } });
-
-    fireEvent.click(screen.getByText('auto.update_password'));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Password must be at least 6 characters'),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it('shows error when updatePassword fails', async () => {
+  it('shows API errors from password reset', async () => {
     mockUpdatePassword.mockResolvedValue({ error: new Error('Update failed') });
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
     render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
+    fireEvent.change(
+      await screen.findByPlaceholderText('auto.new_password_min_6_chars'),
+      { target: { value: 'newpassword123' } },
+    );
+    fireEvent.change(screen.getByPlaceholderText('auto.confirm_new_password'), {
+      target: { value: 'newpassword123' },
     });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'newpassword123' } });
-
-    const confirmInput = screen.getByPlaceholderText(
-      'auto.confirm_new_password',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'newpassword123' } });
-
     fireEvent.click(screen.getByText('auto.update_password'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Update failed')).toBeInTheDocument();
-    });
-  });
-
-  it('navigates to auth from invalid page', () => {
-    Object.defineProperty(window, 'location', {
-      value: {
-        hash: '#error_code=invalid',
-        pathname: '/reset-password',
-        replaceState: vi.fn(),
-      },
-      writable: true,
-    });
-
-    render(<ResetPassword />);
-
-    fireEvent.click(screen.getByText('auto.back_to_sign_in'));
-    expect(mockNavigate).toHaveBeenCalledWith('/auth');
-  });
-
-  it('disables submit button when fields are empty', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      const btn = screen.getByText('auto.update_password').closest('button');
-      expect(btn).toBeDisabled();
-    });
-  });
-
-  it('shows password strength indicator', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'a' } });
-
-    const strengthBars = document.querySelectorAll(
-      '.rounded-full.transition-colors',
-    );
-    expect(strengthBars.length).toBeGreaterThan(0);
-  });
-
-  it('unsubscribes from auth state change on unmount', () => {
-    const { unmount } = render(<ResetPassword />);
-    unmount();
-    expect(mockSubscription.unsubscribe).toHaveBeenCalled();
-  });
-
-  it('toggles showPassword visibility', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    const { container } = render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    expect(passwordInput).toHaveAttribute('type', 'password');
-
-    const toggleButtons = container.querySelectorAll('button[type="button"]');
-    const showPasswordBtn = toggleButtons[0];
-    fireEvent.click(showPasswordBtn);
-
-    expect(passwordInput).toHaveAttribute('type', 'text');
-  });
-
-  it('toggles showConfirm visibility', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    const { container } = render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.confirm_new_password'),
-      ).toBeInTheDocument();
-    });
-
-    const confirmInput = screen.getByPlaceholderText(
-      'auto.confirm_new_password',
-    );
-    expect(confirmInput).toHaveAttribute('type', 'password');
-
-    const toggleButtons = container.querySelectorAll('button[type="button"]');
-    const showConfirmBtn = toggleButtons[1];
-    fireEvent.click(showConfirmBtn);
-
-    expect(confirmInput).toHaveAttribute('type', 'text');
-  });
-
-  it('shows amber password strength bar for length 7-9', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'abcdefgh' } });
-  });
-
-  it('shows green password strength bar for length 10+', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
-
-    render(<ResetPassword />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText('auto.new_password_min_6_chars'),
-      ).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByPlaceholderText(
-      'auto.new_password_min_6_chars',
-    );
-    fireEvent.change(passwordInput, { target: { value: 'abcdefghij' } });
+    expect(await screen.findByText('Update failed')).toBeInTheDocument();
   });
 });

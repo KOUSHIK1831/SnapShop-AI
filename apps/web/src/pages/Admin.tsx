@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useReducer, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/apiClient';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -102,14 +101,10 @@ interface Order {
 
 interface NotificationLog {
   id: string;
-  entity_type: string;
-  entity_id: string;
-  recipient_email: string;
-  notification_type: string;
-  status: 'sent' | 'failed';
-  error_message: string | null;
-  attempts: number;
-  last_attempted_at: string;
+  email: string | null;
+  type: string;
+  status: string;
+  error: string | null;
   created_at: string;
 }
 
@@ -117,10 +112,9 @@ interface AuditLog {
   id: string;
   actor_id: string;
   action: string;
-  entity_type: string;
-  entity_id: string;
-  old_data: any;
-  new_data: any;
+  entity: string;
+  entity_id: string | null;
+  metadata: unknown;
   created_at: string;
 }
 
@@ -219,89 +213,25 @@ export default function Admin() {
 
   const fetchGlobalStats = useCallback(async () => {
     try {
-      const data = await apiClient.get<any>('/admin/overview');
-      if (data?.sellers) {
-        dispatch({
-          type: 'SET_STATS',
-          payload: {
-            profiles: data.profiles || [],
-            sellers: data.sellers || [],
-            totalProducts: data.totalProducts || 0,
-            totalOrders: data.totalOrders || 0,
-            feedback: data.feedback || [],
-            notificationLogs: data.notificationLogs || [],
-            auditLogs: data.auditLogs || [],
-          },
-        });
-        return;
-      }
-    } catch {
-      // fallback to supabase for tests
+      const data = await apiClient.get<{
+        profiles: Profile[];
+        sellers: Seller[];
+        totalProducts: number;
+        totalOrders: number;
+        feedback: Feedback[];
+        notificationLogs: NotificationLog[];
+        auditLogs: AuditLog[];
+      }>('/admin/overview');
+      dispatch({ type: 'SET_STATS', payload: data });
+    } catch (error) {
+      toast({
+        title: 'Could not load admin data',
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
     }
-
-    const [
-      profilesRes,
-      sellersRes,
-      productsRes,
-      ordersRes,
-      feedbackRes,
-      notificationsRes,
-      auditRes,
-    ] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('sellers')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      supabase.from('products').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('id', { count: 'exact', head: true }),
-      supabase
-        .from('feedback')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('notification_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100),
-      supabase
-        .from('system_audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100),
-    ]);
-
-    const emailByUserId = new Map(
-      (profilesRes.data || []).map(profile => [profile.id, profile.email]),
-    );
-    const storeNameBySellerId = new Map(
-      (sellersRes.data || []).map(seller => [seller.id, seller.store_name]),
-    );
-
-    const enrichedFeedback = (feedbackRes.data || []).map(item => ({
-      ...item,
-      user_email: emailByUserId.get(item.user_id) || undefined,
-      store_name: item.seller_id
-        ? storeNameBySellerId.get(item.seller_id)
-        : undefined,
-    }));
-
-    dispatch({
-      type: 'SET_STATS',
-      payload: {
-        profiles: profilesRes.data || [],
-        sellers: sellersRes.data || [],
-        totalProducts: productsRes.count || 0,
-        totalOrders: ordersRes.count || 0,
-        feedback: enrichedFeedback,
-        notificationLogs: notificationsRes.data || [],
-        auditLogs: auditRes.data || [],
-      },
-    });
-  }, []);
+  }, [toast]);
 
   const handleViewDocument = async (url: string) => {
     if (!url) return;
@@ -313,26 +243,10 @@ export default function Admin() {
     }
 
     try {
-      const res = await apiClient.get<{ url: string }>(
+      const result = await apiClient.get<{ url: string }>(
         `/admin/documents/signed-url?key=${encodeURIComponent(url)}`,
       );
-      if (res?.url) {
-        window.open(res.url, '_blank', 'noopener,noreferrer');
-        return;
-      }
-    } catch {
-      // fallback
-    }
-
-    try {
-      const { data, error } = await supabase.storage
-        .from('seller-proofs')
-        .createSignedUrl(url, 3600);
-
-      if (error) throw error;
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-      }
+      window.open(result.url, '_blank', 'noopener,noreferrer');
     } catch (err) {
       console.error('Error generating signed URL:', err);
       toast({
@@ -344,39 +258,11 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    fetchGlobalStats();
-    const channel = supabase
-      .channel('admin-all-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'feedback' },
-        () => fetchGlobalStats(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles' },
-        () => fetchGlobalStats(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sellers' },
-        () => fetchGlobalStats(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => fetchGlobalStats(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        () => fetchGlobalStats(),
-      );
-    channel.subscribe();
-    return () => {
-      channel.unsubscribe();
-      supabase.removeChannel(channel);
-    };
+    void fetchGlobalStats();
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchGlobalStats();
+    }, 30_000);
+    return () => window.clearInterval(refreshTimer);
   }, [fetchGlobalStats]);
 
   const updateFeedbackStatus = async (
@@ -385,28 +271,17 @@ export default function Admin() {
     admin_response?: string,
   ) => {
     try {
-      await apiClient.post(`/admin/feedback/${id}/respond`, {
-        response: admin_response || `Status updated to ${status}`,
-      });
-    } catch {
-      const updateData: { status: string; admin_response?: string } = {
+      await apiClient.patch(`/admin/feedback/${id}`, {
         status,
-      };
-      if (admin_response !== undefined)
-        updateData.admin_response = admin_response;
-
-      const { error } = await supabase
-        .from('feedback')
-        .update(updateData)
-        .eq('id', id);
-      if (error) {
-        toast({
-          title: t('admin.toasts.updateFailed'),
-          description: error.message,
-          variant: 'destructive',
-        });
-        throw error;
-      }
+        ...(admin_response !== undefined ? { response: admin_response } : {}),
+      });
+    } catch (error) {
+      toast({
+        title: t('admin.toasts.updateFailed'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
     dispatch({
       type: 'UPDATE_FEEDBACK',
@@ -423,9 +298,13 @@ export default function Admin() {
     if (!confirm(t('admin.confirm.deleteFeedback'))) return;
     try {
       await apiClient.delete(`/admin/feedback/${id}`);
-    } catch {
-      const { error } = await supabase.from('feedback').delete().eq('id', id);
-      if (error) return;
+    } catch (error) {
+      toast({
+        title: 'Could not delete feedback',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
     dispatch({
       type: 'UPDATE_FEEDBACK',
@@ -435,35 +314,33 @@ export default function Admin() {
   };
 
   const fetchSellerDetails = async (seller: Seller) => {
-    const [productsRes, ordersRes] = await Promise.all([
-      supabase
-        .from('products')
-        .select('*')
-        .eq('seller_id', seller.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('orders')
-        .select('*, product:products(title, price)')
-        .eq('seller_id', seller.id)
-        .order('created_at', { ascending: false }),
-    ]);
-    dispatch({
-      type: 'SET_SELECTED_SELLER',
-      payload: {
-        seller,
-        products: productsRes.data || [],
-        orders: ordersRes.data || [],
-      },
-    });
+    try {
+      const details = await apiClient.get<{
+        seller: Seller;
+        products: Product[];
+        orders: Order[];
+      }>(`/admin/sellers/${seller.id}`);
+      dispatch({ type: 'SET_SELECTED_SELLER', payload: details });
+    } catch (error) {
+      toast({
+        title: 'Could not load seller details',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    }
   };
 
   const deleteProduct = async (id: string) => {
     if (!confirm(t('admin.confirm.deleteProduct'))) return;
     try {
       await apiClient.delete(`/admin/products/${id}`);
-    } catch {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) return;
+    } catch (error) {
+      toast({
+        title: 'Could not delete product',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
     dispatch({
       type: 'SET_SELECTED_SELLER',
@@ -478,8 +355,7 @@ export default function Admin() {
   };
 
   const toggleSellerStatus = async (seller: Seller) => {
-    const newStatus =
-      seller.status === 'active' ? t('auto.blocked_581') : t('auto.active');
+    const newStatus = seller.status === 'active' ? 'blocked' : 'active';
     if (
       !confirm(
         newStatus === 'blocked'
@@ -491,22 +367,18 @@ export default function Admin() {
 
     try {
       await apiClient.patch(`/admin/sellers/${seller.id}/status`, {
-        status: newStatus === 'blocked' ? 'blocked' : 'active',
+        status: newStatus,
       });
-    } catch {
-      const { error } = await supabase
-        .from('sellers')
-        .update({ status: newStatus })
-        .eq('id', seller.id);
-      if (error) return;
-      // Synchronize with profiles table
-      await supabase
-        .from('profiles')
-        .update({ is_blocked: newStatus === 'blocked' })
-        .eq('id', seller.user_id);
+    } catch (error) {
+      toast({
+        title: 'Could not update store status',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
 
-    const updated = { ...seller, status: newStatus as any };
+    const updated = { ...seller, status: newStatus };
     dispatch({
       type: 'SET_SELECTED_SELLER',
       payload: {
@@ -555,21 +427,13 @@ export default function Admin() {
       await apiClient.patch(`/admin/users/${profile.id}/block`, {
         blocked: isBlocking,
       });
-    } catch {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_blocked: isBlocking })
-        .eq('id', profile.id);
-      if (error) return;
-      // If user is a seller, also update their seller status
-      if (profile.role === 'seller') {
-        await supabase
-          .from('sellers')
-          .update({
-            status: isBlocking ? t('auto.blocked_581') : t('auto.active'),
-          })
-          .eq('user_id', profile.id);
-      }
+    } catch (error) {
+      toast({
+        title: 'Could not update user status',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
 
     if (profile.role === 'seller') {
@@ -579,7 +443,7 @@ export default function Admin() {
           s.user_id === profile.id
             ? {
                 ...s,
-                status: isBlocking ? t('auto.blocked_581') : t('auto.active'),
+                status: isBlocking ? 'blocked' : 'active',
               }
             : s,
         ),
@@ -610,23 +474,13 @@ export default function Admin() {
         status,
         feedback,
       });
-    } catch {
-      const { error } = await supabase
-        .from('sellers')
-        .update({
-          verification_status: status,
-          admin_feedback: feedback || null,
-        })
-        .eq('id', sellerId);
-
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-        return;
-      }
+    } catch (error) {
+      toast({
+        title: 'Could not update seller verification',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
     }
 
     toast({
@@ -839,12 +693,11 @@ function MonitoringTab({ notificationLogs, auditLogs, profiles, t }: any) {
                     <tr key={log.id} className="hover:bg-muted/10">
                       <td className="py-3 px-4">
                         <span className="text-xs font-medium capitalize">
-                          {log.notification_type?.replace(/_/g, ' ') ||
-                            'unknown'}
+                          {log.type?.replace(/_/g, ' ') || 'unknown'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-muted-foreground">
-                        {log.recipient_email}
+                        {log.email || '—'}
                       </td>
                       <td className="py-3 px-4">
                         <Badge
@@ -859,11 +712,11 @@ function MonitoringTab({ notificationLogs, auditLogs, profiles, t }: any) {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-[10px] text-muted-foreground">
-                        {new Date(log.last_attempted_at).toLocaleString()}
+                        {new Date(log.created_at).toLocaleString()}
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-[10px] text-red-600 font-mono truncate max-w-[200px]">
-                          {log.error_message || '—'}
+                          {log.error || '—'}
                         </p>
                       </td>
                     </tr>
@@ -919,20 +772,13 @@ function MonitoringTab({ notificationLogs, auditLogs, profiles, t }: any) {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-xs text-muted-foreground capitalize">
-                        {log.entity_type} ({log.entity_id.slice(0, 8)})
+                        {log.entity} ({log.entity_id?.slice(0, 8) || '—'})
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-[10px] flex flex-col gap-0.5">
-                          {log.old_data && (
-                            <span className="text-red-500/80 bg-red-500/5 px-1.5 py-0.5 rounded truncate max-w-[300px]">
-                              {t('auto.old')}
-                              {JSON.stringify(log.old_data)}
-                            </span>
-                          )}
-                          {log.new_data && (
-                            <span className="text-green-600 bg-green-500/5 px-1.5 py-0.5 rounded truncate max-w-[300px]">
-                              {t('auto.new')}
-                              {JSON.stringify(log.new_data)}
+                          {log.metadata != null && (
+                            <span className="text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded truncate max-w-[300px]">
+                              {JSON.stringify(log.metadata)}
                             </span>
                           )}
                         </div>
@@ -1359,21 +1205,12 @@ function SellerDetails({
         limit: parseInt(newAiLimit),
       });
       toast({ title: 'Limit updated successfully' });
-    } catch {
-      const { error } = await supabase
-        .from('sellers')
-        .update({ ai_daily_limit: parseInt(newAiLimit) })
-        .eq('id', seller.id);
-
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else {
-        toast({ title: 'Limit updated successfully' });
-      }
+    } catch (error) {
+      toast({
+        title: 'Could not update AI limit',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
     } finally {
       setUpdatingLimit(false);
     }

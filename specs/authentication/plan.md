@@ -1,28 +1,13 @@
-# Authentication Implementation Plan
+# Authentication implementation notes
 
-## Phase 1: Auth UI
+Authentication is implemented by the Express API in `apps/api/src/services/auth.ts` and `apps/api/src/routes/auth.ts`. The web client stores the short-lived access token in memory and sends the refresh cookie with API requests.
 
-- [x] Sign-in form with email/password
-- [x] Sign-up form with email/password
-- [x] Magic link option
-- [x] Password reset page
-- [x] Language switcher support
+## Flow
 
-## Phase 2: Session Management
+1. Register or sign in through the API.
+2. Restore a session through the refresh endpoint on app startup.
+3. Load the current user and role from the API.
+4. Gate protected pages by authentication and role.
+5. Verify email or reset a password with a one-time token.
 
-- [x] Supabase `onAuthStateChange` listener
-- [x] Role extraction from user metadata
-- [x] Auto-redirect based on role
-- [x] Sign-out with `{ scope: 'global' }` and localStorage cleanup
-
-## Phase 3: Protection & Routing
-
-- [x] `ProtectedRoute` component
-- [x] Role-based route gating
-- [x] Redirect to `/auth` when unauthenticated
-
-## Phase 4: Observability
-
-- [x] Sentry user context on login
-- [x] PostHog identify on login
-- [x] Error capture for auth failures
+The API is authoritative for identity, role, session rotation, and token revocation.

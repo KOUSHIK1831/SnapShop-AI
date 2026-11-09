@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { supabase } from '../src/integrations/supabase/client';
+import { join, resolve } from 'path';
+import { digitizeImage, getEvaluationToken } from './api-eval-client';
 
 interface GroundTruthItem {
   id: string;
@@ -58,15 +58,12 @@ function jaccardSimilarity(a1: string[], a2: string[]): number {
   return intersection.size / union.size;
 }
 
-async function callDigitize(imagePath: string) {
+async function callDigitize(imagePath: string, accessToken: string) {
   try {
-    const { data, error } = await supabase.functions.invoke('digitize', {
-      body: {
-        imageUrl: `https://raw.githubusercontent.com/stackblitz/stackblitz-apnabazar/main/ai-eval/images/${imagePath}`,
-      },
-    });
-    if (error) throw error;
-    return data;
+    return await digitizeImage(
+      resolve(process.cwd(), 'ai-eval', imagePath),
+      accessToken,
+    );
   } catch (err) {
     console.error(`Error digitizing ${imagePath}:`, err);
     return null;
@@ -85,6 +82,7 @@ async function main() {
   const groundTruth: GroundTruthItem[] = JSON.parse(
     readFileSync(groundTruthPath, 'utf-8'),
   );
+  const accessToken = await getEvaluationToken();
 
   console.log(`\n AI Accuracy Evaluation`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━\n`);
@@ -94,7 +92,7 @@ async function main() {
 
   const results = await Promise.all(
     groundTruth.map(async item => {
-      const actual = await callDigitize(item.image);
+      const actual = await callDigitize(item.image, accessToken);
       return { item, actual };
     }),
   );

@@ -1,31 +1,9 @@
-import { readFileSync, existsSync, writeFileSync, readdirSync } from 'fs';
-import { resolve, extname, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { digitizeImage, getEvaluationToken } from './api-eval-client';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function loadEnv() {
-  const envPath = resolve(__dirname, '../.env');
-  if (!existsSync(envPath)) return;
-  const content = readFileSync(envPath, 'utf-8');
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = trimmed.match(/^([^=]+)=(.*)$/);
-    if (!match) continue;
-    const key = match[1].trim();
-    let value = match[2].trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = value;
-  }
-}
-
-loadEnv();
 
 interface BenchmarkResult {
   fileName: string;
@@ -59,26 +37,13 @@ function measureCompression(imagePath: string): BenchmarkResult {
   };
 }
 
-async function measureAILatency(imageUrl: string): Promise<number> {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !anonKey) return 0;
-
+async function measureAILatency(
+  imagePath: string,
+  accessToken: string,
+): Promise<number> {
   const start = performance.now();
   try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/digitize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${anonKey}`,
-      },
-      body: JSON.stringify({
-        imageUrl,
-        sellerId: '00000000-0000-4000-8000-000000000000',
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await res.json();
+    await digitizeImage(imagePath, accessToken);
     return Math.round(performance.now() - start);
   } catch (err) {
     console.error(`  [Latency Error] ${err}`);
@@ -95,18 +60,14 @@ async function main() {
 
   const testCases = JSON.parse(readFileSync(groundTruthPath, 'utf-8'));
   const imagesDir = resolve(__dirname, '../ai-eval/images');
+  const accessToken = await getEvaluationToken();
 
   console.log(`\n Performance Benchmark`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
   const results: BenchmarkResult[] = await Promise.all(
     testCases.map(async (test: any) => {
-      const localPath = resolve(
-        __dirname,
-        '..',
-        'ai-eval/images',
-        test.image.split('/').pop() || '',
-      );
+      const localPath = resolve(__dirname, '..', 'ai-eval', test.image);
       let result: BenchmarkResult;
 
       if (existsSync(localPath)) {
@@ -124,7 +85,7 @@ async function main() {
       console.log(
         `Testing ${test.id} (${test.image.split('?')[0].split('/').pop()})...`,
       );
-      const aiLatency = await measureAILatency(test.image);
+      const aiLatency = await measureAILatency(localPath, accessToken);
       result.aiLatencyMs = aiLatency;
       result.fullPipelineMs = result.compressionTimeMs + aiLatency;
 

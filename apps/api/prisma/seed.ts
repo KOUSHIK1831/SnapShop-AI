@@ -10,9 +10,21 @@ import { hash } from '@node-rs/argon2';
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('The demo seed is for local development and CI only.');
+  }
+
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error('Set ADMIN_PASSWORD before running the local demo seed.');
+  }
+
   console.log('Seeding database with demo data...');
 
-  const defaultPasswordHash = await hash('Password123!');
+  const [adminPasswordHash, demoPasswordHash] = await Promise.all([
+    hash(adminPassword),
+    hash('Password123!'),
+  ]);
 
   // 1. Admin
   const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@snapshop.local')
@@ -25,6 +37,7 @@ async function main(): Promise<void> {
       onboarded: true,
       emailVerified: true,
       isBlocked: false,
+      passwordHash: adminPasswordHash,
     },
     create: {
       email: adminEmail,
@@ -32,7 +45,7 @@ async function main(): Promise<void> {
       role: Role.admin,
       onboarded: true,
       emailVerified: true,
-      passwordHash: defaultPasswordHash,
+      passwordHash: adminPasswordHash,
     },
   });
   console.log(`Admin user: ${admin.email}`);
@@ -54,7 +67,7 @@ async function main(): Promise<void> {
       role: Role.seller,
       onboarded: true,
       emailVerified: true,
-      passwordHash: defaultPasswordHash,
+      passwordHash: demoPasswordHash,
     },
   });
 
@@ -155,7 +168,7 @@ async function main(): Promise<void> {
       role: Role.buyer,
       onboarded: true,
       emailVerified: true,
-      passwordHash: defaultPasswordHash,
+      passwordHash: demoPasswordHash,
     },
   });
   console.log(`Buyer user: ${buyer.email}`);
@@ -177,7 +190,7 @@ async function main(): Promise<void> {
       role: Role.volunteer,
       onboarded: true,
       emailVerified: true,
-      passwordHash: defaultPasswordHash,
+      passwordHash: demoPasswordHash,
     },
   });
   console.log(`Volunteer user: ${volunteer.email}`);

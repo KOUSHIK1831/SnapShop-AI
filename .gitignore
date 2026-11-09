@@ -29,15 +29,14 @@ dist-ssr
 *.sln
 *.sw?
 
-# Supabase
-supabase/.temp/
-
 # Auto-generated reports & local refactor scripts
 doctor-report.json
 report.json
 react-doctor.config.json
 refactor_*.py
 coverage/
+ai-eval/results.json
+ai-eval/benchmark-results.json
 
 # Monorepo / tooling
 .turbo/

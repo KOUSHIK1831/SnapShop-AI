@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { runMigration } from '../scripts/migrate-from-supabase';
+import { runMigration } from '../scripts/import-legacy-data';
 
-describe('Phase 2: Supabase to Prisma data migration script', () => {
+describe('Legacy data import script', () => {
   it('gracefully handles missing directory and completes report', async () => {
     const report = await runMigration('/tmp/non-existent-migration-dir');
     expect(report.usersMigrated).toBe(0);

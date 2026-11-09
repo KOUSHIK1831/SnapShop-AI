@@ -3,6 +3,7 @@ import { apiClient } from './apiClient';
 export interface UploadResult {
   key: string;
   publicUrl: string;
+  fileId: string;
 }
 
 export async function uploadFile(
@@ -37,21 +38,26 @@ export async function uploadFile(
       throw new Error(`Failed to upload file to storage: ${putRes.statusText}`);
     }
 
-    await apiClient.post('/files/confirm', {
-      key: presign.key,
-      mimeType: file.type || undefined,
-      sizeBytes: file.size || undefined,
-    });
+    const confirmation = await apiClient.post<{ file: { id: string } }>(
+      '/files/confirm',
+      {
+        key: presign.key,
+        mimeType: file.type || undefined,
+        sizeBytes: file.size || undefined,
+      },
+    );
 
     return {
       key: presign.key,
       publicUrl: presign.public_url,
+      fileId: confirmation.file.id,
     };
   } catch (err) {
     if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
       return {
         key: `mock-key-${file.name}`,
         publicUrl: `https://example.com/uploads/${file.name}`,
+        fileId: `mock-file-${file.name}`,
       };
     }
     throw err;

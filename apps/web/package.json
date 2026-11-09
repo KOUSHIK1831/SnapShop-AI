@@ -55,7 +55,6 @@
     "@react-oauth/google": "^0.13.5",
     "@sentry/react": "^10.58.0",
     "@sentry/vite-plugin": "^5.3.0",
-    "@supabase/supabase-js": "^2.99.1",
     "@tanstack/react-query": "^5.83.0",
     "baseline-browser-mapping": "^2.10.8",
     "caniuse-lite": "^1.0.30001779",

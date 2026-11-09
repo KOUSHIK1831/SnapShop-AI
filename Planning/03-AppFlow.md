@@ -30,7 +30,7 @@ A brand-new visitor sees the **Landing page** (`/`) — app description, feature
 
 1. User visits `/auth`
 2. Signs up with email + password + role (seller/buyer)
-3. Email verification (optional via Supabase)
+3. Verify the account using the email verification code
 4. Seller: redirected to `/dashboard` → store setup flow
 5. Buyer: redirected to `/buyer` → empty dashboard
 6. Unapproved seller sees verification pending banner — limited access
@@ -43,7 +43,7 @@ A brand-new visitor sees the **Landing page** (`/`) — app description, feature
 4. Admin approves → seller gets full access
 5. Seller goes to Tools → Upload tab
 6. Selects product images (multi-file) → auto-compressed to ~100KB
-7. Images uploaded → AI digitize edge function runs Gemini
+7. Images upload through the API → the API runs AI digitization
 8. Review card appears with extracted title, description, price, category
 9. Seller edits if needed → approves → product saved
 10. Product appears in dashboard catalog and public storefront
@@ -59,7 +59,7 @@ A brand-new visitor sees the **Landing page** (`/`) — app description, feature
 7. Buyer tracks on `/track-order/:orderId`
 8. Buyer can contact seller on WhatsApp from product card
 
-## Core User Journey 3: WhatsApp AI Agent (Future)
+## Core User Journey 3: WhatsApp AI Agent
 
 1. Customer messages seller's WhatsApp number
 2. AI agent responds, shows products, takes order

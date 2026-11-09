@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { notFound, badRequest } from '../lib/http-error';
 import { storage } from '../storage';
+import { orderDto, productDto, sellerDto } from '../lib/dto';
 
 export const adminRouter = Router();
 
@@ -79,6 +80,7 @@ adminRouter.get('/overview', async (_req, res) => {
     store_name: s.storeName,
     store_slug: s.storeSlug,
     location: s.location,
+    status: s.status,
     phone: s.phone,
     contact_number: s.contactNumber,
     verification_status: s.verificationStatus,
@@ -119,6 +121,7 @@ adminRouter.get('/overview', async (_req, res) => {
     entity: a.entity,
     entity_id: a.entityId,
     actor_id: a.actorId,
+    metadata: a.metadata,
     created_at: a.createdAt.toISOString(),
   }));
 
@@ -152,12 +155,29 @@ adminRouter.get('/sellers/:id', async (req, res) => {
     where: { id: req.params.id },
     include: {
       user: { select: { email: true, name: true, phone: true } },
-      products: { take: 50 },
-      orders: { take: 50 },
+      products: {
+        take: 50,
+        orderBy: { createdAt: 'desc' },
+        include: { variants: true, images: { orderBy: { position: 'asc' } } },
+      },
+      orders: {
+        take: 50,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: { include: { product: true } },
+          seller: true,
+          buyer: true,
+          events: { orderBy: { createdAt: 'asc' } },
+        },
+      },
     },
   });
   if (!seller) throw notFound('Seller not found');
-  res.json({ seller });
+  res.json({
+    seller: sellerDto(seller),
+    products: seller.products.map(productDto),
+    orders: seller.orders.map(order => orderDto(order, { includeBuyer: true })),
+  });
 });
 
 // ── PATCH /admin/sellers/:id/verify — Approve or reject verification ──────
@@ -230,22 +250,38 @@ adminRouter.delete('/products/:id', async (req, res) => {
 });
 
 // ── Feedback management ───────────────────────────────────────────────────
-adminRouter.post('/feedback/:id/respond', async (req, res) => {
-  const { response } = req.body;
-  if (!response || typeof response !== 'string') {
-    throw badRequest('Response content required');
-  }
+adminRouter.patch(
+  '/feedback/:id',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({
+      status: z.enum(['open', 'in_review', 'resolved']).optional(),
+      response: z.string().trim().max(2000).nullable().optional(),
+    }),
+  }),
+  async (req, res) => {
+    if (
+      req.valid.body.status === undefined &&
+      req.valid.body.response === undefined
+    ) {
+      throw badRequest('A feedback status or response is required');
+    }
 
-  const feedback = await prisma.feedback.update({
-    where: { id: req.params.id },
-    data: {
-      adminResponse: response,
-      status: 'resolved',
-    },
-  });
+    const feedback = await prisma.feedback.update({
+      where: { id: req.valid.params.id },
+      data: {
+        ...(req.valid.body.status !== undefined
+          ? { status: req.valid.body.status }
+          : {}),
+        ...(req.valid.body.response !== undefined
+          ? { adminResponse: req.valid.body.response }
+          : {}),
+      },
+    });
 
-  res.json({ feedback });
-});
+    res.json({ feedback });
+  },
+);
 
 adminRouter.delete('/feedback/:id', async (req, res) => {
   await prisma.feedback.delete({
