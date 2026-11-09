@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadFile } from '@/lib/upload';
 import { Seller } from '@/hooks/useSeller';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,16 +71,8 @@ export default function StoreSettings({
     if (!file) return;
     setUploadingBanner(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `banners/${seller.id}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage
-        .from('uploads')
-        .upload(path, file);
-      if (error) throw error;
-      const { data: urlData } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(path);
-      setFormData(prev => ({ ...prev, bannerUrl: urlData.publicUrl }));
+      const { publicUrl } = await uploadFile(file, 'banner');
+      setFormData(prev => ({ ...prev, bannerUrl: publicUrl }));
       toast({ title: 'Banner uploaded' });
     } catch (err) {
       toast({

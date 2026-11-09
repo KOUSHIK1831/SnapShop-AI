@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useReducer, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { GoogleLogin } from '@react-oauth/google';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -98,7 +98,8 @@ export default function BuyerAuthModal({
   storeName,
 }: BuyerAuthModalProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { signIn, signUp, verifyOtp, resendOtp } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, verifyOtp, resendOtp } =
+    useAuth();
   const { t } = useTranslation();
 
   const [cooldown, setCooldown] = useState(0);
@@ -107,17 +108,14 @@ export default function BuyerAuthModal({
 
   useEffect(() => {
     if (isOpen && !state.email) {
-      // Check if user is already logged in but unverified
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user && !session.user.email_confirmed_at) {
-          dispatch({
-            type: 'SET_FIELD',
-            payload: { email: session.user.email || '', mode: 'otp' as any },
-          });
-        }
-      });
+      if (user && user.email_confirmed === false) {
+        dispatch({
+          type: 'SET_FIELD',
+          payload: { email: user.email || '', mode: 'otp' as any },
+        });
+      }
     }
-  }, [isOpen, state.email]);
+  }, [isOpen, state.email, user]);
 
   useEffect(() => {
     if (!isOpen || !state.email || state.mode !== 'otp') return;
@@ -150,27 +148,19 @@ export default function BuyerAuthModal({
     }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: '' });
-    const { error } = await signIn.password(state.email, state.password);
+    const { error, user: loggedInUser } = await signIn.password(
+      state.email,
+      state.password,
+    );
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
 
     if (error) {
-      dispatch({ type: 'SET_SUBMITTING', payload: false });
       dispatch({ type: 'SET_ERROR', payload: error.message });
     } else {
-      // Check if user is verified
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      dispatch({ type: 'SET_SUBMITTING', payload: false });
-
-      if (session?.user && !session.user.email_confirmed_at) {
-        // Not verified, send OTP and switch mode
+      const currentUser = loggedInUser || user;
+      if (currentUser && currentUser.email_confirmed === false) {
         try {
-          // Attempt to send OTP (this might fail if email-only auth is strictly password)
-          // But Supabase signup usually sends it. If they are here, we might need to resend.
-          await supabase.auth.resend({
-            type: 'signup',
-            email: state.email,
-          });
+          await resendOtp(state.email);
         } catch (resendErr) {
           console.warn('Resend OTP failed:', resendErr);
         }
@@ -182,6 +172,18 @@ export default function BuyerAuthModal({
       } else {
         onSuccess(state.phone);
       }
+    }
+  };
+
+  const handleGoogleSuccess = async (res: any) => {
+    if (!res.credential) return;
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
+    const { error } = await signInWithGoogle(res.credential);
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
+    if (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    } else {
+      onSuccess(state.phone);
     }
   };
 
@@ -392,6 +394,24 @@ export default function BuyerAuthModal({
                 )}
                 {state.mode === 'signup' ? t('auth.signUp') : t('auth.signIn')}
               </Button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/50" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-center w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => {}}
+                />
+              </div>
 
               <div className="text-center pt-2">
                 <button

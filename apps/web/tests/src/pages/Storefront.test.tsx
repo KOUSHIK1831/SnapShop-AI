@@ -1,46 +1,32 @@
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  act,
-} from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Storefront from '@/pages/Storefront';
 import en from '@/locales/en/translation.json';
 
-// Mock dependencies
-const { toastMock, navigateMock, supabaseMock } = vi.hoisted(() => {
-  const toastMock = vi.fn();
-  const navigateMock = vi.fn();
+const mockGet = vi.fn();
+const mockPost = vi.fn();
 
-  const createChain = () => {
-    const chain: any = {
-      select: vi.fn(() => chain),
-      eq: vi.fn(() => chain),
-      order: vi.fn(() => Promise.resolve(chain)),
-      single: vi.fn(() => Promise.resolve(chain)),
-      update: vi.fn(() => chain),
-      insert: vi.fn(() => Promise.resolve({ error: null })),
-      upsert: vi.fn(() => Promise.resolve({ error: null })),
-      delete: vi.fn(() => chain),
-      then: vi.fn(resolve => resolve({ data: [], error: null })),
-      data: [],
-      error: null,
-    };
-    return chain;
-  };
+vi.mock('@/lib/apiClient', () => ({
+  apiClient: {
+    get: (...args: any[]) => mockGet(...args),
+    post: (...args: any[]) => mockPost(...args),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
-  return {
-    toastMock,
-    navigateMock,
-    supabaseMock: {
-      from: vi.fn(() => createChain()),
-    },
-  };
-});
+vi.mock('@/hooks/useCart', () => ({
+  useCart: () => ({
+    cart: { items: [], total: 0, count: 0 },
+    addItem: vi.fn(),
+    openCart: vi.fn(),
+    closeCart: vi.fn(),
+  }),
+}));
 
+const toastMock = vi.fn();
+const navigateMock = vi.fn();
 let mockUser: any = null;
 
 vi.mock('react-router-dom', async () => {
@@ -63,10 +49,6 @@ vi.mock('@/hooks/useAuth', () => ({
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
-}));
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: supabaseMock,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -181,17 +163,13 @@ describe('Storefront page', () => {
   ];
 
   const setupMocks = (seller = mockSeller, products = mockProducts) => {
-    supabaseMock.from.mockImplementation((table: string) => {
-      const chain: any = {
-        select: vi.fn(() => chain),
-        eq: vi.fn(() => chain),
-        order: vi.fn(() => Promise.resolve({ data: products, error: null })),
-        single: vi.fn().mockResolvedValue({ data: seller, error: null }),
-        update: vi.fn(() => chain),
-        insert: vi.fn().mockResolvedValue({ error: null }),
-      };
-      return chain;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/products')) {
+        return Promise.resolve({ items: products });
+      }
+      return Promise.resolve({ seller });
     });
+    mockPost.mockResolvedValue({ order: { id: 'order-1' } });
   };
 
   it('renders store and products correctly', async () => {

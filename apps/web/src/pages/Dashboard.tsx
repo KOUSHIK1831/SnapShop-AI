@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSocketEvent } from '@/hooks/useSocket';
 import { useAuth } from '@/hooks/useAuth';
 import { useSeller } from '@/hooks/useSeller';
 import UploadZone from '@/components/UploadZone';
@@ -101,33 +101,18 @@ export default function Dashboard() {
   }, [seller, isApproved, activeTab, toast]);
 
   useEffect(() => {
-    let channel: any = null;
     if (seller?.id && isApproved) {
       fetchProducts();
-      channel = supabase
-        .channel('orders-realtime')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'orders',
-            filter: `seller_id=eq.${seller.id}`,
-          },
-          () => {
-            toast({
-              title: t('orders.newOrder'),
-              description: t('orders.newOrderDesc'),
-            });
-            fetchOrders();
-          },
-        )
-        .subscribe();
     }
-    return () => {
-      if (channel) channel.unsubscribe();
-    };
-  }, [seller?.id, toast, t, fetchProducts, fetchOrders]);
+  }, [seller?.id, isApproved, fetchProducts]);
+
+  useSocketEvent('order:new', () => {
+    toast({
+      title: t('orders.newOrder'),
+      description: t('orders.newOrderDesc'),
+    });
+    fetchOrders();
+  });
 
   useEffect(() => {
     if (user?.role === 'admin') navigate('/admin');

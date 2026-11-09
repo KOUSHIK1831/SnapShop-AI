@@ -5,6 +5,7 @@ import { productsRouter } from './products';
 import { ordersRouter } from './orders';
 import { cartRouter } from './cart';
 import { filesRouter } from './files';
+import { feedbackRouter } from './feedback';
 
 export const apiRouter = Router();
 
@@ -24,3 +25,4 @@ apiRouter.use('/products', productsRouter);
 apiRouter.use('/orders', ordersRouter);
 apiRouter.use('/cart', cartRouter);
 apiRouter.use('/files', filesRouter);
+apiRouter.use('/feedback', feedbackRouter);

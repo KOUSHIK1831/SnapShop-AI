@@ -462,10 +462,25 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   note?: string,
+  extra?: {
+    trackingProvider?: string | null;
+    trackingNumber?: string | null;
+    deliveryPersonName?: string | null;
+    deliveryPersonPhone?: string | null;
+    deliveryType?: 'courier' | 'self_delivery' | 'self_pickup';
+    payStatus?:
+      | 'pending'
+      | 'proof_submitted'
+      | 'verified'
+      | 'rejected'
+      | 'paid'
+      | 'refunded';
+    gatewayPaymentId?: string | null;
+  },
 ) {
   const order = await findOrderFor(actor, orderId);
 
-  if (order.status === status) {
+  if (order.status === status && !extra) {
     return orderDto(order, { includeBuyer: true, includeTrackingToken: true });
   }
 
@@ -490,6 +505,27 @@ export async function updateOrderStatus(
       ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
       ...(status === 'completed' ? { completedAt: new Date() } : {}),
       ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
+      ...(extra?.trackingProvider !== undefined
+        ? { trackingProvider: extra.trackingProvider }
+        : {}),
+      ...(extra?.trackingNumber !== undefined
+        ? { trackingNumber: extra.trackingNumber }
+        : {}),
+      ...(extra?.deliveryPersonName !== undefined
+        ? { deliveryPersonName: extra.deliveryPersonName }
+        : {}),
+      ...(extra?.deliveryPersonPhone !== undefined
+        ? { deliveryPersonPhone: extra.deliveryPersonPhone }
+        : {}),
+      ...(extra?.deliveryType !== undefined
+        ? {
+            deliveryType:
+              extra.deliveryType === 'self_delivery'
+                ? 'self_pickup'
+                : extra.deliveryType,
+          }
+        : {}),
+      ...(extra?.payStatus !== undefined ? { payStatus: extra.payStatus } : {}),
     };
 
     if (status === 'cancelled') {

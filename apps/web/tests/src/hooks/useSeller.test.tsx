@@ -3,53 +3,48 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { useSeller } from '@/hooks/useSeller';
 
-const { authState, fromMock } = vi.hoisted(() => ({
-  authState: { user: null as any },
-  fromMock: vi.fn(),
-}));
+const { authState, mockGet, mockPost, mockPatch, mockDelete } = vi.hoisted(
+  () => ({
+    authState: { user: null as any },
+    mockGet: vi.fn(),
+    mockPost: vi.fn(),
+    mockPatch: vi.fn(),
+    mockDelete: vi.fn(),
+  }),
+);
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => authState,
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: fromMock,
+vi.mock('@/lib/apiClient', () => ({
+  apiClient: {
+    get: mockGet,
+    post: mockPost,
+    patch: mockPatch,
+    delete: mockDelete,
   },
 }));
-
-function createQuery(result: any) {
-  const obj = {
-    select: vi.fn(() => obj),
-    eq: vi.fn(() => obj),
-    neq: vi.fn(() => obj),
-    order: vi.fn(() => obj),
-    single: vi.fn(() => obj),
-    upsert: vi.fn(() => obj),
-    update: vi.fn(() => obj),
-    delete: vi.fn(() => obj),
-    insert: vi.fn(() => obj),
-    maybeSingle: vi.fn(() => obj),
-    then: (onFullfilled: any) => Promise.resolve(result).then(onFullfilled),
-    catch: (onRejected: any) => Promise.resolve(result).catch(onRejected),
-  };
-  return obj;
-}
 
 describe('useSeller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authState.user = null;
+    mockGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers/me')
+        return { seller: { id: 's1', verification_status: 'approved' } };
+      if (path.startsWith('/products')) return { items: [] };
+      if (path.startsWith('/files')) return { files: [] };
+      if (path.startsWith('/orders')) return { items: [] };
+      return {};
+    });
+    mockPost.mockResolvedValue({});
+    mockPatch.mockResolvedValue({});
+    mockDelete.mockResolvedValue({});
   });
 
   it('loads seller, products, and files', async () => {
     authState.user = { id: 'user-1' };
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return createQuery({ data: { id: 's1' }, error: null });
-      }
-      return createQuery({ data: [], error: null });
-    });
 
     const { result } = renderHook(() => useSeller());
 
@@ -57,34 +52,22 @@ describe('useSeller', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(fromMock).toHaveBeenCalledWith('sellers');
+    expect(mockGet).toHaveBeenCalledWith('/sellers/me');
+    expect(result.current.seller?.id).toBe('s1');
   });
 
   it('updates order status with timestamps', async () => {
     authState.user = { id: 'user-1' };
-    const updateMock = vi.fn().mockReturnValue(createQuery({ error: null }));
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          ...createQuery({ data: [], error: null }),
-          update: updateMock,
-        };
-      }
-      if (table === 'sellers') {
-        return createQuery({ data: { id: 's1' }, error: null });
-      }
-      return createQuery({ data: [], error: null });
-    });
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await result.current.updateOrderStatus('order-1', 'confirmed');
 
-    expect(updateMock).toHaveBeenCalledWith(
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/orders/order-1/status',
       expect.objectContaining({
         status: 'confirmed',
-        confirmed_at: expect.any(String),
       }),
     );
   });
@@ -96,54 +79,32 @@ describe('useSeller', () => {
     });
 
     expect(response?.error).toEqual(new Error('Not authenticated'));
-    expect(fromMock).not.toHaveBeenCalled();
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
   });
 
   it('handles createSeller update and insert paths', async () => {
     authState.user = { id: 'user-1' };
-    const updateMock = vi
-      .fn()
-      .mockReturnValue(createQuery({ data: [{ id: 's1' }], error: null }));
-    const insertMock = vi.fn().mockReturnValue(createQuery({ error: null }));
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          ...createQuery({ data: { id: 's1' } }),
-          update: updateMock,
-          insert: insertMock,
-          select: vi.fn().mockReturnThis(),
-        };
-      }
-      return createQuery({ data: [] });
-    });
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // Test update path
+    // Test patch path
     await result.current.createSeller({ store_name: 'New Name' });
-    expect(updateMock).toHaveBeenCalled();
+    expect(mockPatch).toHaveBeenCalledWith('/sellers/me', expect.anything());
 
-    // Test insert path (update returns empty)
-    updateMock.mockReturnValueOnce(createQuery({ data: [], error: null }));
+    // Test post fallback path when patch fails
+    mockPatch.mockRejectedValueOnce(new Error('Patch failed'));
+    mockPost.mockResolvedValueOnce({
+      seller: { id: 's1', store_name: 'Brand New' },
+    });
     await result.current.createSeller({ store_name: 'Brand New' });
-    expect(insertMock).toHaveBeenCalled();
+    expect(mockPost).toHaveBeenCalledWith('/sellers/me', expect.anything());
   });
 
-  it('handles verification rate limit', async () => {
+  it('handles verification error when no seller profile exists', async () => {
     authState.user = { id: 'user-1' };
-    const recentDate = new Date();
-    recentDate.setHours(recentDate.getHours() - 2);
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return createQuery({
-          data: { id: 's1', last_submitted_at: recentDate.toISOString() },
-        });
-      }
-      return createQuery({ data: [] });
-    });
+    mockGet.mockResolvedValueOnce({ seller: null });
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -154,54 +115,33 @@ describe('useSeller', () => {
       documents: [],
     });
 
-    expect(response.error?.message).toContain('Rate limit');
+    expect(response.error?.message).toContain('No seller profile found');
   });
 
   it('updates seller profile, products and deletes products', async () => {
     authState.user = { id: 'user-1' };
-    const updateMock = vi.fn().mockReturnValue(createQuery({ error: null }));
-    const deleteMock = vi.fn().mockReturnValue(createQuery({ error: null }));
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          ...createQuery({ data: { id: 's1' } }),
-          update: updateMock,
-        };
-      }
-      return {
-        ...createQuery({ data: [] }),
-        update: updateMock,
-        delete: deleteMock,
-      };
-    });
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await result.current.updateSellerProfile({ theme_color: '#000' });
-    expect(updateMock).toHaveBeenCalled();
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/sellers/me',
+      expect.objectContaining({ themeColor: '#000' }),
+    );
 
     await result.current.updateProduct('p1', { title: 'New Title' });
-    expect(updateMock).toHaveBeenCalledTimes(2);
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/products/p1',
+      expect.objectContaining({ title: 'New Title' }),
+    );
 
     await result.current.deleteProduct('p1');
-    expect(deleteMock).toHaveBeenCalled();
+    expect(mockDelete).toHaveBeenCalledWith('/products/p1');
   });
 
   it('successfully fetches seller and updates profile', async () => {
     authState.user = { id: 'user-1' };
-    const updateMock = vi.fn().mockReturnValue(createQuery({ error: null }));
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          ...createQuery({ data: { id: 's1' } }),
-          update: updateMock,
-        };
-      }
-      return createQuery({ data: [] });
-    });
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -210,21 +150,17 @@ describe('useSeller', () => {
     expect(seller?.id).toBe('s1');
 
     await result.current.updateSellerProfile({ store_name: 'Updated' });
-    expect(updateMock).toHaveBeenCalled();
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/sellers/me',
+      expect.objectContaining({ storeName: 'Updated' }),
+    );
   });
 
   it('handles createSeller update error', async () => {
     authState.user = { id: 'user-1' };
     const updateError = new Error('Update failed');
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'sellers') {
-        return {
-          ...createQuery({ error: updateError }),
-          update: vi.fn().mockReturnValue(createQuery({ error: updateError })),
-        };
-      }
-      return createQuery({ data: [] });
-    });
+    mockPatch.mockRejectedValueOnce(updateError);
+    mockPost.mockRejectedValueOnce(updateError);
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -235,21 +171,20 @@ describe('useSeller', () => {
 
   it('handles errors in updateOrderStatus and createSeller', async () => {
     authState.user = { id: 'user-1' };
-    const error = { message: 'DB Error' };
-    fromMock.mockImplementation((table: string) => {
-      return createQuery({ error });
-    });
+    mockPatch.mockRejectedValueOnce(new Error('Status error'));
+    mockPatch.mockRejectedValueOnce(new Error('Create error 1'));
+    mockPost.mockRejectedValueOnce(new Error('Create error 2'));
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const { result } = renderHook(() => useSeller());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    await result.current.updateOrderStatus('o1', 'confirmed');
-    expect(consoleSpy).toHaveBeenCalled();
+    const statusRes = await result.current.updateOrderStatus('o1', 'confirmed');
+    expect(statusRes.error).toBeDefined();
 
-    const response = await result.current.createSeller({});
-    expect(response.error).toBeDefined();
+    const createRes = await result.current.createSeller({});
+    expect(createRes.error).toBeDefined();
 
     consoleSpy.mockRestore();
   });

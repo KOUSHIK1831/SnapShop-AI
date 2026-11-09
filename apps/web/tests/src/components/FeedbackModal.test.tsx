@@ -1,18 +1,20 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const {
-  mockUser,
-  mockSeller,
-  mockToast,
-  mockSupabaseSelect,
-  mockSupabaseInsert,
-} = vi.hoisted(() => ({
-  mockUser: { id: 'user-1' },
-  mockSeller: { id: 'seller-1' },
-  mockToast: vi.fn(),
-  mockSupabaseSelect: vi.fn(),
-  mockSupabaseInsert: vi.fn(),
+const { mockUser, mockSeller, mockToast, mockApiClientGet, mockApiClientPost } =
+  vi.hoisted(() => ({
+    mockUser: { id: 'user-1' },
+    mockSeller: { id: 'seller-1' },
+    mockToast: vi.fn(),
+    mockApiClientGet: vi.fn(),
+    mockApiClientPost: vi.fn(),
+  }));
+
+vi.mock('@/lib/apiClient', () => ({
+  apiClient: {
+    get: mockApiClientGet,
+    post: mockApiClientPost,
+  },
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -34,40 +36,13 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-let mockChannel: any;
-let realtimeCallback: any;
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    channel: vi.fn(() => {
-      mockChannel = {
-        on: vi.fn((event: any, filter: any, cb: any) => {
-          realtimeCallback = cb;
-          return mockChannel;
-        }),
-        subscribe: vi.fn().mockReturnThis(),
-        unsubscribe: vi.fn(),
-      };
-      return mockChannel;
-    }),
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: mockSupabaseSelect,
-        })),
-      })),
-      insert: mockSupabaseInsert,
-    })),
-  },
-}));
-
 import FeedbackModal, { FeedbackCard } from '@/components/FeedbackModal';
 
 describe('FeedbackModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSupabaseSelect.mockResolvedValue({ data: [], error: null });
-    mockSupabaseInsert.mockResolvedValue({ error: null });
+    mockApiClientGet.mockResolvedValue({ feedback: [] });
+    mockApiClientPost.mockResolvedValue({ success: true });
   });
 
   it('renders trigger button', () => {
@@ -91,18 +66,18 @@ describe('FeedbackModal', () => {
         created_at: '2024-01-01',
       },
     ];
-    mockSupabaseSelect.mockResolvedValue({ data: mockData, error: null });
+    mockApiClientGet.mockResolvedValue({ feedback: mockData });
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));
 
     await waitFor(() => {
-      expect(mockSupabaseSelect).toHaveBeenCalled();
+      expect(mockApiClientGet).toHaveBeenCalledWith('/feedback');
     });
   });
 
   it('submits feedback successfully', async () => {
-    mockSupabaseInsert.mockResolvedValue({ error: null });
+    mockApiClientPost.mockResolvedValue({ success: true });
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));
@@ -120,11 +95,10 @@ describe('FeedbackModal', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(mockSupabaseInsert).toHaveBeenCalledWith({
-        user_id: 'user-1',
+      expect(mockApiClientPost).toHaveBeenCalledWith('/feedback', {
         content: 'Great app!',
-        status: 'open',
-        seller_id: 'seller-1',
+        message: 'Great app!',
+        sellerId: 'seller-1',
       });
     });
 
@@ -135,7 +109,7 @@ describe('FeedbackModal', () => {
   });
 
   it('shows error toast when submission fails', async () => {
-    mockSupabaseInsert.mockResolvedValue({ error: new Error('DB error') });
+    mockApiClientPost.mockRejectedValue(new Error('DB error'));
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));
@@ -161,7 +135,7 @@ describe('FeedbackModal', () => {
   });
 
   it('renders feedback history tab with count', async () => {
-    mockSupabaseSelect.mockResolvedValue({ data: [], error: null });
+    mockApiClientGet.mockResolvedValue({ feedback: [] });
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));
@@ -183,7 +157,7 @@ describe('FeedbackModal', () => {
   });
 
   it('resets form after successful submission', async () => {
-    mockSupabaseInsert.mockResolvedValue({ error: null });
+    mockApiClientPost.mockResolvedValue({ success: true });
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));
@@ -199,7 +173,7 @@ describe('FeedbackModal', () => {
     fireEvent.click(screen.getByText('feedback.submit'));
 
     await waitFor(() => {
-      expect(mockSupabaseInsert).toHaveBeenCalled();
+      expect(mockApiClientPost).toHaveBeenCalled();
     });
 
     await waitFor(() => {
@@ -209,48 +183,8 @@ describe('FeedbackModal', () => {
     });
   });
 
-  it('unsubscribes channel on unmount', () => {
-    const { unmount } = render(<FeedbackModal />);
-    fireEvent.click(screen.getByText('admin.feedback'));
-
-    unmount();
-
-    expect(mockChannel?.unsubscribe).toHaveBeenCalled();
-  });
-
-  it('handles realtime postgres_changes callback', async () => {
-    mockSupabaseSelect.mockResolvedValue({ data: [], error: null });
-
-    render(<FeedbackModal />);
-    fireEvent.click(screen.getByText('admin.feedback'));
-
-    await waitFor(() => {
-      expect(mockSupabaseSelect).toHaveBeenCalled();
-    });
-
-    mockSupabaseSelect.mockClear();
-    mockSupabaseSelect.mockResolvedValue({
-      data: [
-        {
-          id: '1',
-          content: 'New feedback',
-          status: 'open',
-          admin_response: null,
-          created_at: '2024-01-01',
-        },
-      ],
-      error: null,
-    });
-
-    await realtimeCallback();
-
-    await waitFor(() => {
-      expect(mockSupabaseSelect).toHaveBeenCalled();
-    });
-  });
-
   it('shows generic error when submission fails with non-Error', async () => {
-    mockSupabaseInsert.mockResolvedValue({ error: 'string error' });
+    mockApiClientPost.mockRejectedValue('string error');
 
     render(<FeedbackModal />);
     fireEvent.click(screen.getByText('admin.feedback'));

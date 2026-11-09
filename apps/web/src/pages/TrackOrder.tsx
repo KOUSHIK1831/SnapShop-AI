@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/apiClient';
+import { useSocketEvent } from '@/hooks/useSocket';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -88,59 +89,34 @@ export default function TrackOrder() {
   const [logs, setLogs] = useState<TrackingLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!orderId || !user) return;
-
-    async function fetchData() {
+  const fetchData = async () => {
+    if (!orderId) return;
+    try {
       const [orderRes, logsRes] = await Promise.all([
-        supabase
-          .from('orders')
-          .select(t('auto.id_status_created_at_del_type'))
-          .eq('id', orderId)
-          .single(),
-        supabase
-          .from('order_tracking_logs')
-          .select('*')
-          .eq('order_id', orderId)
-          .order('changed_at', { ascending: false }),
+        apiClient.get<{ order: any }>(`/orders/${orderId}`),
+        apiClient.get<{ events: any[] }>(`/orders/${orderId}/events`),
       ]);
 
-      if (orderRes.data) setOrder(orderRes.data as unknown as OrderDetails);
-      if (logsRes.data) setLogs(logsRes.data);
+      if (orderRes?.order) setOrder(orderRes.order as unknown as OrderDetails);
+      if (logsRes?.events) setLogs(logsRes.events);
+    } catch (err) {
+      console.error('Fetch order tracking error:', err);
+    } finally {
       setLoading(false);
     }
+  };
 
-    fetchData();
-
-    // Subscribe to changes
-    const channel = supabase
-      .channel(`track-order-${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        },
-        () => fetchData(),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'order_tracking_logs',
-          filter: `order_id=eq.${orderId}`,
-        },
-        () => fetchData(),
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+  useEffect(() => {
+    if (orderId && user) {
+      fetchData();
+    }
   }, [orderId, user?.id]);
+
+  useSocketEvent('order:status', (data: any) => {
+    if (data?.orderId === orderId) {
+      fetchData();
+    }
+  });
 
   if (loading) return <TrackOrderSkeleton />;
 

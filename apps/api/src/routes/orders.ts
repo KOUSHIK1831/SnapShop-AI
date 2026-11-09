@@ -71,6 +71,33 @@ const listQuery = paginationSchema.extend({
   sellerId: uuidSchema.optional(),
 });
 
+ordersRouter.get('/', validate({ query: listQuery }), async (req, res) => {
+  if (req.actor?.role === 'buyer') {
+    res.json(
+      await orders.listBuyerOrders(req.actor, {
+        page: req.valid.query.page,
+        pageSize: req.valid.query.pageSize,
+      }),
+    );
+  } else {
+    res.json(
+      await orders.listSellerOrders(req.actor!, {
+        page: req.valid.query.page,
+        pageSize: req.valid.query.pageSize,
+        status: req.valid.query.status,
+        search: req.valid.query.search,
+        sellerId: req.valid.query.sellerId,
+      }),
+    );
+  }
+});
+
+ordersRouter.get('/track/:token', async (req, res) => {
+  res.json({
+    order: await orders.getOrderByTrackingToken(String(req.params.token)),
+  });
+});
+
 ordersRouter.get(
   '/seller',
   validate({ query: listQuery }),
@@ -125,15 +152,77 @@ ordersRouter.patch(
     body: z.object({
       status: orderStatusSchema,
       note: z.string().trim().max(1000).optional(),
+      trackingInfo: z
+        .object({
+          tracking_provider: z.string().optional(),
+          trackingProvider: z.string().optional(),
+          tracking_number: z.string().optional(),
+          trackingNumber: z.string().optional(),
+          delivery_person_name: z.string().optional(),
+          deliveryPersonName: z.string().optional(),
+          delivery_person_phone: z.string().optional(),
+          deliveryPersonPhone: z.string().optional(),
+          del_type: z
+            .enum(['courier', 'self_delivery', 'self_pickup'])
+            .optional(),
+          deliveryType: z
+            .enum(['courier', 'self_delivery', 'self_pickup'])
+            .optional(),
+        })
+        .optional(),
+      paymentInfo: z
+        .object({
+          pay_status: z
+            .enum([
+              'pending',
+              'proof_submitted',
+              'verified',
+              'rejected',
+              'paid',
+              'refunded',
+            ])
+            .optional(),
+          payStatus: z
+            .enum([
+              'pending',
+              'proof_submitted',
+              'verified',
+              'rejected',
+              'paid',
+              'refunded',
+            ])
+            .optional(),
+          gateway_payment_id: z.string().optional(),
+          gatewayPaymentId: z.string().optional(),
+        })
+        .optional(),
     }),
   }),
   async (req, res) => {
+    const ti = req.valid.body.trackingInfo;
+    const pi = req.valid.body.paymentInfo;
+    const extra =
+      ti || pi
+        ? {
+            trackingProvider: ti?.trackingProvider ?? ti?.tracking_provider,
+            trackingNumber: ti?.trackingNumber ?? ti?.tracking_number,
+            deliveryPersonName:
+              ti?.deliveryPersonName ?? ti?.delivery_person_name,
+            deliveryPersonPhone:
+              ti?.deliveryPersonPhone ?? ti?.delivery_person_phone,
+            deliveryType: ti?.deliveryType ?? ti?.del_type,
+            payStatus: pi?.payStatus ?? pi?.pay_status,
+            gatewayPaymentId: pi?.gatewayPaymentId ?? pi?.gateway_payment_id,
+          }
+        : undefined;
+
     res.json({
       order: await orders.updateOrderStatus(
         req.actor!,
         req.valid.params.id,
         req.valid.body.status,
         req.valid.body.note,
+        extra,
       ),
     });
   },

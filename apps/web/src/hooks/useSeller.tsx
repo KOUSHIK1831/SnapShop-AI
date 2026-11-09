@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback, useReducer } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useCallback, useReducer } from 'react';
+import { apiClient } from '@/lib/apiClient';
 import { useAuth } from './useAuth';
-import { PostgrestError } from '@supabase/supabase-js';
 
-interface Seller {
+export interface Seller {
   id: string;
   user_id: string;
   full_name: string | null;
@@ -31,6 +30,7 @@ interface Seller {
 export interface SizeVariant {
   size: string;
   stock: number;
+  price_override?: number | null;
 }
 
 export interface Product {
@@ -50,7 +50,7 @@ export interface Product {
   created_at: string;
 }
 
-interface FileRecord {
+export interface FileRecord {
   id: string;
   seller_id: string;
   file_url: string;
@@ -63,8 +63,8 @@ export interface Order {
   id: string;
   buyer_id: string;
   seller_id: string;
-  product_id: string;
-  quantity: number;
+  product_id?: string;
+  quantity?: number;
   status:
     | 'pending'
     | 'accepted'
@@ -76,19 +76,26 @@ export interface Order {
     | 'delivered'
     | 'completed'
     | 'cancelled';
-  pay_method: 'cod' | 'online';
+  pay_method: 'cod' | 'online' | 'upi';
   pay_status:
-    'pending' | 'paid' | 'failed' | 'refunded' | 'awaiting_verification';
+    | 'pending'
+    | 'paid'
+    | 'failed'
+    | 'refunded'
+    | 'awaiting_verification'
+    | 'proof_submitted'
+    | 'verified'
+    | 'rejected';
   gateway_payment_id?: string | null;
   payment_proof_url?: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
-  unit_price: number;
+  unit_price?: number;
   selected_size?: string | null;
   created_at: string;
   confirmed_at?: string;
   completed_at?: string;
-  del_type?: 'courier' | 'self_delivery';
+  del_type?: 'courier' | 'self_delivery' | 'self_pickup';
   tracking_provider?: string;
   tracking_number?: string;
   delivery_person_name?: string;
@@ -102,6 +109,22 @@ export interface Order {
     pincode: string;
   } | null;
   product?: Product;
+  items?: Array<{
+    id: string;
+    product_id: string;
+    variant_id?: string | null;
+    title: string;
+    price: number;
+    size?: string | null;
+    quantity: number;
+    line_total: number;
+    image_url?: string | null;
+    product?: {
+      id: string;
+      title: string;
+      image_url?: string | null;
+    };
+  }>;
 }
 
 type SellerState = {
@@ -141,25 +164,32 @@ export function useSeller() {
 
   const fetchSeller = useCallback(async () => {
     if (!user) return null;
-    const { data } = await supabase
-      .from('sellers')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    if (data) dispatch({ type: 'SET_DATA', payload: { seller: data } });
-    return data;
+    try {
+      const res = await apiClient.get<{ seller: Seller | null }>('/sellers/me');
+      const seller = res?.seller ?? null;
+      if (seller) {
+        dispatch({ type: 'SET_DATA', payload: { seller } });
+      }
+      return seller;
+    } catch {
+      return null;
+    }
   }, [user]);
 
   const fetchProducts = useCallback(
     async (currentSeller?: Seller) => {
       const s = currentSeller || state.seller;
       if (!s) return;
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .eq('seller_id', s.id)
-        .order('created_at', { ascending: false });
-      dispatch({ type: 'SET_DATA', payload: { products: data || [] } });
+      try {
+        const res = await apiClient.get<{
+          items?: Product[];
+          products?: Product[];
+        }>('/products?pageSize=100');
+        const productsList = res?.items || res?.products || [];
+        dispatch({ type: 'SET_DATA', payload: { products: productsList } });
+      } catch (err) {
+        console.error('fetchProducts error:', err);
+      }
     },
     [state.seller],
   );
@@ -168,23 +198,25 @@ export function useSeller() {
     async (currentSeller?: Seller) => {
       const s = currentSeller || state.seller;
       if (!s) return;
-      const { data } = await supabase
-        .from('files')
-        .select('*')
-        .eq('seller_id', s.id)
-        .order('created_at', { ascending: false });
+      try {
+        const res = await apiClient.get<{
+          files?: FileRecord[];
+          items?: FileRecord[];
+        }>('/files');
+        const filesList = res?.files || res?.items || [];
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const usageToday = filesList.filter(
+          f => new Date(f.created_at) >= startOfDay,
+        ).length;
 
-      // Calculate usage today
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const usageToday = (data || []).filter(
-        f => new Date(f.created_at) >= startOfDay,
-      ).length;
-
-      dispatch({
-        type: 'SET_DATA',
-        payload: { files: data || [], ai_usage_today: usageToday },
-      });
+        dispatch({
+          type: 'SET_DATA',
+          payload: { files: filesList, ai_usage_today: usageToday },
+        });
+      } catch (err) {
+        console.error('fetchFiles error:', err);
+      }
     },
     [state.seller],
   );
@@ -193,12 +225,15 @@ export function useSeller() {
     async (currentSeller?: Seller) => {
       const s = currentSeller || state.seller;
       if (!s) return;
-      const { data } = await supabase
-        .from('orders')
-        .select('*, product:products(*)')
-        .eq('seller_id', s.id)
-        .order('created_at', { ascending: false });
-      dispatch({ type: 'SET_DATA', payload: { orders: data || [] } });
+      try {
+        const res = await apiClient.get<{ items?: Order[]; orders?: Order[] }>(
+          '/orders?pageSize=100',
+        );
+        const ordersList = res?.items || res?.orders || [];
+        dispatch({ type: 'SET_DATA', payload: { orders: ordersList } });
+      } catch (err) {
+        console.error('fetchOrders error:', err);
+      }
     },
     [state.seller],
   );
@@ -217,86 +252,57 @@ export function useSeller() {
       >
     >,
     paymentInfo?: Partial<Pick<Order, 'pay_status' | 'gateway_payment_id'>>,
-  ): Promise<{ error: PostgrestError | Error | null }> => {
-    const updates: Partial<Order> = { status };
-    if (status === 'confirmed' || status === 'accepted')
-      updates.confirmed_at = new Date().toISOString();
-    if (status === 'completed' || status === 'delivered')
-      updates.completed_at = new Date().toISOString();
-
-    if (trackingInfo) {
-      Object.assign(updates, trackingInfo);
-    }
-
-    if (paymentInfo) {
-      Object.assign(updates, paymentInfo);
-    }
-
-    const { error } = await supabase
-      .from('orders')
-      .update(updates)
-      .eq('id', orderId);
-    if (error) {
-      console.error('updateOrderStatus error:', error);
-    } else {
+  ): Promise<{ error: Error | null }> => {
+    try {
+      await apiClient.patch(`/orders/${orderId}/status`, {
+        status,
+        trackingInfo,
+        paymentInfo,
+      });
       await fetchOrders();
+      return { error: null };
+    } catch (err: any) {
+      console.error('updateOrderStatus error:', err);
+      return { error: err instanceof Error ? err : new Error(String(err)) };
     }
-    return { error };
   };
 
   const createSeller = async (data: Partial<Seller>) => {
     if (!user) return { error: new Error('Not authenticated') };
 
     const payload = {
-      user_id: user.id,
-      full_name: data.full_name,
-      store_name: data.store_name,
-      store_slug: data.store_slug,
-      store_description: data.store_description,
+      fullName: data.full_name,
+      storeName: data.store_name,
+      storeSlug: data.store_slug,
+      storeDescription: data.store_description,
       location: data.location,
       phone: data.phone || data.contact_number,
-      contact_number: data.contact_number || data.phone,
-      store_number: data.store_number,
-      maps_url: data.maps_url,
-      banner_url: data.banner_url,
-      theme_color: data.theme_color,
+      contactNumber: data.contact_number || data.phone,
+      storeNumber: data.store_number,
+      mapsUrl: data.maps_url,
+      bannerUrl: data.banner_url,
+      themeColor: data.theme_color,
       gstin: data.gstin,
-      registered_business_name: data.registered_business_name,
-      verification_documents: data.verification_documents,
-      last_submitted_at: data.last_submitted_at,
-      verification_status: data.verification_status || 'pending',
+      registeredBusinessName: data.registered_business_name,
+      sellerUpiId: (data as any).seller_upi_id,
+      verificationDocuments: data.verification_documents || undefined,
     };
 
     try {
-      const { data: updated, error: updateError } = await supabase
-        .from('sellers')
-        .update(payload)
-        .eq('user_id', user.id)
-        .select();
-
-      if (updateError) return { error: updateError };
-
-      if (updated && updated.length > 0) {
-        const s = await fetchSeller();
-        if (s) {
-          await Promise.all([fetchProducts(s), fetchFiles(s), fetchOrders(s)]);
-        }
-        return { error: null };
+      let res: { seller?: Seller };
+      try {
+        res = await apiClient.patch<{ seller: Seller }>('/sellers/me', payload);
+      } catch {
+        res = await apiClient.post<{ seller: Seller }>('/sellers/me', payload);
       }
 
-      const { error: insertError } = await supabase
-        .from('sellers')
-        .insert(payload);
-
-      if (insertError) return { error: insertError };
-
-      const s = await fetchSeller();
+      const s = res?.seller || (await fetchSeller());
       if (s) {
         await Promise.all([fetchProducts(s), fetchFiles(s), fetchOrders(s)]);
       }
       return { error: null };
     } catch (err) {
-      console.error('createSeller unexpected error', err);
+      console.error('createSeller error:', err);
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
   };
@@ -308,68 +314,77 @@ export function useSeller() {
   }) => {
     if (!state.seller) return { error: new Error('No seller profile found') };
 
-    // Check rate limit (24 hours)
-    if (state.seller.last_submitted_at) {
-      const lastSubmitted = new Date(state.seller.last_submitted_at);
-      const now = new Date();
-      const hoursDiff =
-        (now.getTime() - lastSubmitted.getTime()) / (1000 * 60 * 60);
-      if (hoursDiff < 24) {
-        const timeLeft = Math.ceil(24 - hoursDiff);
-        return {
-          error: new Error(
-            `Rate limit: Please wait ${timeLeft} hours before resubmitting.`,
-          ),
-        };
-      }
-    }
-
-    const { error } = await supabase
-      .from('sellers')
-      .update({
+    try {
+      await apiClient.patch('/sellers/me', {
         gstin: data.gstin,
-        registered_business_name: data.registered_business_name,
-        verification_documents: data.documents,
-        verification_status: 'pending',
-        last_submitted_at: new Date().toISOString(),
-      })
-      .eq('id', state.seller.id);
-
-    if (!error) await fetchSeller();
-    return { error };
+        registeredBusinessName: data.registered_business_name,
+        verificationDocuments: data.documents,
+      });
+      await apiClient.post('/sellers/me/submit', {});
+      await fetchSeller();
+      return { error: null };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   const updateSellerProfile = async (updates: Partial<Seller>) => {
     if (!state.seller) return { error: new Error('No seller profile found') };
 
-    const { error } = await supabase
-      .from('sellers')
-      .update(updates)
-      .eq('id', state.seller.id);
-
-    if (!error) await fetchSeller();
-    return { error };
+    try {
+      await apiClient.patch('/sellers/me', {
+        fullName: updates.full_name,
+        storeName: updates.store_name,
+        storeSlug: updates.store_slug,
+        storeDescription: updates.store_description,
+        location: updates.location,
+        phone: updates.phone,
+        contactNumber: updates.contact_number,
+        storeNumber: updates.store_number,
+        mapsUrl: updates.maps_url,
+        bannerUrl: updates.banner_url,
+        themeColor: updates.theme_color,
+        sellerUpiId: (updates as any).seller_upi_id,
+        gstin: updates.gstin,
+        registeredBusinessName: updates.registered_business_name,
+      });
+      await fetchSeller();
+      return { error: null };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   const updateProduct = async (
     productId: string,
     updates: Partial<Product>,
   ) => {
-    const { error } = await supabase
-      .from('products')
-      .update(updates)
-      .eq('id', productId);
-    if (!error) await fetchProducts();
-    return { error };
+    try {
+      await apiClient.patch(`/products/${productId}`, {
+        title: updates.title,
+        description: updates.description,
+        price: updates.price,
+        category: updates.category,
+        tags: updates.tags,
+        imageUrl: updates.image_url,
+        stock: updates.stock,
+        lowStockThreshold: updates.low_stock_threshold,
+      });
+      await fetchProducts();
+      return { error: null };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   const deleteProduct = async (productId: string) => {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', productId);
-    if (!error) await fetchProducts();
-    return { error };
+    try {
+      await apiClient.delete(`/products/${productId}`);
+      await fetchProducts();
+      return { error: null };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   useEffect(() => {
@@ -378,40 +393,11 @@ export function useSeller() {
       fetchSeller()
         .then(async s => {
           if (s) {
-            // Fetch everything else concurrently
-            const [productsData, filesData, ordersData] = await Promise.all([
-              supabase
-                .from('products')
-                .select('*')
-                .eq('seller_id', s.id)
-                .order('created_at', { ascending: false }),
-              supabase
-                .from('files')
-                .select('*')
-                .eq('seller_id', s.id)
-                .order('created_at', { ascending: false }),
-              supabase
-                .from('orders')
-                .select('*, product:products(*)')
-                .eq('seller_id', s.id)
-                .order('created_at', { ascending: false }),
+            await Promise.all([
+              fetchProducts(s),
+              fetchFiles(s),
+              fetchOrders(s),
             ]);
-            // Calculate usage today
-            const startOfDay = new Date();
-            startOfDay.setHours(0, 0, 0, 0);
-            const usageToday = (filesData.data || []).filter(
-              f => new Date(f.created_at) >= startOfDay,
-            ).length;
-
-            dispatch({
-              type: 'SET_DATA',
-              payload: {
-                products: productsData.data || [],
-                files: filesData.data || [],
-                orders: ordersData.data || [],
-                ai_usage_today: usageToday,
-              },
-            });
           }
         })
         .finally(() => dispatch({ type: 'SET_LOADING', payload: false }));

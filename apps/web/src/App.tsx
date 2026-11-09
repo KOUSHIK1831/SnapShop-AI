@@ -5,6 +5,8 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/hooks/useAuth';
+import { CartProvider } from '@/hooks/useCart';
+import { CartDrawer } from '@/components/CartDrawer';
 import { NetworkProvider } from '@/hooks/useNetworkStrength';
 import Index from './pages/Index';
 import Auth from './pages/Auth';
@@ -40,53 +42,59 @@ const App = () => {
               <BrowserRouter>
                 <OfflineBanner />
                 <AuthProvider>
-                  <div className="pb-16 sm:pb-0">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/onboarding" element={<Onboarding />} />
-                      <Route
-                        path="/dashboard"
-                        element={
-                          <ProtectedRoute requiredRole="seller">
-                            <Dashboard />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin"
-                        element={
-                          <ProtectedRoute requiredRole="admin">
-                            <Admin />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="/store/:slug" element={<Storefront />} />
-                      <Route
-                        path="/buyer"
-                        element={
-                          <ProtectedRoute requiredRole="buyer">
-                            <BuyerDashboard />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/track-order/:orderId"
-                        element={
-                          <ProtectedRoute requiredRole="buyer">
-                            <TrackOrder />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/reset-password"
-                        element={<ResetPassword />}
-                      />
-                      <Route path="/manual" element={<VolunteerManualPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    <BottomNav />
-                  </div>
+                  <CartProvider>
+                    <CartDrawer />
+                    <div className="pb-16 sm:pb-0">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/onboarding" element={<Onboarding />} />
+                        <Route
+                          path="/dashboard"
+                          element={
+                            <ProtectedRoute requiredRole="seller">
+                              <Dashboard />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin"
+                          element={
+                            <ProtectedRoute requiredRole="admin">
+                              <Admin />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/store/:slug" element={<Storefront />} />
+                        <Route
+                          path="/buyer"
+                          element={
+                            <ProtectedRoute requiredRole="buyer">
+                              <BuyerDashboard />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/track-order/:orderId"
+                          element={
+                            <ProtectedRoute requiredRole="buyer">
+                              <TrackOrder />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/reset-password"
+                          element={<ResetPassword />}
+                        />
+                        <Route
+                          path="/manual"
+                          element={<VolunteerManualPage />}
+                        />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                      <BottomNav />
+                    </div>
+                  </CartProvider>
                 </AuthProvider>
               </BrowserRouter>
             </GoogleOAuthProvider>

@@ -223,6 +223,42 @@ export async function listPublicProducts(
   };
 }
 
+export async function listPublicSellers() {
+  const sellers = await prisma.seller.findMany({
+    where: {
+      status: 'active',
+      verificationStatus: 'approved',
+      storeSlug: { not: null },
+    },
+    include: {
+      products: {
+        where: { status: 'active' },
+        select: { id: true, category: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return sellers.map(s => {
+    const categories = [
+      ...new Set(s.products.map(p => p.category).filter(Boolean)),
+    ] as string[];
+    return {
+      id: s.id,
+      store_name: s.storeName,
+      store_slug: s.storeSlug,
+      store_description: s.storeDescription,
+      location: s.location,
+      banner_url: s.bannerUrl,
+      theme_color: s.themeColor,
+      contact_number: s.contactNumber,
+      phone: s.phone,
+      product_count: s.products.length,
+      categories,
+    };
+  });
+}
+
 export async function listCategories(slug: string) {
   const seller = await prisma.seller.findUnique({
     where: { storeSlug: slug },

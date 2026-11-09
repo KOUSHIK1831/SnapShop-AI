@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/apiClient';
 import { Seller, Product } from '@/hooks/useSeller';
 import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/hooks/useCart';
 import OrderConfirmation, {
   DeliveryAddress,
 } from '@/components/OrderConfirmation';
@@ -17,6 +18,7 @@ import {
   Phone,
   Hash,
   ShoppingBag,
+  ShoppingCart,
   MessageCircle,
   ExternalLink,
   Ban,
@@ -35,6 +37,7 @@ function StorefrontContent() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { cart, addItem, openCart } = useCart();
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,37 +53,38 @@ function StorefrontContent() {
 
   useEffect(() => {
     async function load() {
-      const { data: sellerData } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('store_slug', slug)
-        .single();
+      try {
+        const sellerRes = await apiClient.get<{ seller: any }>(
+          `/sellers/${slug}`,
+        );
+        const sellerData = sellerRes?.seller;
 
-      if (!sellerData) {
+        if (!sellerData) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        if (
+          sellerData.status === 'blocked' ||
+          sellerData.verification_status !== 'approved'
+        ) {
+          setSeller(sellerData);
+          setLoading(false);
+          return;
+        }
+
+        setSeller(sellerData);
+
+        const prodRes = await apiClient.get<{ items: any[] }>(
+          `/sellers/${slug}/products?pageSize=100`,
+        );
+        setProducts(prodRes?.items || []);
+        setLoading(false);
+      } catch {
         setNotFound(true);
         setLoading(false);
-        return;
       }
-
-      if (
-        sellerData.status === 'blocked' ||
-        sellerData.verification_status !== 'approved'
-      ) {
-        setSeller(sellerData);
-        setLoading(false);
-        return;
-      }
-
-      setSeller(sellerData);
-
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('seller_id', sellerData.id)
-        .order('created_at', { ascending: false });
-
-      setProducts(productsData || []);
-      setLoading(false);
     }
     load();
   }, [slug]);
@@ -326,75 +330,59 @@ function StorefrontContent() {
         ? Math.round(product.price * (1 - product.discount_percent / 100))
         : product.price;
 
-    const { error } = await supabase.from('orders').insert({
-      buyer_id: uid,
-      seller_id: product.seller_id,
-      product_id: product.id,
-      quantity: 1,
-      status: 'pending',
-      pay_method: payMethod as any,
-      pay_status: payStatus,
-      gateway_payment_id: gatewayId,
-      payment_proof_url: paymentProofUrl,
-      unit_price: currentUnitPrice,
-      buyer_name:
-        address.name ||
-        currentUser?.name ||
-        currentUser?.email?.split('@')[0] ||
-        'Buyer',
-      buyer_phone: address.phone || currentUser?.phone || '',
-      delivery_address: address,
-      selected_size: selectedSize || product.size || null,
-    });
+    try {
+      const selectedVariant = product.size_variants?.find(
+        (v: any) => v.size === selectedSize,
+      );
+      await apiClient.post('/orders', {
+        sellerId: product.seller_id,
+        buyerName:
+          address.name ||
+          currentUser?.name ||
+          currentUser?.email?.split('@')[0] ||
+          'Buyer',
+        buyerPhone: address.phone || currentUser?.phone || '9999999999',
+        deliveryAddress: address,
+        deliveryType: 'courier',
+        payMethod:
+          payMethod === 'online'
+            ? 'online'
+            : payMethod === 'upi'
+              ? 'upi'
+              : 'cod',
+        items: [
+          {
+            productId: product.id,
+            variantId: (selectedVariant as any)?.id,
+            quantity: 1,
+          },
+        ],
+      });
 
-    if (error) {
+      setOrderedProduct(product);
+      trackEvent('order_placed', {
+        productId: product.id,
+        productTitle: product.title,
+        price: product.price,
+        payMethod,
+        size: selectedSize,
+      });
+      toast({
+        title: t('storefront.orderPlaced'),
+        description:
+          payStatus === 'paid'
+            ? t('auto.payment_successful_order_sent')
+            : t('storefront.orderSent'),
+      });
+      setSelectedSize(null);
+    } catch (error) {
       console.error('Order error:', error);
       toast({
         title: 'Order failed',
         description: 'Could not place order. Please try again.',
         variant: 'destructive',
       });
-      return;
     }
-
-    // Update stock if it's size-based
-    if (selectedSize && product.size_variants) {
-      const updatedVariants = product.size_variants.map(v =>
-        v.size === selectedSize ? { ...v, stock: Math.max(0, v.stock - 1) } : v,
-      );
-      const totalStock = updatedVariants.reduce((acc, v) => acc + v.stock, 0);
-      await supabase
-        .from('products')
-        .update({
-          size_variants: updatedVariants,
-          stock: totalStock,
-        })
-        .eq('id', product.id);
-    } else if (product.stock !== undefined) {
-      await supabase
-        .from('products')
-        .update({
-          stock: Math.max(0, product.stock - 1),
-        })
-        .eq('id', product.id);
-    }
-
-    setOrderedProduct(product);
-    trackEvent('order_placed', {
-      productId: product.id,
-      productTitle: product.title,
-      price: product.price,
-      payMethod,
-      size: selectedSize,
-    });
-    toast({
-      title: t('storefront.orderPlaced'),
-      description:
-        payStatus === 'paid'
-          ? t('auto.payment_successful_order_sent')
-          : t('storefront.orderSent'),
-    });
-    setSelectedSize(null);
   };
 
   const loadRazorpay = () => {
@@ -573,11 +561,23 @@ function StorefrontContent() {
             </div>{' '}
           </div>{' '}
           <div className="absolute top-6 right-6">
-            {' '}
             <div className="flex items-center gap-2">
-              {' '}
-              <ThemeToggle /> <LanguageSwitcher variant="compact" />{' '}
-            </div>{' '}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openCart}
+                className="relative size-9 p-0 rounded-full bg-white/20 hover:bg-white/30 text-white"
+                title="Open Cart"
+              >
+                <ShoppingBag className="size-4" />
+                {cart && cart.count > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full size-4 flex items-center justify-center">
+                    {cart.count}
+                  </span>
+                )}
+              </Button>
+              <ThemeToggle /> <LanguageSwitcher variant="compact" />
+            </div>
           </div>{' '}
           {seller?.store_description && (
             <p className="text-white/80 max-w-xl mb-4 animate-slide-up">
@@ -839,6 +839,25 @@ function StorefrontContent() {
                         >
                           <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />
                           {t('storefront.orderNow')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid={`add-to-cart-btn-${product.id}`}
+                          className="border-border/40"
+                          onClick={() => {
+                            const selectedVariant = product.size_variants?.find(
+                              (v: any) => v.size === selectedSize,
+                            );
+                            addItem(
+                              product.id,
+                              (selectedVariant as any)?.id,
+                              1,
+                            );
+                          }}
+                          title="Add to cart"
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
                         </Button>
                         <Button
                           size="sm"

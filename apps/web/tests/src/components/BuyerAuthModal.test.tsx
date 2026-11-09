@@ -15,16 +15,19 @@ const {
   verifyOtpMock,
   signInSendOtpMock,
   resendOtpMock,
+  mockState,
 } = vi.hoisted(() => ({
   signInPasswordMock: vi.fn(() => ({ error: null })),
   signUpMock: vi.fn(() => ({ error: null })),
   verifyOtpMock: vi.fn(() => ({ error: null })),
   signInSendOtpMock: vi.fn(() => ({ error: null })),
   resendOtpMock: vi.fn(() => ({ error: null })),
+  mockState: { user: null as any },
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
+    user: mockState.user,
     signIn: {
       password: signInPasswordMock,
       sendOtp: signInSendOtpMock,
@@ -32,6 +35,7 @@ vi.mock('@/hooks/useAuth', () => ({
     signUp: signUpMock,
     verifyOtp: verifyOtpMock,
     resendOtp: resendOtpMock,
+    signInWithGoogle: vi.fn(),
   }),
 }));
 
@@ -41,18 +45,10 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      resend: vi.fn().mockResolvedValue({ error: null }),
-    },
-  },
-}));
-
 describe('BuyerAuthModal coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.user = null;
     sessionStorage.clear();
     vi.useRealTimers();
   });
@@ -253,17 +249,10 @@ describe('BuyerAuthModal coverage', () => {
   });
 
   it('handles login for unverified user', async () => {
-    const { supabase } = await import('@/integrations/supabase/client');
-    vi.mocked(supabase.auth.getSession)
-      .mockResolvedValueOnce({ data: { session: null } } as any)
-      .mockResolvedValueOnce({
-        data: {
-          session: {
-            user: { email: 'unverified@test.com', email_confirmed_at: null },
-          },
-        },
-      } as any);
-    signInPasswordMock.mockResolvedValueOnce({ error: null } as any);
+    signInPasswordMock.mockResolvedValueOnce({
+      error: null,
+      user: { email: 'unverified@test.com', email_confirmed: false },
+    } as any);
     render(<BuyerAuthModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText(/name@example.com/i), {
       target: { value: 'unverified@test.com' },
@@ -284,14 +273,7 @@ describe('BuyerAuthModal coverage', () => {
   });
 
   it('detects existing unverified session on mount', async () => {
-    const { supabase } = await import('@/integrations/supabase/client');
-    vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
-      data: {
-        session: {
-          user: { email: 'unverified@test.com', email_confirmed_at: null },
-        },
-      },
-    } as any);
+    mockState.user = { email: 'unverified@test.com', email_confirmed: false };
     render(<BuyerAuthModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
     await waitFor(() => {
       expect(screen.getByText(/Verify OTP/i)).toBeInTheDocument();

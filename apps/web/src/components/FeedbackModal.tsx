@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useReducer } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useSeller } from '@/hooks/useSeller';
 import { Button } from '@/components/ui/button';
@@ -101,80 +101,45 @@ export default function FeedbackModal({
   };
 
   useEffect(() => {
-    let channel: any = null;
     if (isOpen && user) {
       const fetchMyFeedback = async () => {
         dispatch({ type: 'SET_LOADING', value: true });
-        const { data, error } = await supabase
-          .from('feedback')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('created_at', { ascending: false });
-
-        if (!error) {
-          dispatch({ type: 'SET_HISTORY', value: data || [] });
+        try {
+          const res = await apiClient.get<{ feedback: any[] }>('/feedback');
+          dispatch({ type: 'SET_HISTORY', value: res?.feedback || [] });
+        } catch (err) {
+          console.error('Fetch feedback error:', err);
+        } finally {
+          dispatch({ type: 'SET_LOADING', value: false });
         }
-        dispatch({ type: 'SET_LOADING', value: false });
       };
 
       fetchMyFeedback();
-
-      channel = supabase
-        .channel('my-feedback-realtime')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'feedback',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            fetchMyFeedback();
-          },
-        )
-        .subscribe();
     }
-    return () => {
-      if (channel) {
-        channel.unsubscribe();
-      }
-    };
-  }, [state.isOpen, user]);
+  }, [isOpen, user]);
 
   const handleSubmit = async () => {
     if (!state.content.trim()) return;
 
     dispatch({ type: 'SET_SUBMITTING', value: true });
     try {
-      const feedbackData: {
-        user_id: string | undefined;
-        content: string;
-        status: string;
-        seller_id?: string;
-      } = {
-        user_id: user?.id,
+      await apiClient.post('/feedback', {
         content: state.content.trim(),
-        status: 'open',
-      };
-
-      // Include seller_id if the user is a seller
-      if (seller?.id) {
-        feedbackData.seller_id = seller.id;
-      }
-
-      const { error } = await supabase.from('feedback').insert(feedbackData);
-
-      if (error) {
-        console.error('Feedback: Insert error:', error);
-        throw error;
-      }
+        message: state.content.trim(),
+        sellerId: seller?.id,
+      });
 
       toast({
         title: t('feedback.success'),
         variant: 'default',
       });
       dispatch({ type: 'RESET' });
+
+      // Refresh feedback history
+      try {
+        const res = await apiClient.get<{ feedback: any[] }>('/feedback');
+        dispatch({ type: 'SET_HISTORY', value: res?.feedback || [] });
+      } catch {}
     } catch (err: unknown) {
       console.error('Feedback: Detailed error:', err);
       const errorMessage =

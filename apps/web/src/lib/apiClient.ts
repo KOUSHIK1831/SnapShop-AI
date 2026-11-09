@@ -128,30 +128,26 @@ export async function apiRequest<T = any>(
 }
 
 export const apiClient = {
-  get: <T = any>(url: string, headers?: Record<string, string>) =>
-    apiRequest<T>(url, { method: 'GET', headers }),
-
-  post: <T = any>(url: string, body?: any, headers?: Record<string, string>) =>
-    apiRequest<T>(url, {
+  get: <T = any>(endpoint: string, options?: RequestInit) =>
+    apiRequest<T>(endpoint, { ...options, method: 'GET' }),
+  post: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
       method: 'POST',
       body: body instanceof FormData ? body : JSON.stringify(body),
-      headers,
     }),
-
-  patch: <T = any>(url: string, body?: any, headers?: Record<string, string>) =>
-    apiRequest<T>(url, {
+  patch: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
       method: 'PATCH',
       body: body instanceof FormData ? body : JSON.stringify(body),
-      headers,
     }),
-
-  put: <T = any>(url: string, body?: any, headers?: Record<string, string>) =>
-    apiRequest<T>(url, {
+  put: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
       method: 'PUT',
       body: body instanceof FormData ? body : JSON.stringify(body),
-      headers,
     }),
-
-  delete: <T = any>(url: string, headers?: Record<string, string>) =>
-    apiRequest<T>(url, { method: 'DELETE', headers }),
+  delete: <T = any>(endpoint: string, options?: RequestInit) =>
+    apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };

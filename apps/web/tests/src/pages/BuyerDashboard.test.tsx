@@ -1,33 +1,20 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  act,
-} from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 
 import BuyerDashboard from '@/pages/BuyerDashboard';
 
 // Mock dependencies
-const {
-  mockSignOut,
-  mockNavigate,
-  mockSelect,
-  mockEq,
-  mockOrder,
-  mockNot,
-  mockNeq,
-} = vi.hoisted(() => ({
+const { mockSignOut, mockNavigate, mockApiClientGet } = vi.hoisted(() => ({
   mockSignOut: vi.fn(),
   mockNavigate: vi.fn(),
-  mockSelect: vi.fn(),
-  mockEq: vi.fn(),
-  mockOrder: vi.fn(),
-  mockNot: vi.fn(),
-  mockNeq: vi.fn(),
+  mockApiClientGet: vi.fn(),
+}));
+
+vi.mock('@/lib/apiClient', () => ({
+  apiClient: {
+    get: mockApiClientGet,
+  },
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -66,39 +53,18 @@ vi.mock('@/components/NetworkStrengthIndicator', () => ({
   NetworkStrengthIndicator: () => <div data-testid="network-indicator" />,
 }));
 
-// FeedbackModal (rendered by the dashboard) calls useSeller. Without this mock
-// the real hook runs its seller/orders bootstrap against the mocked Supabase
-// client, whose unstable user object makes the effect re-run on every render.
 vi.mock('@/hooks/useSeller', () => ({
   useSeller: () => ({ seller: null }),
 }));
 
-vi.mock('@/integrations/supabase/client', () => {
-  const chain = () => {
-    const c: Record<string, any> = {};
-    c.select = mockSelect.mockReturnValue(c);
-    c.eq = mockEq.mockReturnValue(c);
-    c.order = mockOrder.mockReturnValue(c);
-    c.not = mockNot.mockReturnValue(c);
-    c.neq = mockNeq.mockReturnValue(c);
-    return c;
-  };
-
-  return {
-    supabase: {
-      from: vi.fn().mockReturnValue(chain()),
-      channel: vi.fn().mockReturnValue({
-        on: vi.fn().mockReturnThis(),
-        subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-      }),
-    },
-  };
-});
-
 describe('BuyerDashboard coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOrder.mockResolvedValue({ data: [] });
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') return { sellers: [] };
+      if (path === '/orders/buyer') return { items: [] };
+      return {};
+    });
   });
 
   const renderDashboard = (initialEntries = ['/']) =>
@@ -109,17 +75,22 @@ describe('BuyerDashboard coverage', () => {
     );
 
   it('renders shops tab and loads shops', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [
-        {
-          id: 's1',
-          store_name: 'Test Store',
-          store_slug: 'test-store',
-          store_description: 'A great store',
-          location: 'Test City',
-          phone: '1234567890',
-        },
-      ],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return {
+          sellers: [
+            {
+              id: 's1',
+              store_name: 'Test Store',
+              store_slug: 'test-store',
+              store_description: 'A great store',
+              location: 'Test City',
+              phone: '1234567890',
+            },
+          ],
+        };
+      }
+      return { items: [] };
     });
 
     renderDashboard();
@@ -132,46 +103,55 @@ describe('BuyerDashboard coverage', () => {
   });
 
   it('switches to orders tab', async () => {
-    mockOrder.mockResolvedValue({
-      data: [
-        {
-          id: 'order1',
-          status: 'pending',
-          pay_method: 'cod',
-          pay_status: 'pending',
-          quantity: 2,
-          created_at: new Date().toISOString(),
-          product: { title: 'Test Product', price: 100, image_url: null },
-          seller: { store_name: 'Test Store', phone: '1234567890' },
-        },
-      ],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/orders/buyer') {
+        return {
+          items: [
+            {
+              id: 'order1',
+              status: 'pending',
+              pay_method: 'cod',
+              pay_status: 'pending',
+              quantity: 2,
+              created_at: new Date().toISOString(),
+              product: { title: 'Test Product', price: 100, image_url: null },
+              seller: { store_name: 'Test Store', phone: '1234567890' },
+            },
+          ],
+        };
+      }
+      return { sellers: [] };
     });
 
     renderDashboard(['/?tab=orders']);
 
     await waitFor(() => {
       expect(screen.getByText('Test Product')).toBeInTheDocument();
-      // Translation key for pending status is orders.status.pending
       expect(screen.getByText('orders.status.pending')).toBeInTheDocument();
     });
   });
 
   it('filters shops by search text', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [
-        {
-          id: 's1',
-          store_name: 'Apple Store',
-          store_slug: 'apple',
-          categories: ['tech'],
-        },
-        {
-          id: 's2',
-          store_name: 'Banana Shop',
-          store_slug: 'banana',
-          categories: ['food'],
-        },
-      ],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return {
+          sellers: [
+            {
+              id: 's1',
+              store_name: 'Apple Store',
+              store_slug: 'apple',
+              categories: ['tech'],
+            },
+            {
+              id: 's2',
+              store_name: 'Banana Shop',
+              store_slug: 'banana',
+              categories: ['food'],
+            },
+          ],
+        };
+      }
+      return { items: [] };
     });
 
     renderDashboard();
@@ -190,8 +170,15 @@ describe('BuyerDashboard coverage', () => {
   });
 
   it('handles sharing a store', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [{ id: 's1', store_name: 'Test Store', store_slug: 'test-store' }],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return {
+          sellers: [
+            { id: 's1', store_name: 'Test Store', store_slug: 'test-store' },
+          ],
+        };
+      }
+      return { items: [] };
     });
 
     // Mock navigator.share
@@ -226,15 +213,20 @@ describe('BuyerDashboard coverage', () => {
   });
 
   it('handles clearing filters when no shops match', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [
-        {
-          id: 's1',
-          store_name: 'Existing Store',
-          store_slug: 'existing',
-          categories: ['tech'],
-        },
-      ],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return {
+          sellers: [
+            {
+              id: 's1',
+              store_name: 'Existing Store',
+              store_slug: 'existing',
+              categories: ['tech'],
+            },
+          ],
+        };
+      }
+      return { items: [] };
     });
 
     renderDashboard();
@@ -263,18 +255,23 @@ describe('BuyerDashboard coverage', () => {
   });
 
   it('renders shop card details and handles share fallback', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [
-        {
-          id: 's1',
-          store_name: 'Detailed Store',
-          store_slug: 'detailed',
-          location: 'Local Area',
-          store_description: 'A great store',
-          banner_url: null, // Test missing banner
-          contact_number: '919999999999',
-        },
-      ],
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return {
+          sellers: [
+            {
+              id: 's1',
+              store_name: 'Detailed Store',
+              store_slug: 'detailed',
+              location: 'Local Area',
+              store_description: 'A great store',
+              banner_url: null,
+              contact_number: '919999999999',
+            },
+          ],
+        };
+      }
+      return { items: [] };
     });
 
     // Mock navigator.share to fail to trigger fallback
@@ -300,48 +297,35 @@ describe('BuyerDashboard coverage', () => {
   });
 
   it('renders order card with payment proof and delivery details', async () => {
-    mockOrder.mockResolvedValueOnce({
-      data: [{ id: 's1', store_name: 'Store' }],
-    });
-
-    // Mock orders call
-    const ordersMock = vi.fn().mockResolvedValue({
-      data: [
-        {
-          id: 'o1',
-          status: 'shipped',
-          pay_method: 'online',
-          pay_status: 'paid',
-          payment_proof_url: 'http://proof.jpg',
-          quantity: 1,
-          created_at: new Date().toISOString(),
-          del_type: 'self_delivery',
-          delivery_person_name: 'Delivery Guy',
-          delivery_person_phone: '9876543210',
-          product: { title: 'Test Product', price: 100, image_url: null },
-          seller: {
-            store_name: 'Store',
-            store_slug: 'store',
-            contact_number: '123',
-          },
-        },
-      ],
-    });
-
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'orders')
+    mockApiClientGet.mockImplementation(async (path: string) => {
+      if (path === '/sellers') {
+        return { sellers: [{ id: 's1', store_name: 'Store' }] };
+      }
+      if (path === '/orders/buyer') {
         return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: ordersMock,
-        } as any;
-      return {
-        select: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        neq: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [] }),
-      } as any;
+          items: [
+            {
+              id: 'o1',
+              status: 'shipped',
+              pay_method: 'online',
+              pay_status: 'paid',
+              payment_proof_url: 'http://proof.jpg',
+              quantity: 1,
+              created_at: new Date().toISOString(),
+              del_type: 'self_delivery',
+              delivery_person_name: 'Delivery Guy',
+              delivery_person_phone: '9876543210',
+              product: { title: 'Test Product', price: 100, image_url: null },
+              seller: {
+                store_name: 'Store',
+                store_slug: 'store',
+                contact_number: '123',
+              },
+            },
+          ],
+        };
+      }
+      return {};
     });
 
     renderDashboard(['/?tab=orders']);

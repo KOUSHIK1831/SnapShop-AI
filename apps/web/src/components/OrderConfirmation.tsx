@@ -23,7 +23,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadFile } from '@/lib/upload';
 
 export interface DeliveryAddress {
   name: string;
@@ -206,20 +206,7 @@ export default function OrderConfirmation({
     if (proofFile) {
       setUploadingProof(true);
       try {
-        const fileExt = proofFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `proofs/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('order-proofs')
-          .upload(filePath, proofFile);
-
-        if (uploadError) throw uploadError;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('order-proofs').getPublicUrl(filePath);
-
+        const { publicUrl } = await uploadFile(proofFile, 'payment_proof');
         proofUrl = publicUrl;
       } catch (err) {
         console.error('Proof upload error:', err);

@@ -10,7 +10,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import Dashboard from '@/pages/Dashboard';
 import en from '@/locales/en/translation.json';
-import { supabase } from '@/integrations/supabase/client';
 
 const {
   authState,
@@ -18,7 +17,9 @@ const {
   toastMock,
   navigateMock,
   clipboardWriteTextMock,
+  useSocketEventMock,
 } = vi.hoisted(() => ({
+  useSocketEventMock: vi.fn(),
   authState: {
     user: { id: 'user-1', role: 'seller' },
     signOut: vi.fn(),
@@ -73,23 +74,9 @@ vi.mock('@/hooks/useWelcomeTour', () => ({
   }),
 }));
 
-let realtimeCallback: any;
-let mockChannel: any;
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    channel: vi.fn(() => {
-      mockChannel = {
-        on: vi.fn((event, filter, cb) => {
-          realtimeCallback = cb;
-          return mockChannel;
-        }),
-        subscribe: vi.fn().mockReturnThis(),
-        unsubscribe: vi.fn(),
-      };
-      return mockChannel;
-    }),
-  },
+vi.mock('@/hooks/useSocket', () => ({
+  useSocketEvent: useSocketEventMock,
+  getSocket: vi.fn(),
 }));
 
 vi.mock('@/components/LanguageSwitcher', () => ({
@@ -171,8 +158,6 @@ describe('Dashboard', () => {
     sellerState.products = [];
     authState.user = { id: 'user-1', role: 'seller' };
     sellerState.submitForVerification.mockResolvedValue({ error: null });
-    realtimeCallback = null;
-    mockChannel = null;
   });
 
   const renderDashboard = (path = '/dashboard') => {
@@ -362,12 +347,20 @@ describe('Dashboard', () => {
   });
 
   it('subscribes to realtime orders and handles new order', () => {
-    renderDashboard();
-    expect(supabase.channel).toHaveBeenCalledWith('orders-realtime');
+    let capturedHandler: any;
+    useSocketEventMock.mockImplementation((event: string, handler: any) => {
+      if (event === 'order:new') capturedHandler = handler;
+    });
 
-    if (realtimeCallback) {
+    renderDashboard();
+    expect(useSocketEventMock).toHaveBeenCalledWith(
+      'order:new',
+      expect.any(Function),
+    );
+
+    if (capturedHandler) {
       act(() => {
-        realtimeCallback();
+        capturedHandler();
       });
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({ title: en['orders.newOrder'] }),
@@ -395,9 +388,8 @@ describe('Dashboard', () => {
 
   it('unsubscribes on unmount', () => {
     const { unmount } = renderDashboard();
-    expect(mockChannel).toBeDefined();
+    expect(useSocketEventMock).toHaveBeenCalled();
     unmount();
-    expect(mockChannel.unsubscribe).toHaveBeenCalled();
   });
 
   it('renders ready state when approved but no products', () => {

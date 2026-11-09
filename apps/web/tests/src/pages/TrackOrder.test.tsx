@@ -2,8 +2,30 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import TrackOrder from '@/pages/TrackOrder';
-import { supabase } from '@/integrations/supabase/client';
 import en from '@/locales/en/translation.json';
+
+const mockGet = vi.fn();
+vi.mock('@/lib/apiClient', () => ({
+  apiClient: {
+    get: (...args: any[]) => mockGet(...args),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+const mockSocketListener = vi.fn();
+vi.mock('@/hooks/useSocket', () => ({
+  useSocketEvent: (event: string, handler: any) => {
+    mockSocketListener(event, handler);
+  },
+  getSocket: vi.fn(() => ({
+    connected: true,
+    connect: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  })),
+}));
 
 // Mock translation with real keys
 vi.mock('react-i18next', () => ({
@@ -30,19 +52,6 @@ vi.mock('@/hooks/useAuth', () => ({
     user: { id: 'user-1', role: 'buyer' },
     loading: false,
   }),
-}));
-
-// Mock Supabase
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn(),
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnThis(),
-      unsubscribe: vi.fn(),
-    })),
-    removeChannel: vi.fn(),
-  },
 }));
 
 describe('TrackOrder Page', () => {
@@ -88,24 +97,11 @@ describe('TrackOrder Page', () => {
   });
 
   it('renders order details and status timeline', async () => {
-    const fromMock = vi.mocked(supabase.from);
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
-        } as any;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
       }
-      if (table === 'order_tracking_logs') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: mockLogs, error: null }),
-        } as any;
-      }
-      return {} as any;
+      return Promise.resolve({ order: mockOrder });
     });
 
     render(
@@ -123,24 +119,7 @@ describe('TrackOrder Page', () => {
   });
 
   it('shows error state when order not found', async () => {
-    const fromMock = vi.mocked(supabase.from);
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi
-            .fn()
-            .mockResolvedValue({ data: null, error: { message: 'Not found' } }),
-        } as any;
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
-    });
+    mockGet.mockRejectedValue(new Error('Order not found'));
 
     render(
       <MemoryRouter initialEntries={['/track/invalid']}>
@@ -156,23 +135,13 @@ describe('TrackOrder Page', () => {
   });
 
   it('renders cancelled order state', async () => {
-    const fromMock = vi.mocked(supabase.from);
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: { ...mockOrder, status: 'cancelled' },
-            error: null,
-          }),
-        } as any;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
       }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
+      return Promise.resolve({
+        order: { ...mockOrder, status: 'cancelled' },
+      });
     });
 
     render(
@@ -192,28 +161,18 @@ describe('TrackOrder Page', () => {
   });
 
   it('renders delivery partner details for self-delivery', async () => {
-    const fromMock = vi.mocked(supabase.from);
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: {
-              ...mockOrder,
-              del_type: 'self_delivery',
-              delivery_person_name: 'Ravi',
-              delivery_person_phone: '9999999999',
-            },
-            error: null,
-          }),
-        } as any;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
       }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
+      return Promise.resolve({
+        order: {
+          ...mockOrder,
+          del_type: 'self_delivery',
+          delivery_person_name: 'Ravi',
+          delivery_person_phone: '9999999999',
+        },
+      });
     });
 
     render(
@@ -226,18 +185,16 @@ describe('TrackOrder Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Ravi/i)).toBeInTheDocument();
-      // In TrackOrder.tsx, phone is only in the call button, not as text
     });
   });
 
   it('subscribes to real-time updates', async () => {
-    const fromMock = vi.mocked(supabase.from);
-    fromMock.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
-    } as any);
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
+      }
+      return Promise.resolve({ order: mockOrder });
+    });
 
     render(
       <MemoryRouter initialEntries={['/track/order-1']}>
@@ -247,33 +204,28 @@ describe('TrackOrder Page', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(supabase.channel).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(mockSocketListener).toHaveBeenCalledWith(
+        'order:status',
+        expect.any(Function),
+      );
+    });
   });
 
   it('opens tracking link and call button', async () => {
-    const fromMock = vi.mocked(supabase.from);
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: {
-              ...mockOrder,
-              status: 'shipped',
-              del_type: 'courier',
-              tracking_provider: 'FedEx',
-              tracking_number: '12345',
-            },
-            error: null,
-          }),
-        } as any;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
       }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
+      return Promise.resolve({
+        order: {
+          ...mockOrder,
+          status: 'shipped',
+          del_type: 'courier',
+          tracking_provider: 'FedEx',
+          tracking_number: '12345',
+        },
+      });
     });
 
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
@@ -300,28 +252,19 @@ describe('TrackOrder Page', () => {
     );
 
     // Now test call button
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'orders') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: {
-              ...mockOrder,
-              status: 'shipped',
-              del_type: 'self_delivery',
-              delivery_person_name: 'Ravi',
-              delivery_person_phone: '9999999999',
-            },
-            error: null,
-          }),
-        } as any;
+    mockGet.mockImplementation((endpoint: string) => {
+      if (endpoint.includes('/events')) {
+        return Promise.resolve({ events: mockLogs });
       }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
+      return Promise.resolve({
+        order: {
+          ...mockOrder,
+          status: 'shipped',
+          del_type: 'self_delivery',
+          delivery_person_name: 'Ravi',
+          delivery_person_phone: '9999999999',
+        },
+      });
     });
 
     render(

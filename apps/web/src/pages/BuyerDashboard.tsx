@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -151,43 +151,14 @@ export default function BuyerDashboard() {
   // Load shops
   useEffect(() => {
     async function loadShops() {
-      const { data } = await supabase
-        .from('sellers')
-        .select(
-          'id, store_name, store_slug, store_description, location, banner_url, theme_color, contact_number, phone',
-        )
-        .not('store_slug', 'is', null)
-        .neq('store_slug', '')
-        .neq('status', 'blocked')
-        .eq('verification_status', 'approved')
-        .order('created_at', { ascending: false });
-
-      if (!data) {
+      try {
+        const res = await apiClient.get<{ sellers: any[] }>('/sellers');
+        setShops(res?.sellers || []);
+      } catch (err) {
+        console.error('loadShops error:', err);
+      } finally {
         setShopsLoading(false);
-        return;
       }
-
-      // Fetch product counts + categories per shop
-      const extras = await Promise.all(
-        data.map(async s => {
-          const { count } = await supabase
-            .from('products')
-            .select('id', { count: 'exact', head: true })
-            .eq('seller_id', s.id);
-          const { data: cats } = await supabase
-            .from('products')
-            .select('category')
-            .eq('seller_id', s.id)
-            .not('category', 'is', null);
-          const categories = [
-            ...new Set((cats || []).map(c => c.category).filter(Boolean)),
-          ] as string[];
-          return { product_count: count ?? 0, categories };
-        }),
-      );
-
-      setShops(data.map((s, i) => ({ ...s, ...extras[i] })));
-      setShopsLoading(false);
     }
     loadShops();
   }, []);
@@ -196,16 +167,16 @@ export default function BuyerDashboard() {
   useEffect(() => {
     if (!user) return;
     async function loadOrders() {
-      const { data } = await supabase
-        .from('orders')
-        .select(
-          'id, status, pay_method, pay_status, quantity, created_at, del_type, tracking_provider, tracking_number, delivery_person_name, delivery_person_phone, product:products(title, price, image_url), seller:sellers(store_name, store_slug, contact_number, phone)',
-        )
-        .eq('buyer_id', user!.id)
-        .order('created_at', { ascending: false });
-
-      setOrders((data as unknown as BuyerOrder[]) || []);
-      setOrdersLoading(false);
+      try {
+        const res = await apiClient.get<{ items: BuyerOrder[] }>(
+          '/orders/buyer',
+        );
+        setOrders(res?.items || []);
+      } catch (err) {
+        console.error('loadOrders error:', err);
+      } finally {
+        setOrdersLoading(false);
+      }
     }
     loadOrders();
   }, [user?.id]);

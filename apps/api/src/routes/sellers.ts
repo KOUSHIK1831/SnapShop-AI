@@ -80,6 +80,10 @@ sellersRouter.post(
   },
 );
 
+sellersRouter.get('/', async (_req, res) => {
+  res.json({ sellers: await sellers.listPublicSellers() });
+});
+
 const productQuery = paginationSchema.extend({
   search: z.string().trim().max(100).optional(),
   category: z.string().trim().max(80).optional(),
