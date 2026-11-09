@@ -12,3 +12,8 @@ public/telugu_sub_districts.geojson
 cf
 node_modules
 .git
+
+pnpm-lock.yaml
+.turbo
+*.tsbuildinfo
+apps/api/.storage

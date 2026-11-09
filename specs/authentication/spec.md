@@ -1,24 +1,27 @@
-# Authentication Feature Spec
+# Authentication feature specification
 
-## Overview
+## Scope
 
-Users can sign up, sign in, and manage their session. Supports email/password and magic link authentication via Supabase. Role-based routing directs users to seller, buyer, or admin dashboards.
+Users can create an account, sign in, verify their email, recover their password, and manage their session. Roles are administrator, seller, buyer, and volunteer.
 
 ## Routes
 
-- `/auth` — Login / signup page
-- `/reset-password` — Password reset flow
+- `/auth` — sign-in and account creation
+- `/reset-password` — password reset using a one-time API token
+- `/onboarding` — seller or buyer role setup when required
 
-## States
+## Requirements
 
-- **Loading**: Shows spinner while checking auth state
-- **Authenticated**: Redirects to role-specific dashboard
-- **Unauthenticated**: Shows auth page with sign-in/signup forms
-- **Error**: Displays inline error messages for invalid credentials, expired links, etc.
+- Email and password registration and sign-in
+- Optional Google sign-in
+- Short-lived access tokens and rotating secure refresh cookies
+- Email verification and password-reset tokens with expiration
+- Role-based access checks in API routes
+- Logout invalidates the refresh session; password reset revokes existing sessions
 
-## Edge Cases
+## User states
 
-- OTP type recovery redirects to `/reset-password`
-- `SIGNED_OUT` event must clear user state immediately (prevent `TOKEN_REFRESHED` race condition)
-- Session from URL hash fragments (Supabase magic link callback)
-- Language switch must not translate role strings (`seller`/`buyer`/`admin`) or route paths
+- Loading while the client restores a session
+- Unauthenticated on the sign-in screen
+- Authenticated and routed according to role and onboarding state
+- Invalid or expired verification/reset token with a recoverable error message

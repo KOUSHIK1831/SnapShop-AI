@@ -1,83 +1,41 @@
-# Document 02 — TRD: Technical Requirements Document
+# Technical requirements
 
----
+This document summarizes the current implementation. For environment setup, see [Local development](../docs/development.md).
 
-## Frontend
+## Web application
 
-- **Framework:** React 18 with TypeScript
-- **Build Tool:** Vite 5
-- **Styling:** Tailwind CSS 3 + shadcn/ui (Radix primitives)
-- **Routing:** React Router v6
-- **State & Data:** TanStack React Query v5
-- **I18n:** i18next + react-i18next (English, Hindi, Telugu)
-- **Mobile:** Capacitor (Android only)
+- React 18 and TypeScript
+- Vite 5, Tailwind CSS 3, and Radix-based UI components
+- React Router, TanStack Query, and i18next
+- English, Hindi, and Telugu translations
 
-## Backend
+## API and data
 
-- **Current:** Supabase (BaaS — Auth, PostgreSQL, Edge Functions, Storage, Realtime)
-- **Target (Future):** Python FastAPI backend (see [`docs/api.md`](../docs/api.md))
-- **Edge Functions:** Deno runtime (digitize, whatsapp-agent, order-notifications)
+- Express 5 API, served under `/api/v1`
+- PostgreSQL 16 with Prisma schema and migrations in `apps/api/prisma/`
+- API-owned authentication, authorization, validation, and data access
+- Shared request schemas and types in `packages/shared/`
+- Local filesystem or S3-compatible object storage through the API storage adapter
 
-## Database
+## Product integrations
 
-- **Type:** PostgreSQL via Supabase
-- **Migrations:** Supabase CLI (`supabase db push`)
-- **Key Tables:** `profiles`, `sellers`, `products`, `orders`, `files`, `feedback`, `conversations`
+- Google Identity Services for optional Google sign-in
+- Gemini and Groq providers for image digitization
+- WhatsApp Cloud API for messaging webhooks
+- Resend or console logging for email
+- Socket.IO for realtime order events
 
-## Auth
+## Quality and delivery
 
-- **Provider:** Supabase Auth
-- **Methods:** Email/password
-- **Roles:** Admin, Seller, Buyer (stored in `profiles` table)
-- **RLS:** Row-level security on all tables
-- **Edge Function Auth:** JWT verification (digitize), unauthenticated (whatsapp-agent webhook)
-
-## Hosting
-
-- **Frontend:** Vercel (production: `https://apna-bazar-cs.vercel.app`)
-- **Backend:** Supabase (PostgreSQL, Edge Functions, Storage)
-- **Mobile:** Capacitor Android build
-
-## Third-Party APIs
-
-| Service                       | Purpose                                           | Tier      |
-| ----------------------------- | ------------------------------------------------- | --------- |
-| Google Gemini 2.5 Flash       | AI product digitization (image → structured data) | Paid      |
-| Anthropic Claude (opus-4-5)   | WhatsApp AI agent brain                           | Paid      |
-| Meta WhatsApp Cloud API v25.0 | WhatsApp messaging                                | Free tier |
-| PostHog                       | Product analytics & event tracking                | Free tier |
-
-## Key Libraries
-
-- `@supabase/supabase-js` — Supabase client
-- `@anthropic-ai/sdk` — Claude AI SDK (Edge Function)
-- `lucide-react` — Icons
-- `zod` — Schema validation (Edge Function AI output)
-- `@tanstack/react-query` — Server state management
-- `react-i18next` — Internationalization
-
-## Environment Variables
-
-```
-VITE_SUPABASE_URL
-VITE_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-ANTHROPIC_API_KEY
-WHATSAPP_TOKEN
-PHONE_NUMBER_ID
-VERIFY_TOKEN
-UPI_ID
-STORE_SLUG
-LOVABLE_API_KEY (Gemini)
-VITE_POSTHOG_KEY
-VITE_POSTHOG_HOST
-```
+- pnpm workspace and Turborepo task orchestration
+- Vitest suites in the API and web workspaces
+- TypeScript checks, web ESLint, formatting checks, and production builds
+- GitHub Actions workflow at `.github/workflows/ci.yml`
 
 ## Constraints
 
-- Must work on mobile browsers (Chrome for Android)
-- Must support offline detection with graceful degradation
-- Image compression to ~100KB before upload
-- WhatsApp agent must handle guest orders (no buyer account needed)
-- Must support Hindi, English, and Telugu UI
+- Must work on mobile browsers, with responsive seller and buyer flows.
+- Image uploads must use authenticated API upload authorization.
+- Data access must be authorized and scoped in the API.
+- User-facing text must support English, Hindi, and Telugu.
+- Never expose server credentials in web build variables.

@@ -1,331 +1,94 @@
-# 📸 SnapShop AI — Digitize Your Store
+# SnapShop AI
 
-**AI-powered digitization platform for local clothing sellers.** Upload photos of your products, let AI extract titles, descriptions, prices & categories, and instantly get a shareable online storefront.
+SnapShop AI is a multilingual storefront and inventory platform for local retailers. It is maintained as a pnpm monorepo with a React web app, an Express API, and a PostgreSQL database managed with Prisma.
 
-> **SnapShop AI** — empowering small retailers to go digital in under 2 minutes.
-
-Public URL - https://apna-bazar-cs.vercel.app
-
----
-
-## ✨ Features
-
-| Feature                          | Description                                                                                                                                                                  |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🤖 AI Product Digitization**   | Upload product images → **Automatic frontend compression to ~100KB** → Gemini 2.5 Flash extracts title, description, price, category & tags with multi-size variant support. |
-| **👤 HITL Review Step**          | Human-in-the-Loop review card after AI extraction — seller approves/edits title, price, stock, and size variants before saving to DB.                                        |
-| **📱 Instant Storefront & App**  | Every seller gets a public `/store/:slug` page with customizable banner + theme color. Localized URLs for international reach. Mobile via Capacitor (Android).               |
-| **🔐 Role-Based Access Control** | Admin, Seller, and Buyer roles with Supabase Auth, RBAC route guards, and strict RLS policies.                                                                               |
-| **🛒 Order & Stock Management**  | End-to-end flow: size variants, stock tracking, low-stock alerts, order → stock decrement, status transitions (pending→accepted→shipped→delivered)                           |
-| **📊 Seller Dashboard**          | Analytics (revenue, order volume, insights), inventory editor, realtime order notifications.                                                                                 |
-| **💬 WhatsApp Sales Agent**      | Fully autonomous Anthropic Claude 3.5 Sonnet sales agent with tool-use (get_products, place_order) for 24/7 automated selling.                                               |
-| **🌍 Multi-language Support**    | Full i18n for **English**, **Hindi (हिन्दी)**, and **Telugu (తెలుగు)** with localized routing and language persistence.                                                      |
-| **📊 Admin Dashboard**           | Platform-wide metrics, user management, seller verification/blocking, feedback handling.                                                                                     |
-| **📈 Analytics & Benchmarks**    | PostHog event tracking, AI accuracy evaluation (80% category accuracy), performance benchmarks documented.                                                                   |
-| **📱 Mobile Support**            | Capacitor Android build, bottom tab navigation, native back-button handling.                                                                                                 |
-
----
-
-## 🏗️ Tech Stack
-
-| Layer                     | Technology                 | Purpose                                          |
-| ------------------------- | -------------------------- | ------------------------------------------------ |
-| Framework                 | React 18 + TypeScript      | UI architecture and type safety                  |
-| Build Tool                | Vite 5                     | Fast development bundler                         |
-| Styling                   | Tailwind CSS 3 + shadcn/ui | Design system and reusable components            |
-| Backend / BaaS            | Supabase                   | Auth, PostgreSQL database, storage, and realtime |
-| AI                        | Google Gemini 2.5 Flash    | Large language model processing                  |
-| Backend Compute           | Supabase Edge Functions    | Serverless hosting for Gemini AI scripts         |
-| Routing                   | React Router v6            | Client-side app navigation                       |
-| State & Data              | TanStack React Query       | Server state management and API caching          |
-| Mobile                    | Capacitor                  | Native Android shell deployment                  |
-| Testing                   | Vitest + Playwright        | Unit testing and E2E browser testing             |
-| Version Control           | GitHub / GitLab            | Source code repository and team collaboration    |
-| Infrastructure / Deploy   | Vercel                     | Automated production builds and global hosting   |
-| Observability (Errors)    | Sentry                     | Live exception capture and performance tracing   |
-| Observability (Analytics) | PostHog                    | Product analytics, flags, and session replays    |
-
----
-
-## 📁 Project Structure
+## Repository layout
 
 ```text
-hackathon-cs/
-├── android/                    # Capacitor Android project files
-├── tests/                      # Unified test suites
-│   ├── e2e/                    # Playwright end-to-end specs
-│   ├── src/                    # Vitest unit tests mirroring source layout
-│   └── supabase/               # Supabase function tests
-├── public/                     # Static assets
-├── scripts/                    # Utility scripts (AI evaluation, benchmark, i18n extraction)
-├── src/
-│   ├── components/             # React components
-│   │   ├── ui/                 # shadcn/ui primitives
-│   │   ├── AppTour.tsx         # First-login onboarding walkthrough
-│   │   ├── BackButtonHandler.tsx # Android back-button handling
-│   │   ├── BottomNav.tsx       # Mobile bottom tab navigation
-│   │   ├── BuyerAuthModal.tsx  # Buyer order auth modal
-│   │   ├── ErrorBoundary.tsx   # React error boundary
-│   │   ├── FeedbackModal.tsx   # User feedback form
-│   │   ├── InventoryEditor.tsx # Bulk stock editor
-│   │   ├── LanguageSwitcher.tsx
-│   │   ├── NetworkStrengthIndicator.tsx
-│   │   ├── OfflineBanner.tsx   # Network status banner
-│   │   ├── OrderConfirmation.tsx
-│   │   ├── Orders.tsx
-│   │   ├── ProductCard.tsx
-│   │   ├── ProtectedRoute.tsx  # RBAC route guard
-│   │   ├── ReviewCard.tsx      # HITL review card
-│   │   ├── StoreSettings.tsx
-│   │   ├── StoreSetup.tsx
-│   │   ├── ThemeProvider.tsx / ThemeToggle.tsx
-│   │   ├── UploadZone.tsx      # Multi-file upload with compression
-│   ├── hooks/                  # Custom React hooks
-│   │   ├── useAuth.tsx         # Supabase Auth wrapper
-│   │   ├── useSeller.tsx       # Seller data CRUD (5 entities)
-│   │   ├── useNetworkStrength.tsx # Online/offline + connection type
-│   │   ├── useTeluguTyping.tsx # Telugu keyboard input helper
-│   │   ├── useWelcomeTour.ts   # App tour state
-│   │   ├── use-mobile.tsx      # Mobile detection
-│   │   └── use-toast.ts        # Toast notifications
-│   ├── integrations/supabase/  # Typed Supabase client
-│   ├── lib/                    # Utilities
-│   │   ├── analytics.ts        # PostHog analytics wrapper
-│   │   ├── constants.ts
-│   │   ├── supabase.ts         # Supabase client
-│   │   ├── teluguKeyboard.ts   # Telugu input layout
-│   │   ├── utils.ts            # Image compression, helpers
-│   │   └── *.test.ts           # Co-located tests
-│   ├── locales/en|hi|te/       # i18n translation JSON (800+ keys)
-│   ├── pages/                  # Route pages
-│   │   ├── Index.tsx           # Landing page
-│   │   ├── Auth.tsx            # Login / Sign-up with role picker
-│   │   ├── Dashboard.tsx       # Seller dashboard
-│   │   ├── Admin.tsx           # Admin dashboard
-│   │   ├── BuyerDashboard.tsx  # Buyer dashboard
-│   │   ├── Storefront.tsx      # Public storefront
-│   │   ├── TrackOrder.tsx      # Order tracking
-│   │   ├── ResetPassword.tsx   # Password reset
-│   │   ├── NotFound.tsx        # 404 page
-│   │   └── *.test.tsx          # Co-located tests
-│   ├── test/setup.ts           # Vitest setup
-│   ├── App.tsx                 # Root app with routing & providers
-│   ├── i18n.ts                 # i18n configuration
-│   ├── main.tsx                # Entry point
-│   └── index.css               # Global styles & Tailwind directives
-├── supabase/
-│   ├── functions/              # Edge functions
-│   │   ├── digitize/           # AI product extraction (Gemini 2.5 Flash)
-│   │   ├── order-notifications/# Order status notifications
-│   │   └── whatsapp-agent/     # WhatsApp AI sales agent
-│   ├── migrations/             # SQL migrations (RBAC, stock, realtime, etc.)
-│   └── config.toml             # Supabase project config
-├── docs/                       # Documentation
-│   ├── api.md                  # API endpoint reference
-│   ├── futureplans.md          # WhatsApp AI Sales Agent — future scope
-│   └── rp1.md                  # Initial project evaluation
-├── package.json
-├── capacitor.config.ts
-├── playwright.config.ts
-├── tailwind.config.ts
-├── vite.config.ts
-├── vitest.config.ts
-├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
-└── .env.example                # Environment variables template
+apps/
+  api/                 Express API, Prisma schema/migrations, seed, API tests
+  web/                 React/Vite app, UI tests, translations
+packages/
+  config/              Shared TypeScript configuration
+  shared/              Shared validation schemas and types
+android/               Android project shell
+ai-eval/               AI evaluation fixtures and generated local results
+docs/                  Development and operational guides
+Planning/              Product requirements and design context
+specs/                 Current feature specifications
 ```
 
----
+## Requirements
 
-## 🗄️ Database Schema
-
-The schema powered by Supabase PostgreSQL includes:
-
-- `profiles` / `sellers`: RBAC user definitions (admin/seller/buyer roles), store information, banner & theme customization, seller verification.
-- `products`: Catalog with size variants, stock & low-stock threshold, AI-generated tags, and pricing. Color-coded stock badges.
-- `orders`: Realtime order tracking with unit price, status transitions (pending→confirmed→completed/cancelled), automatic stock decrement on confirmation.
-- `feedback`: Customer and seller support requests with Admin response tracking.
-- `files`: Uploaded image records linked to AI generation jobs.
-- `whatsapp_conversations`: JSONB-based conversation memory for WhatsApp bot interactions.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** ≥ 18 — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-- **npm** (comes with Node.js) or **bun**
-- A **Supabase** project (for auth, database, storage & edge functions)
-- A **Gemini API Key** from Google AI Studio.
-
-### 1. Clone the repository
+- Node.js 26 (see `.nvmrc`)
+- pnpm 11.28.5 through Corepack
+- PostgreSQL 16 or a compatible PostgreSQL service
 
 ```bash
-git clone <YOUR_GIT_URL>
-cd hackathon-cs
+corepack enable
+corepack prepare pnpm@11.28.5 --activate
 ```
 
-### 2. Install dependencies
+## Local setup
 
-```bash
-npm install
-```
+1. Install dependencies and copy the environment templates:
 
-### 3. Configure environment variables
+   ```bash
+   pnpm install
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env
+   ```
 
-Copy `.env.example` to your local environment configuration and update the values with your Supabase credentials.
+2. Set `DATABASE_URL` and `DIRECT_URL` in `apps/api/.env`. Set a local-only `ADMIN_PASSWORD` before seeding. Configure `VITE_GOOGLE_CLIENT_ID` in the web environment if you want Google sign-in.
 
-Required variables:
+3. Generate the Prisma client, apply the development migration, seed local data, and start both apps:
 
-```bash
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-```
+   ```bash
+   pnpm --filter @snapshop/api db:generate
+   pnpm --filter @snapshop/api db:migrate
+   pnpm --filter @snapshop/api db:seed
+   pnpm dev
+   ```
 
-### 4. Backend & Database Setup (Supabase CLI)
+   Seeding is blocked when `NODE_ENV=production`. It creates an administrator using `ADMIN_EMAIL` and `ADMIN_PASSWORD`, plus local demo seller, buyer, and volunteer accounts. Those demo accounts use the development-only password `Password123!`; never deploy seeded demo accounts.
 
-1. Install the CLI: `npm install -g supabase`
-2. Login & Link: `supabase login` and `supabase link --project-ref <your-project-id>`
-3. Push migrations: `supabase db push`
-4. Deploy edge functions: `supabase functions deploy`
-5. Set Gemini API key: `supabase secrets set LOVABLE_API_KEY=your_key`
+The optional Docker Compose stack starts PostgreSQL and MinIO. The API defaults to local file storage and console email. Configure its S3 settings to use MinIO. Docker is optional when you already have PostgreSQL.
 
-### 5. Start the development server
+| Service       | URL                                |
+| ------------- | ---------------------------------- |
+| Web app       | http://localhost:8080              |
+| API           | http://localhost:4000              |
+| API health    | http://localhost:4000/health       |
+| API readiness | http://localhost:4000/ready        |
+| API docs      | http://localhost:4000/docs         |
+| OpenAPI JSON  | http://localhost:4000/openapi.json |
 
-```bash
-npm run dev
-```
+## Common commands
 
-The app will be available at `http://localhost:5173`.
+| Command             | Description                        |
+| ------------------- | ---------------------------------- |
+| `pnpm dev`          | Start the web app and API          |
+| `pnpm build`        | Build the workspaces               |
+| `pnpm typecheck`    | Type-check configured workspaces   |
+| `pnpm lint`         | Run the configured web ESLint task |
+| `pnpm test`         | Run API and web Vitest suites      |
+| `pnpm format:check` | Check Prettier formatting          |
+| `pnpm db:generate`  | Generate the Prisma client         |
+| `pnpm db:migrate`   | Run local development migrations   |
+| `pnpm db:studio`    | Open Prisma Studio                 |
 
----
+See [Local development](docs/development.md) for environment details and [Contributing](CONTRIBUTING.md) for the pull request workflow. Buyer and seller guides are in [USER_MANUAL_BUYER.md](USER_MANUAL_BUYER.md) and [USER_MANUAL_SELLER.md](USER_MANUAL_SELLER.md).
 
-## 📜 Available Scripts
+## API
 
-| Command                | Description                                                 |
-| ---------------------- | ----------------------------------------------------------- |
-| `npm run dev`          | Start Vite dev server with HMR                              |
-| `npm run build`        | Production web build                                        |
-| `npm run validate`     | Run linting, type-check, and unit tests                     |
-| `npm run test`         | Run unit tests with Vitest                                  |
-| `npm run test:watch`   | Run unit tests in watch mode                                |
-| `npm run evaluate-ai`  | Run the AI evaluation benchmark script                      |
-| `npm run benchmark`    | Run performance benchmarks (compression, latency, pipeline) |
-| `npm run i18n:scan`    | Scan for missing translation keys                           |
-| `npx playwright test`  | Run Playwright E2E tests                                    |
-| `npx cap sync android` | Sync Capacitor Android build                                |
+The API is mounted at `/api/v1`. It provides authentication, seller and product management, carts, orders, file uploads, AI digitization, messaging webhooks, feedback, analytics, and administration. Swagger UI at `/docs` and the OpenAPI document at `/openapi.json` are generated from the API source.
 
----
+## Environment and deployment
 
-## 🧪 Testing & Evaluation
+The checked-in `.env.example` files are local examples. Never commit real credentials. Configure external credentials only for the features you enable, such as Google OAuth, AI services, object storage, messaging, and email. Web `VITE_*` values are bundled into client code and must never contain server secrets.
 
-- **Unit Testing (Vitest)**: Co-located tests for components, hooks, utils (compressImage, useSeller, edge function parsing, i18n coverage). Over 20 test files across the project.
-- **Coverage**: The current Vitest suite provides comprehensive coverage for all core business logic, hooks, and utility functions.
-- **E2E Testing (Playwright)**: 4 spec files covering Auth, Upload, Storefront, and i18n flows (`npx playwright test`).
-- **AI Benchmarking**: `scripts/evaluate-ai.ts` measures Gemini extraction accuracy across categories, price, and tags (80% category accuracy achieved).
-- **Performance Benchmarking**: `scripts/benchmark.ts` measures compression ratio, upload latency, AI processing time (P50/P95), and full pipeline time vs manual entry.
-- **CI/CD**: The GitLab CI/CD pipeline is green and passing.
-
----
-
-## 🌐 Routes
-
-| Path                    | Page              | Access                |
-| ----------------------- | ----------------- | --------------------- |
-| `/`                     | Landing page      | Public                |
-| `/auth`                 | Login / Sign-up   | Public                |
-| `/dashboard`            | Seller dashboard  | 🔒 Protected (Seller) |
-| `/admin`                | Admin dashboard   | 🔒 Protected (Admin)  |
-| `/buyer`                | Buyer dashboard   | 🔒 Protected (Buyer)  |
-| `/store/:slug`          | Public storefront | Public                |
-| `/track-order/:orderId` | Track orders      | 🔒 Protected (Buyer)  |
-| `/reset-password`       | Password reset    | Public                |
-| `*`                     | 404 Not Found     | Public                |
-
----
-
-## 🛍️ Storefront Buyer Flow
-
-The buyer flow on the public storefront is:
-
-1. Browse products on `/store/:slug` with stock status badges
-2. Click "Order Now" → BuyerAuthModal (name + phone or sign-in)
-3. Place order → OrderConfirmation modal with order details
-4. Seller receives realtime notification in Dashboard Orders tab
-5. Seller confirms order → stock decrements automatically
-6. Buyer can track order status on `/track-order/:orderId`
-7. Buyers can contact the seller directly on WhatsApp from the product card
-
----
-
-## 🤖 AI Digitization Flow
-
-1. Seller uploads a product image via the **UploadZone** component
-2. **Frontend Compression**: Large images are automatically compressed to ~100KB in the browser
-3. Image is stored in **Supabase Storage**
-4. The `digitize` **Supabase Edge Function** is invoked (JWT-protected, rate-limited)
-5. The function sends the image to **Google Gemini 2.5 Flash** for analysis
-6. AI output is validated with **Zod schema** — auto-retries up to 3 times on malformed JSON
-7. Non-clothing images are detected and rejected gracefully
-8. AI returns structured JSON: `title`, `description`, `price`, `category`, `tags`
-9. **HITL Review Card** appears — seller can edit fields before approving
-10. On approval, product is saved to the `products` table and appears in the seller's catalog
-
----
-
-## 📱 Mobile (Android)
-
-SnapShop AI includes a Capacitor setup for generating native Android apps.
-To build and sync for Android:
-
-```bash
-npx cap sync android
-npx cap open android
-```
-
----
-
-## 🌍 Internationalization
-
-SnapShop AI provides **100% localization support** for three languages across the entire user interface, ensuring a seamless experience for diverse users:
-
-- **English** (`en`) — Default international interface.
-- **Hindi (हिन्दी)** (`hi`) — Natural translations for North Indian retailers.
-- **Telugu (తెలుగు)** (`te`) — Natural translations for South Indian retailers.
-
-**Implementation Details:**
-
-- **Dynamic Switching**: Users can instantly toggle languages using the **LanguageSwitcher** in the navbar.
-- **Full Coverage**: Every label, placeholder, toast notification, and instruction is localized (800+ keys per language).
-- **Logic Integrity**: Technical strings, CSS classes, and internal logic remain in English to ensure system stability while the UI adapts.
-- **Persistence**: Language preferences are saved in `localStorage`, maintaining the user's choice across sessions.
-- **AI Integration**: The AI digitization pipeline can interpret and generate content in the user's preferred language.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions to SnapShop AI! Whether you're fixing a bug, adding a feature, or improving documentation, please check out our [Contributing Guidelines](CONTRIBUTING.md) to get started.
-
----
-
-## 📄 License
-
-This project is licensed under the **GNU Affero General Public License (AGPL) v3**. See the [LICENSE](LICENSE) file for the full license text.
-.
-
----
-
-> _Built with ❤️ for local businesses_
-
-## Contributors
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-
-## Contributors
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+GitHub Actions runs the repository's CI workflow. Production deployments need a PostgreSQL database, production JWT secrets, a public object storage configuration, the required provider credentials, and separate web/API hosting configuration. The Android directory is a shell; this workspace does not currently define native build scripts.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Licensed under the GNU Affero General Public License v3. See [LICENSE](LICENSE).

@@ -1,48 +1,24 @@
-# [PROJECT_NAME] Constitution
+# SnapShop AI engineering principles
 
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+## Architecture
 
-## Core Principles
+- Keep web, API, and shared packages as distinct workspace projects.
+- Treat the Express API as the only browser-facing data boundary.
+- Keep the Prisma schema and migrations as the source of truth for the active database.
+- Share contracts and validation schemas only when both workspaces need them.
 
-### [PRINCIPLE_1_NAME]
+## Security and data
 
-<!-- Example: I. Library-First -->
+- Enforce authentication, authorization, validation, and tenant scoping in the API.
+- Keep secrets server-side and out of version control.
+- Treat seed data and credentials as development-only.
+- Make data changes explicit, reviewable, and covered by migrations.
 
-[PRINCIPLE_1_DESCRIPTION]
+## Maintainability
 
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
-
-### [PRINCIPLE_2_NAME]
-
-<!-- Example: II. CLI Interface -->
-
-[PRINCIPLE_2_DESCRIPTION]
-
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
-
-### [PRINCIPLE_3_NAME]
-
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-
-[PRINCIPLE_3_DESCRIPTION]
-
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
-
-### [PRINCIPLE_4_NAME]
-
-<!-- Example: IV. Integration Testing -->
-
-[PRINCIPLE_4_DESCRIPTION]
-
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
-
-### [PRINCIPLE_5_NAME]
-
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-
-[PRINCIPLE_5_DESCRIPTION]
-
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- Group code by product domain and keep dependencies flowing toward shared contracts.
+- Keep documentation aligned with the implemented behavior.
+- Run relevant formatting, lint, typecheck, build, and regression checks before merging.
 
 ## [SECTION_2_NAME]
 
