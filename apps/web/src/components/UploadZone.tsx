@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useCallback, useEffect, useRef, useReducer } from 'react';
+import { apiClient } from '@/lib/apiClient';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -149,24 +150,41 @@ export default function UploadZone({
 
   const handleApproveReview = useCallback(
     async (product: AIProduct, imageUrl: string, fileId: string) => {
-      const { error } = await supabase.from('products').insert({
-        seller_id: sellerId,
-        title: product.title,
-        description: product.description,
-        price: product.price,
-        category: product.category,
-        tags: product.tags || [],
-        image_url: imageUrl,
-        size: product.size || null,
-        discount_percent: product.discount_percent || 0,
-      });
-      if (error) {
-        toast({
-          title: 'Error',
-          description: `Failed to save product: ${error.message}`,
-          variant: 'destructive',
+      let saved = false;
+      try {
+        await apiClient.post('/products', {
+          title: product.title,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          tags: product.tags || [],
+          imageUrl,
         });
-      } else {
+        saved = true;
+      } catch {
+        const { error } = await supabase.from('products').insert({
+          seller_id: sellerId,
+          title: product.title,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          tags: product.tags || [],
+          image_url: imageUrl,
+          size: product.size || null,
+          discount_percent: product.discount_percent || 0,
+        });
+        if (error) {
+          toast({
+            title: 'Error',
+            description: `Failed to save product: ${error.message}`,
+            variant: 'destructive',
+          });
+          return;
+        }
+        saved = true;
+      }
+
+      if (saved) {
         dispatch({ type: 'APPROVE_REVIEW', payload: fileId });
         if (pendingReviews.length === 1) {
           dispatch({ type: 'SET_STEP', payload: 'complete' });

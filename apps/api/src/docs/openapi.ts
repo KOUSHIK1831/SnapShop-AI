@@ -206,6 +206,35 @@ export const openApiSpec = {
         },
       },
     },
+    '/admin/users/{id}/block': {
+      patch: {
+        summary: 'Block or unblock user access',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': { description: 'User block status updated' },
+          '403': { description: 'Admin role required' },
+        },
+      },
+    },
+    '/admin/sellers/{id}/status': {
+      patch: {
+        summary: 'Update seller status (active, suspended, blocked)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': { description: 'Seller status updated' },
+          '403': { description: 'Admin role required' },
+        },
+      },
+    },
+    '/analytics/seller': {
+      get: {
+        summary: 'Retrieve seller sales metrics, revenue, and daily trends',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': { description: 'Analytics data' },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {

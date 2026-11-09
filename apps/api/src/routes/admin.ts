@@ -29,7 +29,7 @@ adminRouter.get('/overview', async (_req, res) => {
         id: true,
         email: true,
         role: true,
-        status: true,
+        isBlocked: true,
         name: true,
         createdAt: true,
       },
@@ -67,7 +67,8 @@ adminRouter.get('/overview', async (_req, res) => {
     id: u.id,
     email: u.email,
     role: u.role,
-    status: u.status,
+    status: u.isBlocked ? 'blocked' : 'active',
+    is_blocked: u.isBlocked,
     full_name: u.name,
     created_at: u.createdAt.toISOString(),
   }));
@@ -172,7 +173,7 @@ adminRouter.patch(
     const { status, feedback } = req.valid.body;
 
     const seller = await prisma.seller.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         verificationStatus: status,
         adminFeedback: feedback ?? null,
@@ -203,7 +204,7 @@ adminRouter.patch(
   validate({ body: limitBody }),
   async (req, res) => {
     const seller = await prisma.seller.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { aiDailyLimit: req.valid.body.limit },
     });
     res.json({ seller });
@@ -213,7 +214,7 @@ adminRouter.patch(
 // ── DELETE /admin/products/:id — Remove product ───────────────────────────
 adminRouter.delete('/products/:id', async (req, res) => {
   await prisma.product.delete({
-    where: { id: req.params.id },
+    where: { id: req.params.id as string },
   });
 
   await prisma.auditLog.create({
@@ -221,7 +222,7 @@ adminRouter.delete('/products/:id', async (req, res) => {
       actorId: req.actor!.id,
       action: 'product.delete',
       entity: 'product',
-      entityId: req.params.id,
+      entityId: req.params.id as string,
     },
   });
 
@@ -261,3 +262,86 @@ adminRouter.get('/documents/signed-url', async (req, res) => {
   const url = storage.publicUrl(key);
   res.json({ url });
 });
+
+// ── User block / unblock ──────────────────────────────────────────────────
+const blockUserBody = z.object({
+  blocked: z.boolean(),
+});
+
+adminRouter.patch(
+  '/users/:id/block',
+  validate({ body: blockUserBody }),
+  async (req, res) => {
+    const { blocked } = req.valid.body;
+    const userId = req.params.id as string;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { isBlocked: blocked },
+    });
+
+    const seller = await prisma.seller.findUnique({
+      where: { userId },
+    });
+
+    if (seller) {
+      await prisma.seller.update({
+        where: { id: seller.id },
+        data: { status: blocked ? 'blocked' : 'active' },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.actor!.id,
+        action: blocked ? 'user.block' : 'user.unblock',
+        entity: 'user',
+        entityId: user.id,
+      },
+    });
+
+    const io = req.app.get('io');
+    if (io && blocked) {
+      io.to(`user:${user.id}`).emit('user:blocked', { userId: user.id });
+    }
+
+    res.json({ user });
+  },
+);
+
+// ── Seller store status ───────────────────────────────────────────────────
+const sellerStatusBody = z.object({
+  status: z.enum(['active', 'blocked']),
+});
+
+adminRouter.patch(
+  '/sellers/:id/status',
+  validate({ body: sellerStatusBody }),
+  async (req, res) => {
+    const { status } = req.valid.body;
+    const sellerId = req.params.id as string;
+
+    const seller = await prisma.seller.update({
+      where: { id: sellerId },
+      data: { status },
+      include: { user: true },
+    });
+
+    const isBlocked = status === 'blocked';
+    await prisma.user.update({
+      where: { id: seller.userId },
+      data: { isBlocked },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.actor!.id,
+        action: `seller.status.${status}`,
+        entity: 'seller',
+        entityId: seller.id,
+      },
+    });
+
+    res.json({ seller });
+  },
+);

@@ -313,6 +313,18 @@ export default function Admin() {
     }
 
     try {
+      const res = await apiClient.get<{ url: string }>(
+        `/admin/documents/signed-url?key=${encodeURIComponent(url)}`,
+      );
+      if (res?.url) {
+        window.open(res.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    } catch {
+      // fallback
+    }
+
+    try {
       const { data, error } = await supabase.storage
         .from('seller-proofs')
         .createSignedUrl(url, 3600);
@@ -372,21 +384,29 @@ export default function Admin() {
     status: string,
     admin_response?: string,
   ) => {
-    const updateData: { status: string; admin_response?: string } = { status };
-    if (admin_response !== undefined)
-      updateData.admin_response = admin_response;
-
-    const { error } = await supabase
-      .from('feedback')
-      .update(updateData)
-      .eq('id', id);
-    if (error) {
-      toast({
-        title: t('admin.toasts.updateFailed'),
-        description: error.message,
-        variant: 'destructive',
+    try {
+      await apiClient.post(`/admin/feedback/${id}/respond`, {
+        response: admin_response || `Status updated to ${status}`,
       });
-      throw error;
+    } catch {
+      const updateData: { status: string; admin_response?: string } = {
+        status,
+      };
+      if (admin_response !== undefined)
+        updateData.admin_response = admin_response;
+
+      const { error } = await supabase
+        .from('feedback')
+        .update(updateData)
+        .eq('id', id);
+      if (error) {
+        toast({
+          title: t('admin.toasts.updateFailed'),
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
     }
     dispatch({
       type: 'UPDATE_FEEDBACK',
@@ -401,14 +421,17 @@ export default function Admin() {
 
   const deleteFeedback = async (id: string) => {
     if (!confirm(t('admin.confirm.deleteFeedback'))) return;
-    const { error } = await supabase.from('feedback').delete().eq('id', id);
-    if (!error) {
-      dispatch({
-        type: 'UPDATE_FEEDBACK',
-        payload: state.feedback.filter(f => f.id !== id),
-      });
-      toast({ title: t('admin.toasts.feedbackDeleted') });
+    try {
+      await apiClient.delete(`/admin/feedback/${id}`);
+    } catch {
+      const { error } = await supabase.from('feedback').delete().eq('id', id);
+      if (error) return;
     }
+    dispatch({
+      type: 'UPDATE_FEEDBACK',
+      payload: state.feedback.filter(f => f.id !== id),
+    });
+    toast({ title: t('admin.toasts.feedbackDeleted') });
   };
 
   const fetchSellerDetails = async (seller: Seller) => {
@@ -436,19 +459,22 @@ export default function Admin() {
 
   const deleteProduct = async (id: string) => {
     if (!confirm(t('admin.confirm.deleteProduct'))) return;
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (!error) {
-      dispatch({
-        type: 'SET_SELECTED_SELLER',
-        payload: {
-          seller: state.selectedSeller,
-          products: state.sellerProducts.filter(p => p.id !== id),
-          orders: state.sellerOrders,
-        },
-      });
-      fetchGlobalStats();
-      toast({ title: t('admin.toasts.productDeleted') });
+    try {
+      await apiClient.delete(`/admin/products/${id}`);
+    } catch {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) return;
     }
+    dispatch({
+      type: 'SET_SELECTED_SELLER',
+      payload: {
+        seller: state.selectedSeller,
+        products: state.sellerProducts.filter(p => p.id !== id),
+        orders: state.sellerOrders,
+      },
+    });
+    fetchGlobalStats();
+    toast({ title: t('admin.toasts.productDeleted') });
   };
 
   const toggleSellerStatus = async (seller: Seller) => {
@@ -462,50 +488,56 @@ export default function Admin() {
       )
     )
       return;
-    const { error } = await supabase
-      .from('sellers')
-      .update({ status: newStatus })
-      .eq('id', seller.id);
-    if (!error) {
+
+    try {
+      await apiClient.patch(`/admin/sellers/${seller.id}/status`, {
+        status: newStatus === 'blocked' ? 'blocked' : 'active',
+      });
+    } catch {
+      const { error } = await supabase
+        .from('sellers')
+        .update({ status: newStatus })
+        .eq('id', seller.id);
+      if (error) return;
       // Synchronize with profiles table
       await supabase
         .from('profiles')
         .update({ is_blocked: newStatus === 'blocked' })
         .eq('id', seller.user_id);
-
-      const updated = { ...seller, status: newStatus as any };
-      dispatch({
-        type: 'SET_SELECTED_SELLER',
-        payload: {
-          seller: updated,
-          products: state.sellerProducts,
-          orders: state.sellerOrders,
-        },
-      });
-      dispatch({
-        type: 'UPDATE_SELLERS',
-        payload: state.sellers.map(s => (s.id === seller.id ? updated : s)),
-      });
-
-      // Also update profiles in state if they are loaded
-      dispatch({
-        type: 'UPDATE_PROFILES',
-        payload: state.profiles.map(p =>
-          p.id === seller.user_id
-            ? { ...p, is_blocked: newStatus === 'blocked' }
-            : p,
-        ),
-      });
-
-      toast({
-        title:
-          newStatus === 'blocked'
-            ? t('admin.toasts.storeBlocked')
-            : t('admin.toasts.storeUnblocked'),
-        variant:
-          newStatus === 'blocked' ? t('auto.destructive') : t('auto.default'),
-      });
     }
+
+    const updated = { ...seller, status: newStatus as any };
+    dispatch({
+      type: 'SET_SELECTED_SELLER',
+      payload: {
+        seller: updated,
+        products: state.sellerProducts,
+        orders: state.sellerOrders,
+      },
+    });
+    dispatch({
+      type: 'UPDATE_SELLERS',
+      payload: state.sellers.map(s => (s.id === seller.id ? updated : s)),
+    });
+
+    // Also update profiles in state if they are loaded
+    dispatch({
+      type: 'UPDATE_PROFILES',
+      payload: state.profiles.map(p =>
+        p.id === seller.user_id
+          ? { ...p, is_blocked: newStatus === 'blocked' }
+          : p,
+      ),
+    });
+
+    toast({
+      title:
+        newStatus === 'blocked'
+          ? t('admin.toasts.storeBlocked')
+          : t('admin.toasts.storeUnblocked'),
+      variant:
+        newStatus === 'blocked' ? t('auto.destructive') : t('auto.default'),
+    });
   };
 
   const toggleUserBlock = async (profile: Profile) => {
@@ -518,11 +550,17 @@ export default function Admin() {
       )
     )
       return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_blocked: isBlocking })
-      .eq('id', profile.id);
-    if (!error) {
+
+    try {
+      await apiClient.patch(`/admin/users/${profile.id}/block`, {
+        blocked: isBlocking,
+      });
+    } catch {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_blocked: isBlocking })
+        .eq('id', profile.id);
+      if (error) return;
       // If user is a seller, also update their seller status
       if (profile.role === 'seller') {
         await supabase
@@ -531,34 +569,35 @@ export default function Admin() {
             status: isBlocking ? t('auto.blocked_581') : t('auto.active'),
           })
           .eq('user_id', profile.id);
-
-        // Update sellers in state if they are loaded
-        dispatch({
-          type: 'UPDATE_SELLERS',
-          payload: state.sellers.map(s =>
-            s.user_id === profile.id
-              ? {
-                  ...s,
-                  status: isBlocking ? t('auto.blocked_581') : t('auto.active'),
-                }
-              : s,
-          ),
-        });
       }
+    }
 
+    if (profile.role === 'seller') {
       dispatch({
-        type: 'UPDATE_PROFILES',
-        payload: state.profiles.map(p =>
-          p.id === profile.id ? { ...p, is_blocked: isBlocking } : p,
+        type: 'UPDATE_SELLERS',
+        payload: state.sellers.map(s =>
+          s.user_id === profile.id
+            ? {
+                ...s,
+                status: isBlocking ? t('auto.blocked_581') : t('auto.active'),
+              }
+            : s,
         ),
       });
-      toast({
-        title: profile.is_blocked
-          ? t('admin.toasts.userUnblocked')
-          : t('admin.toasts.userBlocked'),
-        variant: profile.is_blocked ? t('auto.default') : t('auto.destructive'),
-      });
     }
+
+    dispatch({
+      type: 'UPDATE_PROFILES',
+      payload: state.profiles.map(p =>
+        p.id === profile.id ? { ...p, is_blocked: isBlocking } : p,
+      ),
+    });
+    toast({
+      title: profile.is_blocked
+        ? t('admin.toasts.userUnblocked')
+        : t('admin.toasts.userBlocked'),
+      variant: profile.is_blocked ? t('auto.default') : t('auto.destructive'),
+    });
   };
 
   const updateVerificationStatus = async (
@@ -566,26 +605,34 @@ export default function Admin() {
     status: 'approved' | 'rejected',
     feedback?: string,
   ) => {
-    const { error } = await supabase
-      .from('sellers')
-      .update({
-        verification_status: status,
-        admin_feedback: feedback || null,
-      })
-      .eq('id', sellerId);
+    try {
+      await apiClient.patch(`/admin/sellers/${sellerId}/verify`, {
+        status,
+        feedback,
+      });
+    } catch {
+      const { error } = await supabase
+        .from('sellers')
+        .update({
+          verification_status: status,
+          admin_feedback: feedback || null,
+        })
+        .eq('id', sellerId);
 
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: `Seller ${status === 'approved' ? t('auto.approved') : t('auto.rejected')}`,
-      });
-      fetchGlobalStats();
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+
+    toast({
+      title: `Seller ${status === 'approved' ? t('auto.approved') : t('auto.rejected')}`,
+    });
+    fetchGlobalStats();
   };
 
   const filteredSellers = useMemo(
@@ -1307,20 +1354,28 @@ function SellerDetails({
 
   const handleUpdateLimit = async () => {
     setUpdatingLimit(true);
-    const { error } = await supabase
-      .from('sellers')
-      .update({ ai_daily_limit: parseInt(newAiLimit) })
-      .eq('id', seller.id);
-
-    setUpdatingLimit(false);
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
+    try {
+      await apiClient.patch(`/admin/sellers/${seller.id}/limit`, {
+        limit: parseInt(newAiLimit),
       });
-    } else {
       toast({ title: 'Limit updated successfully' });
+    } catch {
+      const { error } = await supabase
+        .from('sellers')
+        .update({ ai_daily_limit: parseInt(newAiLimit) })
+        .eq('id', seller.id);
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Limit updated successfully' });
+      }
+    } finally {
+      setUpdatingLimit(false);
     }
   };
 
