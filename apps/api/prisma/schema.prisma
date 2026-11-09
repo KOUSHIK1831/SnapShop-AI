@@ -1,0 +1,431 @@
+// SnapShop AI — Prisma schema
+// Postgres 16 (Neon free tier in development and production).
+// Authorization is enforced in the API layer (Actor-scoped repositories),
+// not in the database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  admin
+  seller
+  buyer
+  volunteer
+}
+
+enum AuthProvider {
+  email
+  google
+}
+
+enum SellerStatus {
+  active
+  blocked
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ProductStatus {
+  draft
+  active
+  archived
+}
+
+enum FileStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum DeliveryType {
+  courier
+  self_pickup
+}
+
+enum PaymentMethod {
+  cod
+  upi
+}
+
+enum PaymentStatus {
+  pending
+  proof_submitted
+  verified
+  rejected
+  paid
+  refunded
+}
+
+enum OrderStatus {
+  pending
+  accepted
+  confirmed
+  preparing
+  ready_for_dispatch
+  shipped
+  out_for_delivery
+  delivered
+  completed
+  cancelled
+}
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  email         String       @unique
+  passwordHash  String?
+  name          String?
+  phone         String?
+  role          Role?
+  onboarded     Boolean      @default(false)
+  emailVerified Boolean      @default(false)
+  isBlocked     Boolean      @default(false)
+  tokenVersion  Int          @default(0)
+  provider      AuthProvider @default(email)
+  lastLoginAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  seller        Seller?
+  oauthAccounts OAuthAccount[]
+  refreshTokens RefreshToken[]
+  carts         Cart[]
+  orders        Order[]        @relation("buyerOrders")
+  feedback      Feedback[]
+
+  @@index([role])
+}
+
+model OAuthAccount {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  provider       String
+  providerUserId String
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  family    String
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Seller {
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String             @unique @db.Uuid
+  fullName               String?
+  storeName              String?
+  storeSlug              String?            @unique
+  storeDescription       String?
+  storeNumber            String?
+  location               String?
+  phone                  String?
+  contactNumber          String?
+  mapsUrl                String?
+  bannerUrl              String?
+  themeColor             String             @default("#8B5CF6")
+  gstin                  String?
+  registeredBusinessName String?
+  sellerUpiId            String?
+  preferredPaymentMethod String             @default("both")
+  verificationStatus     VerificationStatus @default(pending)
+  verificationDocuments  String[]
+  status                 SellerStatus       @default(active)
+  aiDailyLimit           Int                @default(25)
+  lastSubmittedAt        DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[]
+  orders   Order[]
+  files    StoredFile[]
+  feedback Feedback[]
+
+  @@index([status, verificationStatus])
+}
+
+model Product {
+  id                String        @id @default(uuid()) @db.Uuid
+  sellerId          String        @db.Uuid
+  title             String
+  description       String?
+  price             Decimal       @db.Decimal(10, 2)
+  category          String?
+  tags              String[]
+  stock             Int           @default(0)
+  lowStockThreshold Int           @default(5)
+  status            ProductStatus @default(active)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  seller   Seller           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  variants ProductVariant[]
+  images   ProductImage[]
+  items    OrderItem[]
+
+  @@index([sellerId, status])
+  @@index([category])
+}
+
+model ProductVariant {
+  id            String   @id @default(uuid()) @db.Uuid
+  productId     String   @db.Uuid
+  size          String
+  stock         Int      @default(0)
+  priceOverride Decimal? @db.Decimal(10, 2)
+  sku           String?
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@unique([productId, size])
+  @@index([productId])
+}
+
+model ProductImage {
+  id         String @id @default(uuid()) @db.Uuid
+  productId  String @db.Uuid
+  storageKey String
+  url        String
+  position   Int    @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  cartId    String  @db.Uuid
+  productId String  @db.Uuid
+  variantId String? @db.Uuid
+  quantity  Int     @default(1)
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, productId, variantId])
+  @@index([cartId])
+}
+
+model Order {
+  id                   String        @id @default(uuid()) @db.Uuid
+  orderNumber          String        @unique
+  sellerId             String        @db.Uuid
+  buyerId              String?       @db.Uuid
+  buyerName            String?
+  buyerPhone           String?
+  status               OrderStatus   @default(pending)
+  subtotal             Decimal       @db.Decimal(10, 2)
+  discountPercent      Decimal       @default(0) @db.Decimal(5, 2)
+  total                Decimal       @db.Decimal(10, 2)
+  deliveryAddress      Json?
+  deliveryType         DeliveryType  @default(courier)
+  deliveryPersonName   String?
+  deliveryPersonPhone  String?
+  payMethod            PaymentMethod @default(cod)
+  payStatus            PaymentStatus @default(pending)
+  paymentProofKey      String?
+  trackingNumber       String?
+  trackingProvider     String?
+  trackingToken        String        @unique
+  notes                String?
+  confirmedAt          DateTime?
+  completedAt          DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  seller Seller       @relation(fields: [sellerId], references: [id])
+  buyer  User?        @relation("buyerOrders", fields: [buyerId], references: [id])
+  items  OrderItem[]
+  events OrderEvent[]
+
+  @@index([sellerId, status])
+  @@index([buyerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id            String  @id @default(uuid()) @db.Uuid
+  orderId       String  @db.Uuid
+  productId     String  @db.Uuid
+  variantId     String? @db.Uuid
+  titleSnapshot String
+  priceSnapshot Decimal @db.Decimal(10, 2)
+  sizeSnapshot  String?
+  quantity      Int
+  lineTotal     Decimal @db.Decimal(10, 2)
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+}
+
+model OrderEvent {
+  id         String       @id @default(uuid()) @db.Uuid
+  orderId    String       @db.Uuid
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  actorId    String?      @db.Uuid
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model StoredFile {
+  id         String     @id @default(uuid()) @db.Uuid
+  sellerId   String?    @db.Uuid
+  storageKey String
+  fileType   String?
+  mimeType   String?
+  sizeBytes  Int?
+  status     FileStatus @default(pending)
+  createdAt  DateTime   @default(now())
+
+  seller Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId])
+  @@map("files")
+}
+
+model Feedback {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String?  @db.Uuid
+  sellerId      String?  @db.Uuid
+  message       String
+  rating        Int?
+  adminFeedback String?
+  adminResponse String?
+  createdAt     DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  seller Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId])
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String
+  storeSlug String
+  messages  Json     @default("[]")
+  updatedAt DateTime @updatedAt
+
+  @@unique([phone, storeSlug])
+}
+
+model NotificationLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  entityId  String?
+  email     String?
+  type      String
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model AiUsage {
+  id       String   @id @default(uuid()) @db.Uuid
+  sellerId String   @db.Uuid
+  day      DateTime @db.Date
+  count    Int      @default(0)
+
+  @@unique([sellerId, day])
+}
+
+model AiJob {
+  id        String   @id @default(uuid()) @db.Uuid
+  sellerId  String   @db.Uuid
+  status    String   @default("pending")
+  imageKey  String
+  result    Json?
+  error     String?
+  provider  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId, status])
+}

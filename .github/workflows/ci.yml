@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: ['main', 'feat/**']
+  pull_request:
+    branches: ['main']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: snapshop
+          POSTGRES_PASSWORD: snapshop
+          POSTGRES_DB: snapshop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U snapshop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://snapshop:snapshop@localhost:5432/snapshop_test?schema=public
+      DIRECT_URL: postgresql://snapshop:snapshop@localhost:5432/snapshop_test?schema=public
+      ADMIN_EMAIL: admin@snapshop.local
+      ADMIN_PASSWORD: ChangeMe123!
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @snapshop/api db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Apply migrations
+        run: pnpm --filter @snapshop/api db:deploy
+
+      - name: Seed database
+        run: pnpm --filter @snapshop/api db:seed
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

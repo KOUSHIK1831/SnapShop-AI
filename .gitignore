@@ -38,3 +38,10 @@ report.json
 react-doctor.config.json
 refactor_*.py
 coverage/
+
+# Monorepo / tooling
+.turbo/
+*.tsbuildinfo
+apps/api/.storage/
+apps/api/dist/
+packages/*/dist/

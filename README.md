@@ -6,6 +6,11 @@
 
 Public URL - https://apna-bazar-cs.vercel.app
 
+> **Monorepo migration in progress.** The repository is being split into
+> `apps/web` (React client) and `apps/api` (Express 5 + Prisma). The live app
+> still runs on the Supabase stack while the migration proceeds phase by phase.
+> See [docs/development.md](docs/development.md) for the new local workflow.
+
 ---
 
 ## ✨ Features

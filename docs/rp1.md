@@ -20,14 +20,15 @@
 ## 2. Technical Depth
 
 **Strongest technical aspects:**
-| Component | What is confirmed |
-|---|---|
-| **AI Edge Function** (`supabase/functions/digitize/`) | Gemini 2.5 Flash integration. Multi-modal prompt engineering. Zod-validated output with auto-retry logic and markdown sanitization. |
+
+| Component                                                    | What is confirmed                                                                                                                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AI Edge Function** (`supabase/functions/digitize/`)        | Gemini 2.5 Flash integration. Multi-modal prompt engineering. Zod-validated output with auto-retry logic and markdown sanitization.         |
 | **WhatsApp AI Agent** (`supabase/functions/whatsapp-agent/`) | Anthropic Claude 3.5 Sonnet with Tool-Use (agentic pattern). Handles discovery, ordering, and payments autonomously via WhatsApp Cloud API. |
-| **Order & Stock Engine** (`supabase/migrations/`) | Realtime status tracking, automatic stock decrement on confirmation, multi-size variant support, and automated tracking logs. |
-| **Testing Suite** (`tests/`) | comprehensive coverage for core utilities and hooks via Vitest. 4 Playwright E2E spec files covering critical paths. |
-| **i18n Infrastructure** (`src/locales/`) | 750+ keys across 3 languages with localized routing and language persistence. |
-| **Performance Benchmarks** (`scripts/`) | Dedicated scripts for measuring AI accuracy (80% category accuracy) and pipeline latency (P95 < 8s). |
+| **Order & Stock Engine** (`supabase/migrations/`)            | Realtime status tracking, automatic stock decrement on confirmation, multi-size variant support, and automated tracking logs.               |
+| **Testing Suite** (`tests/`)                                 | comprehensive coverage for core utilities and hooks via Vitest. 4 Playwright E2E spec files covering critical paths.                        |
+| **i18n Infrastructure** (`src/locales/`)                     | 750+ keys across 3 languages with localized routing and language persistence.                                                               |
+| **Performance Benchmarks** (`scripts/`)                      | Dedicated scripts for measuring AI accuracy (80% category accuracy) and pipeline latency (P95 < 8s).                                        |
 
 **AI integration depth:** **Substantial and Agentic.** Unlike typical AI wrappers, this system uses an agentic loop for the WhatsApp sales assistant, allowing it to "call" tools like `get_products` and `place_order` based on conversation context. The digitization pipeline includes a Human-in-the-Loop (HITL) review step to ensure data integrity.
 

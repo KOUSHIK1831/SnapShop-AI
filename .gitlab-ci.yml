@@ -1,33 +1,33 @@
 # SnapShop AI GitLab CI/CD Pipeline
-# Optimized for performance and comprehensive validation
+# GitHub Actions (.github/workflows/ci.yml) is the authoritative pipeline.
+# This mirror keeps the legacy GitLab project green with the pnpm monorepo.
 
 stages:
   - validate
   - test
   - build
 
-# Global cache for npm dependencies
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
-    - .npm/
-    - node_modules/
+    - .pnpm-store/
 
-# Use a specific, stable Node version
-image: node:22-alpine
+image: node:26-alpine
 
 variables:
   NODE_OPTIONS: '--max-old-space-size=3072'
+  PNPM_HOME: /pnpm
 
 before_script:
-  - apk add --no-cache git
-  - npm ci --cache .npm --prefer-offline
+  - corepack enable
+  - corepack prepare pnpm@11.28.5 --activate
+  - pnpm config set store-dir .pnpm-store
+  - pnpm install --frozen-lockfile
 
 lint:
   stage: validate
   script:
-    - echo "Running ESLint..."
-    - npm run lint
+    - pnpm lint
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -35,8 +35,7 @@ lint:
 format:
   stage: validate
   script:
-    - echo "Running Prettier format check..."
-    - npm run format:check
+    - pnpm format:check
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -44,8 +43,7 @@ format:
 type-check:
   stage: validate
   script:
-    - echo "Running TypeScript type checks..."
-    - npm run type-check
+    - pnpm typecheck
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -53,8 +51,7 @@ type-check:
 test:
   stage: test
   script:
-    - echo "Running unit tests..."
-    - npm run test
+    - pnpm test
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -62,15 +59,14 @@ test:
 coverage:
   stage: test
   script:
-    - echo "Running tests with coverage..."
-    - npm run test:coverage
+    - pnpm --filter @snapshop/web test:coverage
   artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
+        path: apps/web/coverage/cobertura-coverage.xml
     paths:
-      - coverage/
+      - apps/web/coverage/
     expire_in: 1 week
   coverage: '/All files[^|]*\|[^|]*\s+([\d.]+)%/'
   rules:
@@ -80,11 +76,11 @@ coverage:
 build:
   stage: build
   script:
-    - echo "Building SnapShop AI production bundle..."
-    - npm run build
+    - pnpm build
   artifacts:
     paths:
-      - dist/
+      - apps/web/dist/
+      - apps/api/dist/
     expire_in: 1 month
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -104,8 +100,7 @@ gitleaks:
 dependency-audit:
   stage: validate
   script:
-    - echo "Running npm audit..."
-    - npm audit --audit-level=high || true
+    - pnpm audit --audit-level high || true
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
