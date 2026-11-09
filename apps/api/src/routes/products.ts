@@ -60,11 +60,9 @@ productsRouter.post(
   requireRole('seller'),
   validate({ body: productBody }),
   async (req, res) => {
-    res
-      .status(201)
-      .json({
-        product: await products.createProduct(req.actor!, req.valid.body),
-      });
+    res.status(201).json({
+      product: await products.createProduct(req.actor!, req.valid.body),
+    });
   },
 );
 

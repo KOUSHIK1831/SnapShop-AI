@@ -182,12 +182,10 @@ describe('Phase 5: Security, RBAC & Hardening Suite', () => {
     });
 
     it('rejects dangerous content-types in file presign', async () => {
-      const res = await request(app)
-        .post('/api/v1/files/presign')
-        .send({
-          filename: 'payload.exe',
-          contentType: 'application/x-msdownload',
-        });
+      const res = await request(app).post('/api/v1/files/presign').send({
+        filename: 'payload.exe',
+        contentType: 'application/x-msdownload',
+      });
       expect(res.status).toBe(401);
     });
   });
