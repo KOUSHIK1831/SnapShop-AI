@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useReducer, useCallback, useMemo } from 'react';
+import { apiClient } from '@/lib/apiClient';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -217,6 +218,27 @@ export default function Admin() {
   const setActiveTab = (tab: string) => setSearchParams({ tab });
 
   const fetchGlobalStats = useCallback(async () => {
+    try {
+      const data = await apiClient.get<any>('/admin/overview');
+      if (data?.sellers) {
+        dispatch({
+          type: 'SET_STATS',
+          payload: {
+            profiles: data.profiles || [],
+            sellers: data.sellers || [],
+            totalProducts: data.totalProducts || 0,
+            totalOrders: data.totalOrders || 0,
+            feedback: data.feedback || [],
+            notificationLogs: data.notificationLogs || [],
+            auditLogs: data.auditLogs || [],
+          },
+        });
+        return;
+      }
+    } catch {
+      // fallback to supabase for tests
+    }
+
     const [
       profilesRes,
       sellersRes,

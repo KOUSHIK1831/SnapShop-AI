@@ -6,6 +6,10 @@ import { ordersRouter } from './orders';
 import { cartRouter } from './cart';
 import { filesRouter } from './files';
 import { feedbackRouter } from './feedback';
+import { aiRouter } from './ai';
+import { whatsappRouter } from './whatsapp';
+import { analyticsRouter } from './analytics';
+import { adminRouter } from './admin';
 
 export const apiRouter = Router();
 
@@ -26,3 +30,7 @@ apiRouter.use('/orders', ordersRouter);
 apiRouter.use('/cart', cartRouter);
 apiRouter.use('/files', filesRouter);
 apiRouter.use('/feedback', feedbackRouter);
+apiRouter.use('/ai', aiRouter);
+apiRouter.use('/whatsapp', whatsappRouter);
+apiRouter.use('/analytics', analyticsRouter);
+apiRouter.use('/admin', adminRouter);

@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { email } from '../email';
+import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 
 const appLink = (path: string) => `${env.APP_URL.replace(/\/$/, '')}${path}`;
@@ -31,11 +32,34 @@ async function safeSend(input: {
   subject: string;
   html: string;
   text: string;
+  entityId?: string;
+  type?: string;
 }): Promise<void> {
   try {
     await email.send(input);
+    await prisma.notificationLog
+      .create({
+        data: {
+          email: input.to,
+          type: input.type || 'email',
+          entityId: input.entityId ?? null,
+          status: 'sent',
+        },
+      })
+      .catch(err => logger.warn({ err }, 'Failed to log notification'));
   } catch (error) {
     logger.error({ err: error, to: input.to }, 'Failed to send email');
+    await prisma.notificationLog
+      .create({
+        data: {
+          email: input.to,
+          type: input.type || 'email',
+          entityId: input.entityId ?? null,
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+      .catch(err => logger.warn({ err }, 'Failed to log notification error'));
   }
 }
 

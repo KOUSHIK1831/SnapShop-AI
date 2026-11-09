@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { PostgrestError } from '@supabase/supabase-js';
 import {
   Dialog,
   DialogContent,
@@ -56,7 +55,7 @@ interface OrdersProps {
     status: Order['status'],
     trackingInfo?: TrackingInfo,
     paymentInfo?: PaymentInfo,
-  ) => Promise<{ error: PostgrestError | Error | null }>;
+  ) => Promise<{ error: Error | null }>;
 }
 
 export default function Orders({ orders, onUpdateStatus }: OrdersProps) {

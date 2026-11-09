@@ -60,6 +60,7 @@ function reducer(state: State, action: Action): State {
 }
 
 export default function ResetPassword() {
+  const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [state, dispatch] = useReducer(reducer, {
     page: 'loading',
     password: '',
@@ -76,6 +77,15 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check for REST API token in query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const queryToken = searchParams.get('token');
+    if (queryToken) {
+      setResetToken(queryToken);
+      dispatch({ type: 'SET_PAGE', payload: 'form' });
+      return;
+    }
+
     // Parse tokens from URL hash (Supabase puts them there for recovery links)
     const hash = window.location.hash.substring(1);
     const params = new URLSearchParams(hash);
@@ -151,7 +161,9 @@ export default function ResetPassword() {
       return;
     }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
-    const { error } = await updatePassword(state.password);
+    const { error } = resetToken
+      ? await updatePassword(state.password, resetToken)
+      : await updatePassword(state.password);
     dispatch({ type: 'SET_SUBMITTING', payload: false });
     if (error) {
       dispatch({ type: 'SET_FIELD', payload: { error: error.message } });

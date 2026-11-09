@@ -34,4 +34,18 @@ describe('health endpoints', () => {
     );
     expect(response.body).toMatchObject({ status: 404, title: 'Not Found' });
   });
+
+  it('GET /openapi.json returns OpenAPI 3.1 schema', async () => {
+    const response = await request(app).get('/openapi.json');
+    expect(response.status).toBe(200);
+    expect(response.body.openapi).toBe('3.1.0');
+    expect(response.body.info.title).toBe('SnapShop AI API');
+  });
+
+  it('GET /docs returns HTML documentation UI', async () => {
+    const response = await request(app).get('/docs');
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.text).toContain('SwaggerUIBundle');
+  });
 });
