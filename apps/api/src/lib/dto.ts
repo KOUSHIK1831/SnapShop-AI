@@ -23,7 +23,75 @@ export const num = (
 export const iso = (value: Date | null | undefined): string | null =>
   value ? value.toISOString() : null;
 
-export function sellerDto(seller: SellerRecord) {
+export function storageKeyForSellerReference(
+  reference: string | null,
+  sellerId: string,
+) {
+  if (!reference) return null;
+  const prefix = `sellers/${sellerId}/`;
+  if (reference.startsWith(prefix)) {
+    const segments = reference.split('/');
+    return segments.every(
+      segment => segment && segment !== '.' && segment !== '..',
+    ) && !reference.includes('\\')
+      ? reference
+      : null;
+  }
+
+  try {
+    const url = new URL(reference);
+    const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
+    const sellerIndex = parts.indexOf('sellers');
+    if (sellerIndex >= 0 && parts[sellerIndex + 1] === sellerId) {
+      const key = parts.slice(sellerIndex).join('/');
+      const segments = key.split('/');
+      return key.startsWith(prefix) &&
+        segments.every(
+          segment => segment && segment !== '.' && segment !== '..',
+        ) &&
+        !key.includes('\\')
+        ? key
+        : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function isStorageReference(reference: string) {
+  if (reference.startsWith('sellers/')) return true;
+  try {
+    return decodeURIComponent(new URL(reference).pathname).includes(
+      '/sellers/',
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function stableStorageReference(
+  reference: string | null | undefined,
+  sellerId: string,
+) {
+  if (!reference) return reference ?? null;
+  if (!isStorageReference(reference)) return reference;
+  return storageKeyForSellerReference(reference, sellerId);
+}
+
+async function privateImageUrl(reference: string | null, sellerId: string) {
+  const key = storageKeyForSellerReference(reference, sellerId);
+  if (key) return (await storage.presignGet(key)).url;
+
+  if (reference && isStorageReference(reference)) return null;
+  // Preserve externally hosted legacy assets; private bucket keys are signed above.
+  return reference;
+}
+
+export async function sellerDto(
+  seller: SellerRecord,
+  options: { includeVerificationDocuments?: boolean } = {},
+) {
   return {
     id: seller.id,
     user_id: seller.userId,
@@ -37,14 +105,16 @@ export function sellerDto(seller: SellerRecord) {
     phone: seller.phone,
     contact_number: seller.contactNumber,
     maps_url: seller.mapsUrl,
-    banner_url: seller.bannerUrl,
+    banner_url: await privateImageUrl(seller.bannerUrl, seller.id),
     theme_color: seller.themeColor,
     gstin: seller.gstin,
     registered_business_name: seller.registeredBusinessName,
     seller_upi_id: seller.sellerUpiId,
     preferred_payment_method: seller.preferredPaymentMethod,
     verification_status: seller.verificationStatus,
-    verification_documents: seller.verificationDocuments,
+    ...(options.includeVerificationDocuments
+      ? { verification_documents: seller.verificationDocuments }
+      : {}),
     admin_feedback: seller.adminFeedback,
     status: seller.status,
     ai_daily_limit: seller.aiDailyLimit,
@@ -66,9 +136,26 @@ export function variantDto(variant: ProductRecord['variants'][number]) {
   };
 }
 
-export function productDto(product: ProductRecord) {
+export async function productDto(product: ProductRecord) {
   const variants = [...product.variants].sort((a, b) =>
     a.size.localeCompare(b.size, undefined, { numeric: true }),
+  );
+
+  const primaryImage = product.images[0];
+  const primaryReference = product.imageUrl ?? primaryImage?.url ?? null;
+  const imageUrl =
+    (await privateImageUrl(primaryReference, product.sellerId)) ?? null;
+  const images = await Promise.all(
+    product.images.map(async image => ({
+      id: image.id,
+      url:
+        (await privateImageUrl(
+          image.storageKey || image.url,
+          product.sellerId,
+        )) ?? image.url,
+      storage_key: image.storageKey,
+      position: image.position,
+    })),
   );
 
   return {
@@ -80,7 +167,7 @@ export function productDto(product: ProductRecord) {
     discount_percent: num(product.discountPercent),
     category: product.category,
     tags: product.tags,
-    image_url: product.imageUrl ?? product.images[0]?.url ?? null,
+    image_url: imageUrl,
     stock: product.stock,
     low_stock_threshold: product.lowStockThreshold,
     status: product.status,
@@ -91,18 +178,13 @@ export function productDto(product: ProductRecord) {
       stock: v.stock,
       price_override: v.priceOverride == null ? null : num(v.priceOverride),
     })),
-    images: product.images.map(image => ({
-      id: image.id,
-      url: image.url,
-      storage_key: image.storageKey,
-      position: image.position,
-    })),
+    images,
     created_at: product.createdAt.toISOString(),
     updated_at: product.updatedAt.toISOString(),
   };
 }
 
-export function orderItemDto(item: OrderRecord['items'][number]) {
+export async function orderItemDto(item: OrderRecord['items'][number]) {
   return {
     id: item.id,
     product_id: item.productId,
@@ -112,22 +194,33 @@ export function orderItemDto(item: OrderRecord['items'][number]) {
     size: item.sizeSnapshot,
     quantity: item.quantity,
     line_total: num(item.lineTotal),
-    image_url: item.product.imageUrl,
+    image_url: await privateImageUrl(
+      item.product.imageUrl,
+      item.product.sellerId,
+    ),
     product: {
       id: item.product.id,
       title: item.product.title,
-      image_url: item.product.imageUrl,
+      image_url: await privateImageUrl(
+        item.product.imageUrl,
+        item.product.sellerId,
+      ),
     },
   };
 }
 
-export function orderDto(
+export async function orderDto(
   order: OrderRecord,
-  options: { includeBuyer?: boolean; includeTrackingToken?: boolean } = {},
+  options: {
+    includeBuyer?: boolean;
+    includeTrackingToken?: boolean;
+    includePaymentProof?: boolean;
+  } = {},
 ) {
-  const items = order.items.map(orderItemDto);
+  const items = await Promise.all(order.items.map(orderItemDto));
   const first = items[0];
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const paymentProofKey = order.paymentProofKey;
 
   return {
     id: order.id,
@@ -146,9 +239,13 @@ export function orderDto(
     delivery_person_phone: order.deliveryPersonPhone,
     pay_method: order.payMethod,
     pay_status: order.payStatus,
-    payment_proof_url: order.paymentProofKey
-      ? storage.publicUrl(order.paymentProofKey)
-      : null,
+    payment_proof_url:
+      options.includePaymentProof !== false &&
+      paymentProofKey !== null &&
+      storageKeyForSellerReference(paymentProofKey, order.sellerId) ===
+        paymentProofKey
+        ? (await storage.presignGet(paymentProofKey)).url
+        : null,
     tracking_provider: order.trackingProvider,
     tracking_number: order.trackingNumber,
     notes: order.notes,

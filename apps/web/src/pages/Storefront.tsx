@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '@/lib/apiClient';
+import { uploadPaymentProof } from '@/lib/upload';
 import { Seller, Product } from '@/hooks/useSeller';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
@@ -226,7 +227,7 @@ function StorefrontContent() {
     address: DeliveryAddress,
     payMethod: 'cod' | 'online',
     onlineType?: 'upi_qr' | 'razorpay',
-    paymentProofUrl?: string,
+    paymentProof?: File,
   ) => {
     const product = pendingProduct;
     if (!product) return;
@@ -302,7 +303,7 @@ function StorefrontContent() {
         payMethod,
         payStatus,
         null,
-        paymentProofUrl,
+        paymentProof,
       );
     } catch (err) {
       console.error(err);
@@ -320,7 +321,7 @@ function StorefrontContent() {
     payMethod: string,
     payStatus: any,
     gatewayId: string | null = null,
-    paymentProofUrl?: string,
+    paymentProof?: File,
   ) => {
     const currentUser = user;
     const uid = currentUser?.id;
@@ -334,30 +335,37 @@ function StorefrontContent() {
       const selectedVariant = product.size_variants?.find(
         (v: any) => v.size === selectedSize,
       );
-      await apiClient.post('/orders', {
-        sellerId: product.seller_id,
-        buyerName:
-          address.name ||
-          currentUser?.name ||
-          currentUser?.email?.split('@')[0] ||
-          'Buyer',
-        buyerPhone: address.phone || currentUser?.phone || '9999999999',
-        deliveryAddress: address,
-        deliveryType: 'courier',
-        payMethod:
-          payMethod === 'online'
-            ? 'online'
-            : payMethod === 'upi'
-              ? 'upi'
-              : 'cod',
-        items: [
-          {
-            productId: product.id,
-            variantId: (selectedVariant as any)?.id,
-            quantity: 1,
-          },
-        ],
-      });
+      const { order } = await apiClient.post<{ order: { id: string } }>(
+        '/orders',
+        {
+          sellerId: product.seller_id,
+          buyerName:
+            address.name ||
+            currentUser?.name ||
+            currentUser?.email?.split('@')[0] ||
+            'Buyer',
+          buyerPhone: address.phone || currentUser?.phone || '9999999999',
+          deliveryAddress: address,
+          deliveryType: 'courier',
+          payMethod:
+            payMethod === 'online'
+              ? 'online'
+              : payMethod === 'upi'
+                ? 'upi'
+                : 'cod',
+          items: [
+            {
+              productId: product.id,
+              variantId: (selectedVariant as any)?.id,
+              quantity: 1,
+            },
+          ],
+        },
+      );
+
+      if (paymentProof) {
+        await uploadPaymentProof(order.id, paymentProof);
+      }
 
       setOrderedProduct(product);
       trackEvent('order_placed', {

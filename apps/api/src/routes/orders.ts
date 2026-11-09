@@ -145,6 +145,32 @@ ordersRouter.get(
   },
 );
 
+ordersRouter.post(
+  '/:id/payment-proof/presign',
+  validate({
+    params: z.object({ id: uuidSchema }),
+    body: z.object({
+      filename: z.string().trim().min(1).max(200),
+      contentType: z
+        .string()
+        .trim()
+        .regex(/^(image\/[a-z0-9.+-]+|application\/pdf)$/i),
+    }),
+  }),
+  async (req, res) => {
+    res
+      .status(201)
+      .json(
+        await orders.presignPaymentProof(
+          req.actor!,
+          req.valid.params.id,
+          req.valid.body.filename,
+          req.valid.body.contentType,
+        ),
+      );
+  },
+);
+
 ordersRouter.patch(
   '/:id/status',
   validate({

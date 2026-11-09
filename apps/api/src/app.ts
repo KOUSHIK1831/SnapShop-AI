@@ -1,16 +1,16 @@
-import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { pinoHttp } from 'pino-http';
-import { corsOrigins, env, isProduction } from './config/env';
+import { corsOrigins, env } from './config/env';
 import { logger } from './lib/logger';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { apiRouter } from './routes';
 import { healthRouter } from './routes/health';
 import { openApiSpec } from './docs/openapi';
+import { localDownloadHandler, localUploadHandler } from './routes/files';
 
 export function createApp() {
   const app = express();
@@ -40,20 +40,34 @@ export function createApp() {
     }),
   );
 
+  const apiRateLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 120,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: req => req.method === 'OPTIONS',
+  });
+
+  // Local-driver signed uploads need the raw body before JSON parsing.
+  if (env.STORAGE_DRIVER === 'local') {
+    app.put(
+      '/api/v1/files/local-upload',
+      apiRateLimiter,
+      express.raw({ type: '*/*', limit: '20mb' }),
+      localUploadHandler,
+    );
+    app.get(
+      '/api/v1/files/local-download',
+      apiRateLimiter,
+      localDownloadHandler,
+    );
+  }
+
   // Webhooks need the raw body and must be mounted before express.json().
-  // (Phase 4: /api/v1/whatsapp/webhook)
 
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(cookieParser());
-
-  app.use(
-    '/media',
-    express.static(path.resolve(process.cwd(), env.STORAGE_LOCAL_DIR), {
-      fallthrough: false,
-      maxAge: isProduction ? '7d' : 0,
-    }),
-  );
 
   // Health lives outside the versioned API so monitors never hit the limiter.
   app.use(healthRouter);
@@ -86,17 +100,7 @@ export function createApp() {
 </html>`);
   });
 
-  app.use(
-    '/api/v1',
-    rateLimit({
-      windowMs: 60_000,
-      limit: 120,
-      standardHeaders: 'draft-7',
-      legacyHeaders: false,
-      skip: req => req.method === 'OPTIONS',
-    }),
-    apiRouter,
-  );
+  app.use('/api/v1', apiRateLimiter, apiRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -5,7 +5,12 @@ import { requireAuth, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { notFound, badRequest } from '../lib/http-error';
 import { storage } from '../storage';
-import { orderDto, productDto, sellerDto } from '../lib/dto';
+import {
+  orderDto,
+  productDto,
+  sellerDto,
+  storageKeyForSellerReference,
+} from '../lib/dto';
 
 export const adminRouter = Router();
 
@@ -174,9 +179,13 @@ adminRouter.get('/sellers/:id', async (req, res) => {
   });
   if (!seller) throw notFound('Seller not found');
   res.json({
-    seller: sellerDto(seller),
+    seller: await sellerDto(seller, { includeVerificationDocuments: true }),
     products: seller.products.map(productDto),
-    orders: seller.orders.map(order => orderDto(order, { includeBuyer: true })),
+    orders: await Promise.all(
+      seller.orders.map(order =>
+        orderDto(order, { includeBuyer: true, includePaymentProof: true }),
+      ),
+    ),
   });
 });
 
@@ -291,12 +300,31 @@ adminRouter.delete('/feedback/:id', async (req, res) => {
 });
 
 // ── Document signed URL generation ────────────────────────────────────────
-adminRouter.get('/documents/signed-url', async (req, res) => {
-  const key = req.query.key as string;
+export async function getVerificationDocumentDownload(key: string) {
   if (!key) throw badRequest('key is required');
 
-  const url = storage.publicUrl(key);
-  res.json({ url });
+  const seller = await prisma.seller.findFirst({
+    where: { verificationDocuments: { has: key } },
+    select: { id: true, verificationDocuments: true },
+  });
+  if (!seller) throw notFound('Verification document not found');
+
+  const storedReference = seller.verificationDocuments.find(
+    document => document === key,
+  );
+  const storageKey = storageKeyForSellerReference(
+    storedReference ?? null,
+    seller.id,
+  );
+  if (!storageKey) throw notFound('Verification document not found');
+
+  return storage.presignGet(storageKey);
+}
+
+adminRouter.get('/documents/signed-url', async (req, res) => {
+  const key = typeof req.query.key === 'string' ? req.query.key : '';
+  const { url, expiresIn } = await getVerificationDocumentDownload(key);
+  res.json({ url, expires_in: expiresIn });
 });
 
 // ── User block / unblock ──────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { conflict, forbidden, notFound } from '../lib/http-error';
 import type { Actor } from '../auth/actor';
-import { productDto } from '../lib/dto';
+import { productDto, stableStorageReference } from '../lib/dto';
 
 export interface VariantInput {
   size: string;
@@ -106,7 +106,7 @@ export async function listOwnedProducts(
     }),
   ]);
 
-  const items = products.map(productDto);
+  const items = await Promise.all(products.map(productDto));
   return {
     items: query.lowStock
       ? items.filter(product => product.stock <= product.low_stock_threshold)
@@ -156,7 +156,7 @@ export async function createProduct(actor: Actor, input: ProductInput) {
       discountPercent: input.discountPercent ?? 0,
       category: input.category ?? null,
       tags: input.tags ?? [],
-      imageUrl: input.imageUrl ?? null,
+      imageUrl: stableStorageReference(input.imageUrl, seller.id),
       stock,
       lowStockThreshold: input.lowStockThreshold ?? 5,
       status: input.status ?? 'active',
@@ -205,7 +205,11 @@ export async function updateProduct(
         : {}),
       ...(input.category !== undefined ? { category: input.category } : {}),
       ...(input.tags !== undefined ? { tags: input.tags } : {}),
-      ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+      ...(input.imageUrl !== undefined
+        ? {
+            imageUrl: stableStorageReference(input.imageUrl, existing.sellerId),
+          }
+        : {}),
       ...(input.lowStockThreshold !== undefined
         ? { lowStockThreshold: input.lowStockThreshold }
         : {}),
@@ -409,7 +413,7 @@ export async function addImage(
     data: {
       productId: product.id,
       storageKey: input.storageKey,
-      url: input.url,
+      url: input.storageKey,
       position: input.position ?? count,
     },
   });
@@ -417,7 +421,7 @@ export async function addImage(
   if (!product.imageUrl) {
     await prisma.product.update({
       where: { id: product.id },
-      data: { imageUrl: input.url },
+      data: { imageUrl: input.storageKey },
     });
   }
 

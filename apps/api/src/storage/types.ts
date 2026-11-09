@@ -1,6 +1,5 @@
 export interface PutResult {
   key: string;
-  url: string;
 }
 
 export interface PresignResult {
@@ -10,14 +9,20 @@ export interface PresignResult {
   expiresIn: number;
 }
 
+export interface PresignedDownload {
+  url: string;
+  expiresIn: number;
+}
+
 /**
  * Storage is deliberately provider-agnostic. The local driver is used in
- * development; Cloudflare R2 (S3-compatible) is used in production.
+ * development; an S3-compatible private bucket is used in production.
  */
 export interface StorageAdapter {
   put(key: string, body: Buffer, contentType: string): Promise<PutResult>;
   get(key: string): Promise<Buffer>;
   presignPut(key: string, contentType: string): Promise<PresignResult>;
-  publicUrl(key: string): string;
+  presignGet(key: string, contentType?: string): Promise<PresignedDownload>;
+  exists(key: string): Promise<boolean>;
   delete(key: string): Promise<void>;
 }

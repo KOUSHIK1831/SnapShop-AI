@@ -10,15 +10,19 @@ import { validate } from '../middleware/validate';
 import { storage } from '../storage';
 import { badRequest, notFound, unauthorized } from '../lib/http-error';
 import { verifyUploadToken } from '../lib/tokens';
+import { verifyDownloadToken } from '../storage/download-tokens';
 import type { StoredFile } from '@prisma/client';
+import { localContentTypeForKey, localIsInlineImage } from '../storage/local';
+import { storageKeyForSellerReference } from '../lib/dto';
 
 export const filesRouter = Router();
 
-function fileDto(file: StoredFile) {
+async function fileDto(file: StoredFile) {
   return {
     id: file.id,
     storage_key: file.storageKey,
-    url: storage.publicUrl(file.storageKey),
+    url: (await storage.presignGet(file.storageKey, file.mimeType ?? undefined))
+      .url,
     file_type: file.fileType,
     mime_type: file.mimeType,
     size_bytes: file.sizeBytes,
@@ -75,7 +79,7 @@ filesRouter.post(
       method: upload.method,
       headers: upload.headers,
       expires_in: upload.expiresIn,
-      public_url: storage.publicUrl(key),
+      public_url: (await storage.presignGet(key, contentType)).url,
       file_type: fileType ?? null,
     });
   },
@@ -102,8 +106,15 @@ filesRouter.post(
     const seller = await sellerFor(req.actor!.id);
     const prefix = `sellers/${seller.id}/`;
 
-    if (!req.valid.body.key.startsWith(prefix)) {
+    if (
+      storageKeyForSellerReference(req.valid.body.key, seller.id) !==
+      req.valid.body.key
+    ) {
       throw badRequest('This upload key does not belong to your store');
+    }
+
+    if (!(await storage.exists(req.valid.body.key))) {
+      throw badRequest('Uploaded object was not found');
     }
 
     const existing = await prisma.storedFile.findFirst({
@@ -126,7 +137,7 @@ filesRouter.post(
         })
       : await prisma.storedFile.create({ data });
 
-    res.status(201).json({ file: fileDto(file) });
+    res.status(201).json({ file: await fileDto(file) });
   },
 );
 
@@ -159,7 +170,7 @@ filesRouter.get(
     ]);
 
     res.json({
-      items: files.map(fileDto),
+      items: await Promise.all(files.map(fileDto)),
       total,
       page: req.valid.query.page,
       pageSize: req.valid.query.pageSize,
@@ -211,4 +222,23 @@ export const localUploadHandler: RequestHandler = async (req, res) => {
   await storage.put(key, req.body, contentType);
 
   res.status(204).send();
+};
+
+/** Short-lived local download target. The HMAC token is scoped to this key. */
+export const localDownloadHandler: RequestHandler = async (req, res) => {
+  const key = typeof req.query.key === 'string' ? req.query.key : '';
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+
+  if (!key || !token || !verifyDownloadToken(key, token)) {
+    throw unauthorized('Invalid or expired download token');
+  }
+
+  const body = await storage.get(key);
+  const isInlineImage = localIsInlineImage(key);
+  res
+    .set('Content-Type', localContentTypeForKey(key))
+    .set('Content-Disposition', `${isInlineImage ? 'inline' : 'attachment'}`)
+    .set('X-Content-Type-Options', 'nosniff')
+    .set('Cache-Control', 'private, no-store')
+    .send(body);
 };

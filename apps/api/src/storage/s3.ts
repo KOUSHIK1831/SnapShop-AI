@@ -1,38 +1,61 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env';
-import type { PresignResult, PutResult, StorageAdapter } from './types';
+import type {
+  PresignResult,
+  PresignedDownload,
+  PutResult,
+  StorageAdapter,
+} from './types';
 
 const TTL_SECONDS = 15 * 60;
+const DOWNLOAD_TTL_SECONDS = 5 * 60;
+
+export interface S3StorageConfig {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
 
 function required(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing storage configuration: ${name}`);
   return value;
 }
 
-/** Cloudflare R2 / any S3-compatible bucket. */
+/** Supabase Storage and other S3-compatible private buckets. */
 export class S3StorageAdapter implements StorageAdapter {
   private readonly client: S3Client;
 
   private readonly bucket: string;
 
-  constructor() {
-    this.bucket = required('S3_BUCKET', env.S3_BUCKET);
+  constructor(
+    config: S3StorageConfig = {
+      endpoint: required('S3_ENDPOINT', env.S3_ENDPOINT),
+      region: required('S3_REGION', env.S3_REGION),
+      bucket: required('S3_BUCKET', env.S3_BUCKET),
+      accessKeyId: required('S3_ACCESS_KEY_ID', env.S3_ACCESS_KEY_ID),
+      secretAccessKey: required(
+        'S3_SECRET_ACCESS_KEY',
+        env.S3_SECRET_ACCESS_KEY,
+      ),
+    },
+  ) {
+    this.bucket = config.bucket;
 
     this.client = new S3Client({
-      region: env.S3_REGION,
-      ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
+      endpoint: config.endpoint,
+      region: config.region,
       credentials: {
-        accessKeyId: required('S3_ACCESS_KEY_ID', env.S3_ACCESS_KEY_ID),
-        secretAccessKey: required(
-          'S3_SECRET_ACCESS_KEY',
-          env.S3_SECRET_ACCESS_KEY,
-        ),
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
       },
       forcePathStyle: true,
     });
@@ -51,7 +74,7 @@ export class S3StorageAdapter implements StorageAdapter {
         ContentType: contentType,
       }),
     );
-    return { key, url: this.publicUrl(key) };
+    return { key };
   }
 
   async get(key: string): Promise<Buffer> {
@@ -83,12 +106,33 @@ export class S3StorageAdapter implements StorageAdapter {
     };
   }
 
-  publicUrl(key: string): string {
-    const base = required('S3_PUBLIC_URL', env.S3_PUBLIC_URL).replace(
-      /\/+$/,
-      '',
+  async presignGet(
+    key: string,
+    _contentType?: string,
+  ): Promise<PresignedDownload> {
+    const url = await getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn: DOWNLOAD_TTL_SECONDS },
     );
-    return `${base}/${key.replace(/^\/+/, '')}`;
+    return { url, expiresIn: DOWNLOAD_TTL_SECONDS };
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return true;
+    } catch (error) {
+      const name = (error as { name?: string }).name;
+      const status = (error as { $metadata?: { httpStatusCode?: number } })
+        .$metadata?.httpStatusCode;
+      if (name === 'NotFound' || name === 'NoSuchKey' || status === 404) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {

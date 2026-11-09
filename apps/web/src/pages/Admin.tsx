@@ -236,12 +236,6 @@ export default function Admin() {
   const handleViewDocument = async (url: string) => {
     if (!url) return;
 
-    // If it's already a full URL (legacy data), just open it
-    if (url.startsWith('http')) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
     try {
       const result = await apiClient.get<{ url: string }>(
         `/admin/documents/signed-url?key=${encodeURIComponent(url)}`,

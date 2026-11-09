@@ -23,7 +23,6 @@ import {
   Upload,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { uploadFile } from '@/lib/upload';
 
 export interface DeliveryAddress {
   name: string;
@@ -51,7 +50,7 @@ interface OrderConfirmationProps {
     address: DeliveryAddress,
     payMethod: 'cod' | 'online',
     onlineType?: 'upi_qr' | 'razorpay',
-    paymentProofUrl?: string,
+    paymentProof?: File,
   ) => Promise<void>;
 }
 
@@ -152,7 +151,6 @@ export default function OrderConfirmation({
 
   const [copied, setCopied] = useState(false);
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [uploadingProof, setUploadingProof] = useState(false);
 
   React.useEffect(() => {
     if (isOpen && initialAddress) {
@@ -201,21 +199,12 @@ export default function OrderConfirmation({
 
   const handleFinalConfirm = async () => {
     dispatch({ type: 'SET_SUBMITTING', value: true });
-    let proofUrl = undefined;
-
-    if (proofFile) {
-      setUploadingProof(true);
-      try {
-        const { publicUrl } = await uploadFile(proofFile, 'payment_proof');
-        proofUrl = publicUrl;
-      } catch (err) {
-        console.error('Proof upload error:', err);
-      } finally {
-        setUploadingProof(false);
-      }
-    }
-
-    await onConfirm(state.address, state.payMethod, state.onlineType, proofUrl);
+    await onConfirm(
+      state.address,
+      state.payMethod,
+      state.onlineType,
+      proofFile ?? undefined,
+    );
     dispatch({ type: 'SET_SUBMITTING', value: false });
     dispatch({ type: 'SET_STEP', step: 'success' });
   };
@@ -669,10 +658,10 @@ export default function OrderConfirmation({
             <div className="px-5 py-4 border-t border-border/50 shrink-0 space-y-3">
               <Button
                 onClick={handleFinalConfirm}
-                disabled={state.submitting || uploadingProof}
+                disabled={state.submitting}
                 className="w-full h-12 font-bold text-lg"
               >
-                {state.submitting || uploadingProof ? (
+                {state.submitting ? (
                   <Loader2 className="size-5 mr-2 animate-spin" />
                 ) : (
                   <CheckCircle2 className="size-5 mr-2" />

@@ -12,4 +12,9 @@ function createStorage(): StorageAdapter {
 }
 
 export const storage: StorageAdapter = createStorage();
-export type { PresignResult, PutResult, StorageAdapter } from './types';
+export type {
+  PresignResult,
+  PresignedDownload,
+  PutResult,
+  StorageAdapter,
+} from './types';

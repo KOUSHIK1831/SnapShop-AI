@@ -44,6 +44,7 @@ export async function uploadFile(
         key: presign.key,
         mimeType: file.type || undefined,
         sizeBytes: file.size || undefined,
+        fileType,
       },
     );
 
@@ -62,4 +63,34 @@ export async function uploadFile(
     }
     throw err;
   }
+}
+
+export async function uploadPaymentProof(orderId: string, file: File) {
+  const contentType = file.type || 'image/jpeg';
+  const presign = await apiClient.post<{
+    key: string;
+    upload_url: string;
+    method: string;
+    headers?: Record<string, string>;
+  }>(`/orders/${orderId}/payment-proof/presign`, {
+    filename: file.name,
+    contentType,
+  });
+
+  const headers = {
+    ...presign.headers,
+    'Content-Type': contentType,
+  };
+  const upload = await fetch(presign.upload_url, {
+    method: presign.method,
+    headers,
+    body: file,
+  });
+  if (!upload.ok) {
+    throw new Error(`Failed to upload payment proof: ${upload.statusText}`);
+  }
+
+  await apiClient.post(`/orders/${orderId}/payment-proof`, {
+    key: presign.key,
+  });
 }

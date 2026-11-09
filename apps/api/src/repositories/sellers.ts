@@ -4,7 +4,7 @@ import { conflict, forbidden, notFound } from '../lib/http-error';
 import { RESERVED_SLUGS, slugify } from '../lib/slug';
 import { randomToken } from '../lib/tokens';
 import type { Actor } from '../auth/actor';
-import { productDto, sellerDto } from '../lib/dto';
+import { productDto, sellerDto, stableStorageReference } from '../lib/dto';
 
 export interface SellerInput {
   fullName?: string | null;
@@ -49,7 +49,9 @@ export async function getMySeller(actor: Actor) {
   const seller = await prisma.seller.findUnique({
     where: { userId: actor.id },
   });
-  return seller ? sellerDto(seller) : null;
+  return seller
+    ? sellerDto(seller, { includeVerificationDocuments: true })
+    : null;
 }
 
 export async function saveMySeller(actor: Actor, input: SellerInput) {
@@ -75,6 +77,20 @@ export async function saveMySeller(actor: Actor, input: SellerInput) {
     storeSlug = await uniqueSlug(input.storeName, existing?.id);
   }
 
+  const verificationDocuments = input.verificationDocuments?.map(document => {
+    const stableReference = stableStorageReference(
+      document,
+      existing?.id ?? '',
+    );
+    if (
+      !stableReference ||
+      !stableReference.startsWith(`sellers/${existing?.id ?? ''}/`)
+    ) {
+      throw forbidden('Verification document must be uploaded to your store');
+    }
+    return stableReference;
+  });
+
   const data: Prisma.SellerUncheckedCreateInput = {
     userId: actor.id,
     fullName: input.fullName ?? existing?.fullName ?? null,
@@ -87,7 +103,10 @@ export async function saveMySeller(actor: Actor, input: SellerInput) {
     phone: input.phone ?? existing?.phone ?? null,
     contactNumber: input.contactNumber ?? existing?.contactNumber ?? null,
     mapsUrl: input.mapsUrl ?? existing?.mapsUrl ?? null,
-    bannerUrl: input.bannerUrl ?? existing?.bannerUrl ?? null,
+    bannerUrl:
+      input.bannerUrl === undefined
+        ? (existing?.bannerUrl ?? null)
+        : stableStorageReference(input.bannerUrl, existing?.id ?? ''),
     themeColor: input.themeColor ?? existing?.themeColor ?? '#8B5CF6',
     gstin: input.gstin ?? existing?.gstin ?? null,
     registeredBusinessName:
@@ -98,7 +117,7 @@ export async function saveMySeller(actor: Actor, input: SellerInput) {
       existing?.preferredPaymentMethod ??
       'both',
     verificationDocuments:
-      input.verificationDocuments ?? existing?.verificationDocuments ?? [],
+      verificationDocuments ?? existing?.verificationDocuments ?? [],
   };
 
   const seller = await prisma.seller.upsert({
@@ -124,7 +143,7 @@ export async function saveMySeller(actor: Actor, input: SellerInput) {
     },
   });
 
-  return sellerDto(seller);
+  return sellerDto(seller, { includeVerificationDocuments: true });
 }
 
 export async function submitMySeller(actor: Actor) {
@@ -141,7 +160,7 @@ export async function submitMySeller(actor: Actor) {
   }
 
   if (seller.verificationStatus === 'approved') {
-    return sellerDto(seller);
+    return sellerDto(seller, { includeVerificationDocuments: true });
   }
 
   const updated = await prisma.seller.update({
@@ -152,7 +171,7 @@ export async function submitMySeller(actor: Actor) {
     },
   });
 
-  return sellerDto(updated);
+  return sellerDto(updated, { includeVerificationDocuments: true });
 }
 
 export async function getPublicSeller(slug: string) {
@@ -215,7 +234,7 @@ export async function listPublicProducts(
   ]);
 
   return {
-    items: products.map(productDto),
+    items: await Promise.all(products.map(productDto)),
     total,
     page: query.page,
     pageSize: query.pageSize,

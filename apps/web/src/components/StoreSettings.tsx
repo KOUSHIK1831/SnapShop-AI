@@ -71,8 +71,8 @@ export default function StoreSettings({
     if (!file) return;
     setUploadingBanner(true);
     try {
-      const { publicUrl } = await uploadFile(file, 'banner');
-      setFormData(prev => ({ ...prev, bannerUrl: publicUrl }));
+      const { key } = await uploadFile(file, 'banner');
+      setFormData(prev => ({ ...prev, bannerUrl: key }));
       toast({ title: 'Banner uploaded' });
     } catch (err) {
       toast({

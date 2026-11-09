@@ -29,13 +29,11 @@ const envSchema = z
 
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     STORAGE_LOCAL_DIR: z.string().default('.storage'),
-    PUBLIC_MEDIA_URL: z.string().default('http://localhost:4000/media'),
-    S3_ENDPOINT: z.string().url().optional(),
-    S3_REGION: z.string().default('auto'),
-    S3_BUCKET: z.string().optional(),
-    S3_ACCESS_KEY_ID: z.string().optional(),
-    S3_SECRET_ACCESS_KEY: z.string().optional(),
-    S3_PUBLIC_URL: z.string().url().optional(),
+    S3_ENDPOINT: z.string().trim().url().optional(),
+    S3_REGION: z.string().trim().min(1).optional(),
+    S3_BUCKET: z.string().trim().min(1).optional(),
+    S3_ACCESS_KEY_ID: z.string().trim().min(1).optional(),
+    S3_SECRET_ACCESS_KEY: z.string().trim().min(1).optional(),
 
     EMAIL_DRIVER: z.enum(['console', 'resend']).default('console'),
     RESEND_API_KEY: z.string().optional(),
@@ -57,33 +55,42 @@ const envSchema = z
     LOG_LEVEL: z.string().default('info'),
   })
   .superRefine((value, ctx) => {
-    if (value.NODE_ENV !== 'production') return;
+    if (value.NODE_ENV === 'production') {
+      if (value.STORAGE_DRIVER === 'local') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['STORAGE_DRIVER'],
+          message: 'STORAGE_DRIVER=s3 is required in production',
+        });
+      }
 
-    if (
-      value.JWT_ACCESS_SECRET === DEV_ACCESS_SECRET ||
-      value.JWT_REFRESH_SECRET === DEV_REFRESH_SECRET
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['JWT_ACCESS_SECRET'],
-        message: 'JWT secrets must be overridden in production',
-      });
-    }
+      if (
+        value.JWT_ACCESS_SECRET === DEV_ACCESS_SECRET ||
+        value.JWT_REFRESH_SECRET === DEV_REFRESH_SECRET
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['JWT_ACCESS_SECRET'],
+          message: 'JWT secrets must be overridden in production',
+        });
+      }
 
-    if (value.EMAIL_DRIVER === 'resend' && !value.RESEND_API_KEY) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['RESEND_API_KEY'],
-        message: 'RESEND_API_KEY is required when EMAIL_DRIVER=resend',
-      });
+      if (value.EMAIL_DRIVER === 'resend' && !value.RESEND_API_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['RESEND_API_KEY'],
+          message: 'RESEND_API_KEY is required when EMAIL_DRIVER=resend',
+        });
+      }
     }
 
     if (value.STORAGE_DRIVER === 's3') {
       for (const key of [
+        'S3_ENDPOINT',
+        'S3_REGION',
         'S3_BUCKET',
         'S3_ACCESS_KEY_ID',
         'S3_SECRET_ACCESS_KEY',
-        'S3_PUBLIC_URL',
       ] as const) {
         if (!value[key]) {
           ctx.addIssue({
@@ -95,7 +102,11 @@ const envSchema = z
       }
     }
 
-    if (value.AI_PROVIDER === 'gemini' && !value.GEMINI_API_KEY) {
+    if (
+      value.NODE_ENV === 'production' &&
+      value.AI_PROVIDER === 'gemini' &&
+      !value.GEMINI_API_KEY
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['GEMINI_API_KEY'],
@@ -103,7 +114,11 @@ const envSchema = z
       });
     }
 
-    if (value.AI_PROVIDER === 'groq' && !value.GROQ_API_KEY) {
+    if (
+      value.NODE_ENV === 'production' &&
+      value.AI_PROVIDER === 'groq' &&
+      !value.GROQ_API_KEY
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['GROQ_API_KEY'],

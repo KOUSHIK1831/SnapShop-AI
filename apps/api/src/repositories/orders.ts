@@ -1,9 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import type { OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../lib/http-error';
 import type { Actor } from '../auth/actor';
 import { effectivePrice, roundMoney } from '../lib/pricing';
-import { orderDto } from '../lib/dto';
+import { orderDto, storageKeyForSellerReference } from '../lib/dto';
 import { randomToken } from '../lib/tokens';
 import { emitToSeller, emitToUser } from '../realtime';
 import {
@@ -12,6 +13,7 @@ import {
   trackingLink,
 } from '../services/mailer';
 import { logger } from '../lib/logger';
+import { storage } from '../storage';
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ['accepted', 'cancelled'],
@@ -314,7 +316,11 @@ export async function createOrder(actor: Actor, input: CreateOrderInput) {
     buyerName: created.buyerName,
   });
 
-  return orderDto(created, { includeBuyer: true, includeTrackingToken: true });
+  return orderDto(created, {
+    includeBuyer: true,
+    includeTrackingToken: true,
+    includePaymentProof: true,
+  });
 }
 
 export async function listSellerOrders(
@@ -374,11 +380,14 @@ export async function listSellerOrders(
   ]);
 
   return {
-    items: orders.map(order =>
-      orderDto(order, {
-        includeBuyer: true,
-        includeTrackingToken: true,
-      }),
+    items: await Promise.all(
+      orders.map(order =>
+        orderDto(order, {
+          includeBuyer: true,
+          includeTrackingToken: true,
+          includePaymentProof: true,
+        }),
+      ),
     ),
     total,
     page: query.page,
@@ -407,7 +416,9 @@ export async function listBuyerOrders(
   ]);
 
   return {
-    items: orders.map(order => orderDto(order)),
+    items: await Promise.all(
+      orders.map(order => orderDto(order, { includePaymentProof: true })),
+    ),
     total,
     page: query.page,
     pageSize: query.pageSize,
@@ -438,6 +449,7 @@ export async function getOrder(actor: Actor, orderId: string) {
   return orderDto(await findOrderFor(actor, orderId), {
     includeBuyer: actor.role !== 'buyer',
     includeTrackingToken: true,
+    includePaymentProof: true,
   });
 }
 
@@ -448,7 +460,7 @@ export async function getOrderByTrackingToken(token: string) {
   });
   if (!order) throw notFound('Tracking link is invalid or has expired');
 
-  const dto = orderDto(order);
+  const dto = await orderDto(order, { includePaymentProof: false });
   return {
     ...dto,
     buyer_phone: dto.buyer_phone
@@ -481,7 +493,11 @@ export async function updateOrderStatus(
   const order = await findOrderFor(actor, orderId);
 
   if (order.status === status && !extra) {
-    return orderDto(order, { includeBuyer: true, includeTrackingToken: true });
+    return orderDto(order, {
+      includeBuyer: true,
+      includeTrackingToken: true,
+      includePaymentProof: true,
+    });
   }
 
   if (actor.role === 'buyer') {
@@ -573,7 +589,11 @@ export async function updateOrderStatus(
 
   void sendOrderEmails(updated);
 
-  return orderDto(updated, { includeBuyer: true, includeTrackingToken: true });
+  return orderDto(updated, {
+    includeBuyer: true,
+    includeTrackingToken: true,
+    includePaymentProof: true,
+  });
 }
 
 export async function submitPaymentProof(
@@ -593,7 +613,31 @@ export async function submitPaymentProof(
     throw conflict('This order is already paid');
   }
 
+  const expectedProofPrefix = `sellers/${order.sellerId}/payment-proofs/${order.id}/${actor.id}/`;
+  if (
+    storageKeyForSellerReference(proofKey, order.sellerId) !== proofKey ||
+    !proofKey.startsWith(expectedProofPrefix) ||
+    !(await storage.exists(proofKey))
+  ) {
+    throw badRequest('Payment proof upload was not found for this order');
+  }
+
+  const storedFile = await prisma.storedFile.findFirst({
+    where: {
+      sellerId: order.sellerId,
+      storageKey: proofKey,
+      fileType: 'payment_proof',
+      status: 'pending',
+    },
+    select: { id: true },
+  });
+  if (!storedFile) throw badRequest('Payment proof upload was not authorized');
+
   await prisma.$transaction([
+    prisma.storedFile.update({
+      where: { id: storedFile.id },
+      data: { status: 'completed' },
+    }),
     prisma.order.update({
       where: { id: order.id },
       data: { paymentProofKey: proofKey, payStatus: 'proof_submitted' },
@@ -617,6 +661,51 @@ export async function submitPaymentProof(
   });
 
   return getOrder(actor, order.id);
+}
+
+export async function presignPaymentProof(
+  actor: Actor,
+  orderId: string,
+  filename: string,
+  contentType: string,
+) {
+  const order = await findOrderFor(actor, orderId);
+  if (actor.role !== 'buyer' || order.buyerId !== actor.id) {
+    throw forbidden('Only the buyer can upload a payment proof');
+  }
+  if (order.payMethod === 'cod') {
+    throw badRequest('This order is cash on delivery');
+  }
+  if (order.payStatus === 'paid' || order.payStatus === 'verified') {
+    throw conflict('This order is already paid');
+  }
+
+  const safeName =
+    filename
+      .split(/[\\/]/)
+      .pop()
+      ?.replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .slice(0, 80) || 'payment-proof';
+  const key = `sellers/${order.sellerId}/payment-proofs/${order.id}/${actor.id}/${new Date().getUTCFullYear()}/${randomUUID()}-${safeName}`;
+  const upload = await storage.presignPut(key, contentType);
+
+  await prisma.storedFile.create({
+    data: {
+      sellerId: order.sellerId,
+      storageKey: key,
+      fileType: 'payment_proof',
+      mimeType: contentType,
+      status: 'pending',
+    },
+  });
+
+  return {
+    key,
+    upload_url: upload.url,
+    method: upload.method,
+    headers: upload.headers,
+    expires_in: upload.expiresIn,
+  };
 }
 
 export async function verifyPayment(

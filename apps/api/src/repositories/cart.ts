@@ -23,23 +23,25 @@ const cartInclude = {
 
 type CartRecord = Prisma.CartGetPayload<{ include: typeof cartInclude }>;
 
-export function cartDto(cart: CartRecord) {
-  const items = cart.items.map(item => {
-    const base = Number(item.variant?.priceOverride ?? item.product.price);
-    const unit = effectivePrice(base, Number(item.product.discountPercent));
-    const lineTotal = roundMoney(unit * item.quantity);
+export async function cartDto(cart: CartRecord) {
+  const items = await Promise.all(
+    cart.items.map(async item => {
+      const base = Number(item.variant?.priceOverride ?? item.product.price);
+      const unit = effectivePrice(base, Number(item.product.discountPercent));
+      const lineTotal = roundMoney(unit * item.quantity);
 
-    return {
-      id: item.id,
-      product_id: item.productId,
-      variant_id: item.variantId,
-      size: item.variant?.size ?? null,
-      quantity: item.quantity,
-      unit_price: unit,
-      line_total: lineTotal,
-      product: productDto(item.product),
-    };
-  });
+      return {
+        id: item.id,
+        product_id: item.productId,
+        variant_id: item.variantId,
+        size: item.variant?.size ?? null,
+        quantity: item.quantity,
+        unit_price: unit,
+        line_total: lineTotal,
+        product: await productDto(item.product),
+      };
+    }),
+  );
 
   return {
     id: cart.id,
