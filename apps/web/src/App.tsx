@@ -26,9 +26,11 @@ import BottomNav from './components/BottomNav';
 import ThemeProvider from '@/components/ThemeProvider';
 
 const queryClient = new QueryClient();
-const googleClientId =
-  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-  '1000000000000-dummygoogleclientidforlocaldev.apps.googleusercontent.com';
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
+if (!googleClientId) {
+  console.error('VITE_GOOGLE_CLIENT_ID is missing. Configure it in Vercel.');
+}
 
 const App = () => {
   return (
@@ -38,7 +40,7 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <GoogleOAuthProvider clientId={googleClientId}>
+            <GoogleOAuthProvider clientId={googleClientId ?? ''}>
               <BrowserRouter>
                 <OfflineBanner />
                 <AuthProvider>

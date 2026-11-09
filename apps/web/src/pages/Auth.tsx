@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import React, { useEffect, useReducer, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -714,12 +716,14 @@ function LoginForm({
         </div>
       </div>
 
-      <div className="flex justify-center w-full">
-        <GoogleLogin
-          onSuccess={handlers.handleGoogleSuccess}
-          onError={() => {}}
-        />
-      </div>
+      {googleClientId && (
+        <div className="flex justify-center w-full">
+          <GoogleLogin
+            onSuccess={handlers.handleGoogleSuccess}
+            onError={() => {}}
+          />
+        </div>
+      )}
 
       <div className="flex items-center justify-between mt-1">
         <p className="text-sm text-muted-foreground">
@@ -880,12 +884,14 @@ function SignupForm({
         </div>
       </div>
 
-      <div className="flex justify-center w-full">
-        <GoogleLogin
-          onSuccess={handlers.handleGoogleSuccess}
-          onError={() => {}}
-        />
-      </div>
+      {googleClientId && (
+        <div className="flex justify-center w-full">
+          <GoogleLogin
+            onSuccess={handlers.handleGoogleSuccess}
+            onError={() => {}}
+          />
+        </div>
+      )}
 
       <p className="text-center text-sm text-muted-foreground">
         {t('auth.hasAccount')}{' '}
