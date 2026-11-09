@@ -44,6 +44,25 @@ if (!React.use) {
   (React as any).use = React.useContext;
 }
 
+vi.mock('@react-oauth/google', () => ({
+  GoogleOAuthProvider: ({ children }: any) => children,
+  GoogleLogin: (props: any) =>
+    React.createElement(
+      'button',
+      {
+        'data-testid': 'google-login-btn',
+        onClick: () =>
+          props.onSuccess?.({ credential: 'mock-google-id-token' }),
+      },
+      'Sign in with Google',
+    ),
+  useGoogleLogin: vi.fn(),
+  useGoogleOneTapLogin: vi.fn(),
+  googleLogout: vi.fn(),
+  hasGrantedAllScopesGoogle: vi.fn(),
+  hasGrantedAnyScopeGoogle: vi.fn(),
+}));
+
 vi.mock('@capacitor/app', () => ({
   App: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),

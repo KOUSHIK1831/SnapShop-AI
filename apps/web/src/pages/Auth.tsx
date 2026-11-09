@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useReducer, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,12 +111,51 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
 export default function Auth() {
   const [state, dispatch] = useReducer(authReducer, initialState);
-  const { signIn, signUp, user, loading, resetPassword, verifyOtp, resendOtp } =
-    useAuth();
+  const {
+    signIn,
+    signUp,
+    signInWithGoogle,
+    user,
+    loading,
+    resetPassword,
+    verifyOtp,
+    resendOtp,
+  } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse?.credential) return;
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
+    const { error, user: loggedInUser } = await signInWithGoogle(
+      credentialResponse.credential,
+    );
+    dispatch({ type: 'SET_SUBMITTING', payload: false });
+    if (error) {
+      toast({
+        title: 'Google Sign-In failed',
+        description: error.message || 'Could not authenticate with Google',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({ title: 'Signed in with Google' });
+    if (loggedInUser && !loggedInUser.onboarded) {
+      navigate('/onboarding');
+    } else if (returnTo) {
+      navigate(returnTo);
+    } else if (loggedInUser?.role === 'seller') {
+      navigate('/dashboard');
+    } else if (loggedInUser?.role === 'buyer') {
+      navigate('/buyer');
+    } else if (loggedInUser?.role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/onboarding');
+    }
+  };
 
   const { mode, showPassword, submitting, forgotEmail, otpValue, form } = state;
 
@@ -189,6 +228,11 @@ export default function Auth() {
         return;
       }
 
+      if (user.onboarded === false) {
+        navigate('/onboarding');
+        return;
+      }
+
       if (returnTo) {
         navigate(returnTo);
       } else {
@@ -214,7 +258,7 @@ export default function Auth() {
       return;
     }
     dispatch({ type: 'SET_SUBMITTING', payload: true });
-    const { error } = await signIn.password(
+    const { error, user: loggedInUser } = await signIn.password(
       form.loginEmail,
       form.loginPassword,
     );
@@ -226,13 +270,8 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
-      // Check if user was immediately signed out (blocked) or needs verification
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
-
-      if (!session.user.email_confirmed_at) {
+      const currentUser = loggedInUser || user;
+      if (currentUser?.email_confirmed === false) {
         toast({
           title: 'Verification Required',
           description: 'Please verify your email to continue.',
@@ -240,19 +279,18 @@ export default function Auth() {
         dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
         dispatch({
           type: 'UPDATE_FORM',
-          payload: { signupEmail: session.user.email || form.loginEmail },
+          payload: { signupEmail: form.loginEmail },
         });
         return;
       }
 
       toast({ title: 'Success', description: 'Logged in successfully' });
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      const role =
-        profile?.role || session.user.user_metadata?.role || 'seller';
+      const role = currentUser?.role || 'seller';
+
+      if (currentUser?.onboarded === false) {
+        navigate('/onboarding');
+        return;
+      }
 
       if (returnTo) {
         navigate(returnTo);
@@ -297,30 +335,13 @@ export default function Auth() {
       );
       if (error) throw error;
 
-      // Check if session exists (email confirmation might be disabled in Supabase, though we want it on)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session && session.user.email_confirmed_at) {
-        toast({
-          title: 'Success',
-          description: 'Account created successfully!',
-        });
-        const role = form.signupRole;
-        if (returnTo) navigate(returnTo);
-        else if (role === 'buyer') navigate('/buyer');
-        else navigate('/dashboard');
-      } else {
-        // Stay for OTP
-        sessionStorage.setItem('apnabazar_pending_otp_email', form.signupEmail);
-        toast({
-          title: 'Verification Required',
-          description:
-            'Please check your email for the 6-digit verification code.',
-        });
-        dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
-      }
+      sessionStorage.setItem('apnabazar_pending_otp_email', form.signupEmail);
+      toast({
+        title: 'Verification Required',
+        description:
+          'Please check your email for the 6-digit verification code.',
+      });
+      dispatch({ type: 'SET_MODE', payload: 'otp-signup' });
     } catch (err) {
       toast({
         title: 'Error',
@@ -469,7 +490,11 @@ export default function Auth() {
                 key="login"
                 state={state}
                 dispatch={dispatch}
-                handlers={{ handlePasswordLogin, formatPhone }}
+                handlers={{
+                  handlePasswordLogin,
+                  formatPhone,
+                  handleGoogleSuccess,
+                }}
                 t={t}
               />
             ) : mode === 'signup' ? (
@@ -477,7 +502,11 @@ export default function Auth() {
                 key="signup"
                 state={state}
                 dispatch={dispatch}
-                handlers={{ handleCreateAccount, formatPhone }}
+                handlers={{
+                  handleCreateAccount,
+                  formatPhone,
+                  handleGoogleSuccess,
+                }}
                 t={t}
               />
             ) : mode === 'forgot' ? (
@@ -674,6 +703,24 @@ function LoginForm({
         {t('auth.signIn')}
       </Button>
 
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-center w-full">
+        <GoogleLogin
+          onSuccess={handlers.handleGoogleSuccess}
+          onError={() => {}}
+        />
+      </div>
+
       <div className="flex items-center justify-between mt-1">
         <p className="text-sm text-muted-foreground">
           {t('auth.noAccount')}{' '}
@@ -821,6 +868,24 @@ function SignupForm({
         {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}{' '}
         {t('auth.signUp')}
       </Button>
+
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-center w-full">
+        <GoogleLogin
+          onSuccess={handlers.handleGoogleSuccess}
+          onError={() => {}}
+        />
+      </div>
 
       <p className="text-center text-sm text-muted-foreground">
         {t('auth.hasAccount')}{' '}

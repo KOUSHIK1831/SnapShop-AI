@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,6 +8,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { NetworkProvider } from '@/hooks/useNetworkStrength';
 import Index from './pages/Index';
 import Auth from './pages/Auth';
+import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Storefront from './pages/Storefront';
@@ -22,6 +24,10 @@ import BottomNav from './components/BottomNav';
 import ThemeProvider from '@/components/ThemeProvider';
 
 const queryClient = new QueryClient();
+const googleClientId =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '1000000000000-dummygoogleclientidforlocaldev.apps.googleusercontent.com';
+
 const App = () => {
   return (
     <ThemeProvider>
@@ -30,54 +36,60 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <OfflineBanner />
-              <AuthProvider>
-                <div className="pb-16 sm:pb-0">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <ProtectedRoute requiredRole="seller">
-                          <Dashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin"
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <Admin />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/store/:slug" element={<Storefront />} />
-                    <Route
-                      path="/buyer"
-                      element={
-                        <ProtectedRoute requiredRole="buyer">
-                          <BuyerDashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/track-order/:orderId"
-                      element={
-                        <ProtectedRoute requiredRole="buyer">
-                          <TrackOrder />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/manual" element={<VolunteerManualPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <BottomNav />
-                </div>
-              </AuthProvider>
-            </BrowserRouter>
+            <GoogleOAuthProvider clientId={googleClientId}>
+              <BrowserRouter>
+                <OfflineBanner />
+                <AuthProvider>
+                  <div className="pb-16 sm:pb-0">
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/onboarding" element={<Onboarding />} />
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedRoute requiredRole="seller">
+                            <Dashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute requiredRole="admin">
+                            <Admin />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route path="/store/:slug" element={<Storefront />} />
+                      <Route
+                        path="/buyer"
+                        element={
+                          <ProtectedRoute requiredRole="buyer">
+                            <BuyerDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/track-order/:orderId"
+                        element={
+                          <ProtectedRoute requiredRole="buyer">
+                            <TrackOrder />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/reset-password"
+                        element={<ResetPassword />}
+                      />
+                      <Route path="/manual" element={<VolunteerManualPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                    <BottomNav />
+                  </div>
+                </AuthProvider>
+              </BrowserRouter>
+            </GoogleOAuthProvider>
           </TooltipProvider>
         </QueryClientProvider>
       </NetworkProvider>

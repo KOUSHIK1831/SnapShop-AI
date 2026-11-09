@@ -23,6 +23,8 @@ export default function ProtectedRoute({
 
   if (!user) return <Navigate to="/auth" replace />;
 
+  if (user.onboarded === false) return <Navigate to="/onboarding" replace />;
+
   if (!user.email_confirmed) return <Navigate to="/auth" replace />;
 
   if (requiredRole && user.role !== requiredRole) {
