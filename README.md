@@ -70,14 +70,14 @@ SnapShop AI is a full-stack, multi-store commerce platform for neighborhood reta
    docker compose up -d postgres
    ~~~
 
-   In \`apps/api/.env\`, set both Prisma URLs to the local database:
+   In `apps/api/.env`, set both Prisma URLs to the local database:
 
    ~~~dotenv
    DATABASE_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
    DIRECT_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
    ~~~
 
-   Replace the example JWT secrets with distinct values of at least 32 characters, and set a local-only \`ADMIN_PASSWORD\` before seeding. The web app's example \`VITE_API_URL\` already targets the local API.
+   Replace the example JWT secrets with distinct values of at least 32 characters, and set a local-only `ADMIN_PASSWORD` before seeding. The web app's example `VITE_API_URL` already targets the local API.
 
 4. **Initialize and run.**
 
@@ -103,23 +103,23 @@ SnapShop AI is a full-stack, multi-store commerce platform for neighborhood reta
 
 ## Configuration
 
-Use the checked-in examples as the source of truth: [API variables](apps/api/.env.example) and [web variables](apps/web/.env.example). Do not commit actual \`.env\` files or credentials.
+Use the checked-in examples as the source of truth: [API variables](apps/api/.env.example) and [web variables](apps/web/.env.example). Do not commit actual `.env` files or credentials.
 
 | Purpose | Variables |
 | --- | --- |
-| Database | \`DATABASE_URL\`, \`DIRECT_URL\` |
-| API / auth | \`APP_URL\`, \`API_PUBLIC_URL\`, \`CORS_ORIGINS\`, \`JWT_ACCESS_SECRET\`, \`JWT_REFRESH_SECRET\` |
-| Frontend | \`VITE_API_URL\`, optional \`VITE_GOOGLE_CLIENT_ID\` |
-| Image AI | \`AI_PROVIDER\`, \`GEMINI_API_KEY\`, \`GROQ_API_KEY\` |
-| Storage | \`STORAGE_DRIVER\` and, for S3, the \`S3_*\` variables |
+| Database | `DATABASE_URL`, `DIRECT_URL` |
+| API / auth | `APP_URL`, `API_PUBLIC_URL`, `CORS_ORIGINS`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` |
+| Frontend | `VITE_API_URL`, optional `VITE_GOOGLE_CLIENT_ID` |
+| Image AI | `AI_PROVIDER`, `GEMINI_API_KEY`, `GROQ_API_KEY` |
+| Storage | `STORAGE_DRIVER` and, for S3, the `S3_*` variables |
 | Other optional services | Google OAuth, Resend, Meta WhatsApp Cloud API, Sentry, PostHog |
 
 > [!IMPORTANT]
-> Production requires strong JWT secrets, HTTPS, an appropriately restricted CORS configuration, and \`STORAGE_DRIVER=s3\` with a private S3-compatible bucket. The included Compose credentials and demo accounts are for local development only.
+> Production requires strong JWT secrets, HTTPS, an appropriately restricted CORS configuration, and `STORAGE_DRIVER=s3` with a private S3-compatible bucket. The included Compose credentials and demo accounts are for local development only.
 
 ## Architecture
 
-\`\`\`text
+```text
 React / Vite client (apps/web)
            |
            | REST /api/v1
@@ -131,11 +131,11 @@ Express API (apps/api)
    +-- Prisma ORM
            |
        PostgreSQL
-\`\`\`
+```
 
 The API owns authentication, authorization, data validation, business logic, and persistence. The web client communicates through the API rather than connecting directly to the database.
 
-\`\`\`text
+```text
 apps/
   web/               React storefront and seller/admin UIs
   api/               Express routes, services, Prisma, tests
@@ -145,15 +145,15 @@ packages/
 android/             Capacitor Android shell
 ai-eval/             AI evaluation fixtures
 docs/                Development documentation
-\`\`\`
+```
 
 ## API and development
 
-The API is served under \`/api/v1\`; [Swagger UI](http://localhost:4000/docs) documents available routes and request schemas. Route groups include \`/auth\`, \`/sellers\`, \`/products\`, \`/cart\`, \`/orders\`, \`/files\`, \`/ai\`, \`/whatsapp\`, \`/analytics\`, \`/feedback\`, and \`/admin\`. Protected routes require the appropriate authenticated role.
+The API is served under `/api/v1`; [Swagger UI](http://localhost:4000/docs) documents available routes and request schemas. Route groups include `/auth`, `/sellers`, `/products`, `/cart`, `/orders`, `/files`, `/ai`, `/whatsapp`, `/analytics`, `/feedback`, and `/admin`. Protected routes require the appropriate authenticated role.
 
 Common workspace commands:
 
-\`\`\`bash
+```bash
 pnpm dev                 # Run web and API
 pnpm build               # Build workspaces
 pnpm typecheck           # Type-check
@@ -161,9 +161,9 @@ pnpm lint                # Lint web workspace
 pnpm test                # Run Vitest suites
 pnpm format:check        # Verify formatting
 pnpm db:studio           # Open Prisma Studio
-\`\`\`
+```
 
-The repository also includes web Playwright E2E specs and a GitHub Actions workflow that runs migrations, tests, typechecks, linting, and builds against PostgreSQL. Apply committed migrations in production with \`pnpm --filter @snapshop/api db:deploy\`, not the development migration command.
+The repository also includes web Playwright E2E specs and a GitHub Actions workflow that runs migrations, tests, typechecks, linting, and builds against PostgreSQL. Apply committed migrations in production with `pnpm --filter @snapshop/api db:deploy`, not the development migration command.
 
 ## Documentation
 
