@@ -165,6 +165,73 @@ pnpm db:studio           # Open Prisma Studio
 
 The repository also includes web Playwright E2E specs and a GitHub Actions workflow that runs migrations, tests, typechecks, linting, and builds against PostgreSQL. Apply committed migrations in production with `pnpm --filter @snapshop/api db:deploy`, not the development migration command.
 
+## How to use the platform
+
+### Seller: photo to published listing
+
+1. Sign in as a seller and complete the store onboarding flow.
+2. Add a product manually, or upload an eligible **fashion-product image**
+   for AI-assisted digitization.
+3. Inspect the proposed title, description, price, category, tags, and
+   confidence values; **correct them before saving**.
+4. Set variants, stock levels, and a low-stock threshold.
+5. Make the listing active and share the public store URL with buyers.
+6. Handle incoming orders and update fulfillment statuses in the dashboard.
+
+AI-generated prices and descriptions are suggestions, not verified facts.
+The image digitization endpoint currently targets fashion, clothing, footwear,
+and accessories; it should not be assumed to classify all retail categories.
+
+### Buyer: discover to fulfillment
+
+1. Explore a seller's storefront and available products.
+2. Add items to the cart and choose delivery and payment preferences.
+3. Place an order through the authenticated checkout workflow.
+4. Review order history and tracking information.
+
+The order API supports `courier`, `self_delivery`, and `self_pickup`
+delivery types and `cod`, `upi`, and `online` payment-method values.
+Those choices do **not** imply payment-gateway capture or automatic
+confirmation of funds.
+
+### Admin and role boundaries
+
+Seller inventory operations use role-scoped API routes, while the
+administration UI supports store approval and moderation. Authentication
+uses short-lived JWT access tokens and rotating HTTP-only refresh cookies.
+The API also applies input validation and rate limits. Consult
+[`apps/api/src/routes/`](apps/api/src/routes/) for exact permissions.
+
+## Deployment considerations
+
+| Component | Configuration | Important detail |
+| --- | --- | --- |
+| Web client | Vite build, `VITE_API_URL` | Point to the deployed API's `/api/v1` path |
+| API | Node host, `PORT`, `APP_URL`, `CORS_ORIGINS` | Configure trusted origins and HTTPS |
+| Database | PostgreSQL, `DATABASE_URL`, `DIRECT_URL` | Run committed Prisma migrations before serving traffic |
+| File storage | `STORAGE_DRIVER=s3` | Use private S3-compatible storage in production |
+| Email | `EMAIL_DRIVER=resend` | Set the Resend key and verified sender when enabled |
+| AI | Gemini and/or Groq credentials | Provider availability and usage limits apply |
+| WhatsApp | Meta credentials and webhook | Prototype; verify security and delivery before production use |
+
+The provided `docker-compose.yml` starts PostgreSQL and MinIO for local
+experimentation; it is **not** a complete production deployment. There
+is no verified public demo URL or backend hosting manifest in this
+repository. Check the [local development guide](docs/development.md)
+for supported environment setup.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Database connection fails | PostgreSQL is running and both Prisma URLs match its credentials |
+| Prisma client is missing | Run `pnpm db:generate` before starting the API |
+| Browser calls fail with CORS | Match `VITE_API_URL` and API `CORS_ORIGINS` |
+| AI returns a sample clothing product | Configure a provider key; mock mode is the local fallback |
+| Google sign-in is unavailable | Configure matching frontend and API Google client IDs |
+| Uploads fail | Check local file permissions or the private S3 adapter settings |
+| Swagger UI is blank offline | Its interface assets are loaded from a CDN |
+
 ## Documentation
 
 - [Local development](docs/development.md)
