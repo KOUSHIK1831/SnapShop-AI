@@ -1,386 +1,177 @@
+<div align="center">
+
+<img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="SnapShop AI app icon" width="88" />
+
 # SnapShop AI
 
-**A local commerce platform that helps neighborhood retailers bring their catalog and customer service online.**
+**Turn a product photo into a storefront-ready listing. Run your local shop online.**
 
 [![CI](https://github.com/KOUSHIK1831/SnapShop-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/KOUSHIK1831/SnapShop-AI/actions/workflows/ci.yml)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-26%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-11.28.5-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Node.js 26+](https://img.shields.io/badge/Node.js-26%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
 
-[Repository](https://github.com/KOUSHIK1831/SnapShop-AI) · [Local development guide](docs/development.md) · [Buyer manual](USER_MANUAL_BUYER.md) · [Seller manual](USER_MANUAL_SELLER.md)
+[Features](#features) · [Quick start](#quick-start) · [Architecture](#architecture) · [API](#api-and-development) · [Guides](#documentation)
 
-## Contents
+</div>
 
-- [Overview](#overview)
-- [Features](#features)
-- [Technology stack](#technology-stack)
-- [Architecture](#architecture)
-- [Project structure](#project-structure)
-- [Getting started](#getting-started)
-- [Environment configuration](#environment-configuration)
-- [Database and migrations](#database-and-migrations)
-- [API documentation](#api-documentation)
-- [Authentication and security](#authentication-and-security)
-- [Testing and quality](#testing-and-quality)
-- [Deployment](#deployment)
-- [Screenshots and demo](#screenshots-and-demo)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License and acknowledgements](#license-and-acknowledgements)
-- [Contact](#contact)
-
-## Overview
-
-SnapShop AI is a multi-role commerce application for local retailers, sellers, and buyers. Sellers can set up a public store, manage products and stock, process orders, and view store analytics. Buyers can browse stores and products, build a cart, place orders, and track their orders.
-
-The platform is designed to give small retailers a lightweight path from an offline catalog to online storefronts and order management. AI-assisted image digitization can draft product information from a photo. An optional WhatsApp webhook and Gemini-powered agent can help customers find products and create orders in a messaging flow.
-
-Unlike a conventional single-store shop, SnapShop AI includes seller onboarding and management, public multi-store discovery, role-aware dashboards, and retailer-focused inventory workflows. AI and WhatsApp features require external provider credentials; they are not prerequisites for the core application.
+SnapShop AI is a full-stack, multi-store commerce platform for neighborhood retailers. Sellers manage digital storefronts, products, inventory, and orders; buyers discover shops, browse catalogs, and track purchases. Optional vision-language model integrations draft product details from images, with seller review before publishing.
 
 ## Features
 
-### Buyer experience
+- **AI-assisted listings:** Draft fashion-product titles, descriptions, prices, categories, and tags from photos using Gemini or Groq; review the results before saving.
+- **Seller workspace:** Store onboarding, product variants, stock management, low-stock alerts, order fulfillment, and analytics.
+- **Buyer experience:** Public storefront discovery, search, cart, checkout preferences, order history, and tracking.
+- **Multi-role access:** Email/password and optional Google sign-in; buyer, seller, admin, and volunteer roles.
+- **Localized interface:** English, Hindi, and Telugu.
+- **Administration:** Seller verification, user controls, moderation, and platform insights.
+- **WhatsApp integration (prototype):** Webhook, catalog lookup, conversational ordering, and UPI deep-link generation with external credentials.
 
-- Browse public sellers, store pages, product categories, and available products.
-- Search and filter storefront catalogs.
-- Add items to a cart and submit orders with delivery and payment preferences.
-- View order history and use a public tracking token to check an order.
-- Use the interface in English, Hindi, or Telugu.
+> [!NOTE]
+> AI product digitization uses a mock response when provider keys are absent, so you can try the workflow locally. The WhatsApp flow is a prototype, not a production-ready payment or customer-support system; generating a UPI link does **not** confirm a payment.
 
-### Seller tools
+## Tech stack
 
-- Create and edit a store profile, including its description, contact details, location, branding, and UPI details.
-- Submit a store profile for review and manage products, variants, images, stock, and low-stock thresholds.
-- Review and update order statuses, view seller analytics, and upload store documents.
-- Configure WhatsApp customer support through the seller interface when the API integration is configured.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, TypeScript, Vite 5, Tailwind CSS, Radix UI, TanStack Query |
+| Backend | Node.js, Express 5, TypeScript, REST API |
+| Data | PostgreSQL 16, Prisma 6 |
+| Auth | JWT access tokens, HTTP-only refresh cookies, Argon2, optional Google OAuth |
+| AI | Google Gemini and Groq vision models |
+| Storage / email | Local or S3-compatible storage; console or Resend email |
+| Tooling | pnpm workspaces, Turborepo, Vitest, Testing Library, Playwright |
+| Mobile | Capacitor Android project shell |
 
-### Accounts and administration
+## Quick start
 
-- Register and sign in with email and password, or use Google sign-in when OAuth credentials are configured.
-- Select a buyer or seller role during onboarding. API authorization also supports admin and volunteer roles.
-- Verify email, recover or change a password, and manage active sessions.
-- Admin screens and API routes support platform overview, seller review/status management, user controls, product and feedback moderation, and audit records.
+**Requirements:** Node.js **26+**, pnpm **11.28.5**, and PostgreSQL 16 (or Docker for the provided local database). Run these commands from the repository root.
 
-### AI and messaging
+1. **Clone and install.**
 
-- **AI product digitization:** image analysis can draft a clothing product title, description, price, category, tags, and confidence values. Gemini and Groq integrations are available; local development falls back to mock results when no provider key is configured. Seller daily usage limits are tracked.
-- **WhatsApp agent:** a Meta webhook receives text messages; the Gemini-backed agent can look up a store catalog, create an order after confirmation, and return a UPI payment link. It requires WhatsApp Cloud API and Gemini configuration. Outbound messages are simulated when WhatsApp credentials are missing.
+   ~~~bash
+   git clone https://github.com/KOUSHIK1831/SnapShop-AI.git
+   cd SnapShop-AI
+   corepack enable
+   corepack prepare pnpm@11.28.5 --activate
+   pnpm install
+   ~~~
 
-These integrations are implemented in the repository but depend on external services and credentials. A UPI deep link is generated by the WhatsApp flow; the codebase does not establish a payment processor integration.
+2. **Create local environment files.**
 
-## Technology stack
+   ~~~bash
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env
+   ~~~
 
-| Area                     | Technologies in this repository                                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Web client               | React 18, Vite 5, React Router, TanStack Query, Tailwind CSS, Radix UI, i18next                                      |
-| API                      | Node.js, Express 5, REST routes, Socket.IO client/server support code                                                |
-| Language                 | TypeScript; JavaScript tooling and configuration                                                                     |
-| Database                 | PostgreSQL 16 (Compose and CI); PostgreSQL-compatible managed databases are supported by Prisma URLs                 |
-| ORM and migrations       | Prisma 6                                                                                                             |
-| Authentication           | Google Identity Services / `google-auth-library`, JWT via `jose`, HTTP-only refresh cookies, Argon2 password hashing |
-| AI                       | Google Gemini API and Groq API; mock digitization fallback for local/test use                                        |
-| File storage             | Local filesystem adapter or S3-compatible storage adapter (including Supabase Storage private buckets)               |
-| Email                    | Console adapter or Resend                                                                                            |
-| Monitoring and analytics | Sentry and PostHog client integrations, configured optionally                                                        |
-| Tests                    | Vitest, Testing Library, Supertest; Playwright end-to-end test files and configuration are present                   |
-| Build and package tools  | pnpm workspaces, Turborepo, Vite, tsup, TypeScript, Prettier, ESLint                                                 |
-| Deployment configuration | Vercel SPA rewrite configuration; CI on GitHub Actions. No backend-host deployment manifest is included.             |
+3. **Start PostgreSQL** (skip this if you already have a compatible database).
+
+   ~~~bash
+   docker compose up -d postgres
+   ~~~
+
+   In \`apps/api/.env\`, set both Prisma URLs to the local database:
+
+   ~~~dotenv
+   DATABASE_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
+   DIRECT_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
+   ~~~
+
+   Replace the example JWT secrets with distinct values of at least 32 characters, and set a local-only \`ADMIN_PASSWORD\` before seeding. The web app's example \`VITE_API_URL\` already targets the local API.
+
+4. **Initialize and run.**
+
+   ~~~bash
+   pnpm db:generate
+   pnpm db:migrate
+   pnpm --filter @snapshop/api db:seed
+   pnpm dev
+   ~~~
+
+   The seed adds demo stores, products, and accounts for local testing. **Never seed a production database.**
+
+| Service | Local URL |
+| --- | --- |
+| Web app | http://localhost:8080 |
+| REST API | http://localhost:4000/api/v1 |
+| Swagger UI | http://localhost:4000/docs |
+| OpenAPI JSON | http://localhost:4000/openapi.json |
+| Health checks | http://localhost:4000/health · http://localhost:4000/ready |
+
+> [!TIP]
+> Google sign-in, live AI models, email delivery, and WhatsApp messaging are optional for the first local run. See the [development guide](docs/development.md) for additional setup details.
+
+## Configuration
+
+Use the checked-in examples as the source of truth: [API variables](apps/api/.env.example) and [web variables](apps/web/.env.example). Do not commit actual \`.env\` files or credentials.
+
+| Purpose | Variables |
+| --- | --- |
+| Database | \`DATABASE_URL\`, \`DIRECT_URL\` |
+| API / auth | \`APP_URL\`, \`API_PUBLIC_URL\`, \`CORS_ORIGINS\`, \`JWT_ACCESS_SECRET\`, \`JWT_REFRESH_SECRET\` |
+| Frontend | \`VITE_API_URL\`, optional \`VITE_GOOGLE_CLIENT_ID\` |
+| Image AI | \`AI_PROVIDER\`, \`GEMINI_API_KEY\`, \`GROQ_API_KEY\` |
+| Storage | \`STORAGE_DRIVER\` and, for S3, the \`S3_*\` variables |
+| Other optional services | Google OAuth, Resend, Meta WhatsApp Cloud API, Sentry, PostHog |
+
+> [!IMPORTANT]
+> Production requires strong JWT secrets, HTTPS, an appropriately restricted CORS configuration, and \`STORAGE_DRIVER=s3\` with a private S3-compatible bucket. The included Compose credentials and demo accounts are for local development only.
 
 ## Architecture
 
-The browser application talks to the Express API for application data. The API validates requests, applies authentication and role checks where required, and uses Prisma to access PostgreSQL. The shared workspace contains common validation schemas and types. Optional integrations provide AI inference, email delivery, file storage, Google identity verification, and WhatsApp messaging.
-
-```mermaid
-flowchart LR
-    Buyer[Buyer browser] --> Web[apps/web<br/>React and Vite]
-    Seller[Seller or admin browser] --> Web
-    Web -->|REST /api/v1| API[apps/api<br/>Express 5]
-    Web -. optional realtime client .-> API
-    API --> Auth[Authentication and authorization]
-    API --> Shared[packages/shared<br/>schemas and types]
-    API --> Prisma[Prisma]
-    Prisma --> DB[(PostgreSQL)]
-    API --> Storage[Local or S3-compatible storage]
-    API -. optional .-> Google[Google OAuth verification]
-    API -. optional .-> AI[Gemini or Groq]
-    API -. optional .-> Email[Console or Resend email]
-    WhatsApp[Meta WhatsApp Cloud API] <-->|optional webhook and messages| API
-```
-
-`apps/web` provides buyer, seller, and admin screens. `apps/api` owns authentication, route handlers, business services, storage adapters, and database access. `packages/shared` exports shared schemas and types; `packages/config` provides shared TypeScript configuration. PostgreSQL persists user, seller, product, cart, order, file, feedback, conversation, audit, and AI usage data described by the Prisma schema.
-
-The API has Socket.IO support code and the web includes a Socket.IO client hook. Realtime server initialization is not wired in the current API entry point, so this README does not describe realtime delivery as an active end-to-end capability.
-
-## Project structure
-
-```text
-.
-├── apps/
-│   ├── api/
-│   │   ├── prisma/             # Prisma schema, migrations, and local/CI seed
-│   │   ├── src/routes/         # Versioned REST route groups and health checks
-│   │   ├── src/services/       # Authentication, AI, email, and WhatsApp logic
-│   │   ├── src/storage/        # Local and S3-compatible storage adapters
-│   │   └── tests/              # API tests
-│   └── web/
-│       ├── src/components/     # Shared UI and commerce components
-│       ├── src/hooks/          # Auth, cart, seller, network, and socket hooks
-│       ├── src/pages/          # Buyer, seller, admin, and auth pages
-│       ├── src/locales/        # English, Hindi, and Telugu translations
-│       └── tests/              # Unit/component and Playwright E2E tests
-├── packages/
-│   ├── shared/                 # Shared TypeScript schemas and types
-│   └── config/                 # Shared TypeScript configuration
-├── docs/                       # Development notes
-├── Planning/                   # Product and technical planning documents
-├── android/                    # Capacitor Android project shell
-├── docker-compose.yml          # Local PostgreSQL and MinIO services
-├── .github/workflows/ci.yml    # GitHub Actions verification workflow
-└── README.md
-```
-
-## Getting started
-
-### Prerequisites
-
-- Node.js 26 or newer (`.nvmrc` pins Node.js 26).
-- Corepack and pnpm 11.28.5.
-- PostgreSQL 16 or a compatible PostgreSQL database.
-- Docker Compose is optional and can start PostgreSQL and MinIO for local development.
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/KOUSHIK1831/SnapShop-AI.git
-cd SnapShop-AI
-corepack enable
-corepack prepare pnpm@11.28.5 --activate
-pnpm install
-```
-
-### 2. Configure the applications
-
-```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Edit `apps/api/.env` and set `DATABASE_URL` to your PostgreSQL connection. For the local Compose database shown below, use:
-
-```dotenv
-DATABASE_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
-DIRECT_URL=postgresql://snapshop:snapshop_dev_password@localhost:5432/snapshop?schema=public
-```
-
-The provided API example uses sample Neon URLs; replace them with the database you actually intend to use. Set a local-only `ADMIN_PASSWORD` before running the seed. Configure the frontend's `VITE_API_URL` (default: `http://localhost:4000/api/v1`). Google OAuth is optional for local development, but Google sign-in needs a real client ID in both the web and API environment files.
-
-### 3. Start PostgreSQL (optional Compose setup)
-
-```bash
-docker compose up -d postgres
-```
-
-The Compose service creates a local `snapshop` database using the username and password in `docker-compose.yml`. Keep these development credentials local; do not use them for a public deployment.
-
-### 4. Generate Prisma client and apply migrations
-
-```bash
-pnpm db:generate
-pnpm db:migrate
-```
-
-`db:migrate` runs Prisma's development migration command and applies pending migrations. See [Database and migrations](#database-and-migrations).
-
-### 5. Start the API and web app
-
-```bash
-pnpm dev
-```
-
-Turborepo starts the workspace development tasks. The default local URLs are:
-
-| Service       | URL                            |
-| ------------- | ------------------------------ |
-| Web client    | <http://localhost:8080>        |
-| API           | <http://localhost:4000>        |
-| API health    | <http://localhost:4000/health> |
-| API readiness | <http://localhost:4000/ready>  |
-| API docs      | <http://localhost:4000/docs>   |
-
-Vite proxies `/api/v1` requests to the local API. To use the local demo data, set `ADMIN_PASSWORD` in the API environment and run `pnpm --filter @snapshop/api db:seed`. Demo seed accounts and data are for local development and CI only.
-
-For details, see [docs/development.md](docs/development.md).
-
-## Environment configuration
-
-Use the example files as the source of truth: [`apps/api/.env.example`](apps/api/.env.example) and [`apps/web/.env.example`](apps/web/.env.example). All values below should be replaced with environment-specific values; never commit real credentials.
-
-### API: `apps/api/.env`
-
-| Variable(s)                                                                                       | Requirement                                                           | Purpose                                                                                                                                                                                           |
-| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                                    | Required                                                              | PostgreSQL connection used by Prisma at runtime.                                                                                                                                                  |
-| `DIRECT_URL`                                                                                      | Optional for config; recommended for migrations with pooled databases | Direct PostgreSQL connection for Prisma migrations.                                                                                                                                               |
-| `NODE_ENV`, `PORT`                                                                                | Optional; defaults provided                                           | Runtime mode and API port (`development`, `4000`).                                                                                                                                                |
-| `APP_URL`, `API_PUBLIC_URL`, `CORS_ORIGINS`, `TRUST_PROXY`                                        | Optional; defaults are local                                          | Public web/API origins, allowed browser origins (comma-separated), and proxy trust setting. Set production CORS origins to the deployed frontend origin(s).                                       |
-| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`                                                         | Defaults are development-only; override in production                 | Signing secrets. Production validation rejects the built-in development secrets. Generate independent random values.                                                                              |
-| `JWT_ISSUER`, `JWT_AUDIENCE`, `ACCESS_TTL`, `REFRESH_TTL`, `REFRESH_COOKIE_NAME`, `COOKIE_DOMAIN` | Optional                                                              | Token claims and session cookie settings. `COOKIE_DOMAIN` is optional and useful only when the deployment's domain arrangement requires it.                                                       |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                                        | Optional unless using Google sign-in                                  | Google OAuth configuration. The server verifies Google ID tokens against the configured client ID. Never expose the client secret in frontend variables.                                          |
-| `AI_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`                     | Optional; keys required for chosen provider in production             | Product digitization uses Gemini or Groq. `auto` can try configured providers; `mock` selects mock results. The WhatsApp agent uses Gemini when configured.                                       |
-| `STORAGE_DRIVER`, `STORAGE_LOCAL_DIR`                                                             | Local default; production requires `s3`                               | Select `local` or `s3` file storage. Production rejects the local driver.                                                                                                                         |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`               | Required when `STORAGE_DRIVER=s3`                                     | S3-compatible endpoint, provider region, bucket, and server-only access credentials. Supabase Storage uses its S3 endpoint and generated S3 keys. Private downloads use short-lived signed URLs.  |
-| `EMAIL_DRIVER`, `EMAIL_FROM`, `RESEND_API_KEY`                                                    | Optional; console default                                             | Email delivery via console logging or Resend. `RESEND_API_KEY` is required when selecting `resend` in production.                                                                                 |
-| `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_API_VERSION`                            | Optional                                                              | Meta webhook verification and Graph API configuration. The sender also reads `WHATSAPP_TOKEN` and `PHONE_NUMBER_ID` from the process environment; these are not listed in the checked-in example. |
-| `LOG_LEVEL`                                                                                       | Optional                                                              | Pino logging level.                                                                                                                                                                               |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`                                                                   | Needed for local/CI seed                                              | Admin account created by the seed. Use a unique local-only password; the seed refuses to run under `NODE_ENV=production`.                                                                         |
-
-### Web: `apps/web/.env`
-
-| Variable                                | Requirement                                            | Purpose                                                                                                                                  |
-| --------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_URL`                          | Optional; defaults to the same origin's `/api/v1` path | API base URL, including `/api/v1`. The Vite development server proxies this path to `http://localhost:4000`.                             |
-| `VITE_GOOGLE_CLIENT_ID`                 | Optional unless Google sign-in is used                 | Google Identity Services client ID. It must match the API's `GOOGLE_CLIENT_ID`. This value is public client configuration, not a secret. |
-| `VITE_SENTRY_DSN`, `VITE_SENTRY_ENV`    | Optional                                               | Sentry browser error reporting configuration.                                                                                            |
-| `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` | Optional                                               | PostHog analytics configuration.                                                                                                         |
-
-The web code also supports `VITE_WS_URL` for its Socket.IO client hook, but no such variable is listed in the web example and the API entry point does not currently attach a realtime server. Set it only if realtime server support is wired for your deployment.
-
-## Database and migrations
-
-The database model is defined in [`apps/api/prisma/schema.prisma`](apps/api/prisma/schema.prisma); committed SQL migrations are in [`apps/api/prisma/migrations/`](apps/api/prisma/migrations/). Prisma Client is generated from this schema and used by the API repositories and services.
-
-For a fresh local database, configure `DATABASE_URL` (and `DIRECT_URL` when needed), then run:
-
-```bash
-pnpm db:generate
-pnpm db:migrate
-```
-
-Useful database commands defined in the root workspace are:
-
-```bash
-pnpm db:studio
-pnpm db:migrate
-pnpm db:generate
-```
-
-`pnpm db:studio` opens Prisma Studio. `pnpm db:migrate` uses `prisma migrate dev` for development. For production, use the API package's deploy command to apply committed migrations without creating new ones:
-
-```bash
-pnpm --filter @snapshop/api db:deploy
-```
-
-Do not use `db:migrate` to deploy production schema changes. The demo seed command is `pnpm --filter @snapshop/api db:seed`; the code explicitly throws when `NODE_ENV=production`, and it creates known demo accounts and sample commerce data. Never run it against production.
-
-## API documentation
-
-The API is versioned under `/api/v1`. When the API is running, Swagger UI is served at [`/docs`](http://localhost:4000/docs), and the OpenAPI document is at [`/openapi.json`](http://localhost:4000/openapi.json). Health endpoints are outside the versioned API: `GET /health` and `GET /ready`.
-
-The route groups and representative endpoints below are verified in `apps/api/src/routes/`:
-
-| Route group  | Representative endpoints                                                | Responsibility                                                                             |
-| ------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/auth`      | `POST /register`, `/login`, `/google`, `/refresh`, `/logout`; `GET /me` | Account registration, sessions, Google sign-in, email verification, and password recovery. |
-| `/sellers`   | `GET /`, `GET /:slug`, `GET /:slug/products`; `GET/PATCH /me`           | Public seller/store discovery and seller profile management.                               |
-| `/products`  | `GET/POST /`, `GET/PATCH/DELETE /:id`, `PATCH /stock`                   | Authenticated seller product and inventory management, variants, and images.               |
-| `/cart`      | `GET/POST/PATCH/DELETE /`                                               | Cart retrieval and item management.                                                        |
-| `/orders`    | `POST /`, `GET /`, `GET /track/:token`, `PATCH /:id/status`             | Order placement, buyer/seller order lists, tracking, and fulfillment updates.              |
-| `/files`     | `POST /presign`, `GET /:id`, `DELETE /:id`                              | Upload authorization and stored-file management.                                           |
-| `/ai`        | `POST /digitize`, `GET /usage`                                          | Seller product image digitization and AI quota usage.                                      |
-| `/whatsapp`  | `GET/POST /webhook`, `GET /conversations`, `POST /send`                 | Meta webhook verification, inbound messages, seller conversations, and outbound messages.  |
-| `/analytics` | `GET /seller`, `GET /store/:slug`                                       | Seller performance and public store analytics data.                                        |
-| `/admin`     | `GET /overview`, `GET /sellers`, `PATCH /users/:id/block`               | Administrative platform management and moderation.                                         |
-| `/feedback`  | `GET/POST /`                                                            | User feedback submission and administration.                                               |
-
-All endpoint paths in the table are relative to `/api/v1`. Some routes require authentication or specific roles; consult the route code or OpenAPI document for request schemas and responses. The `/docs` interface loads Swagger UI from a CDN, so an internet connection is needed to render its UI assets.
-
-## Authentication and security
-
-- Email/password accounts are stored with Argon2 password hashes (`@node-rs/argon2`).
-- Google sign-in sends a Google credential to `POST /api/v1/auth/google`; the API verifies the ID token with `google-auth-library` and checks it against the configured Google client ID.
-- The API returns short-lived signed access tokens and stores refresh-token hashes in PostgreSQL. Refresh tokens are delivered through an HTTP-only cookie and rotated by `POST /auth/refresh`.
-- Authentication middleware verifies bearer access tokens and checks account state and token version. Role middleware restricts seller and admin operations.
-- Email verification, resend verification, forgot/reset password, and authenticated password change routes are implemented. Delivery uses the configured console or Resend mail adapter.
-- The Express app configures Helmet, CORS with credentials, request validation, rate limiting, and structured Pino logging.
-
-These are descriptions of implemented mechanisms, not a security certification. Production deployments must supply strong independent JWT secrets, correct HTTPS/domain cookie settings, restricted CORS origins, and valid provider credentials.
-
-## Testing and quality
-
-The repository scripts provide these checks:
-
-```bash
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm build
-pnpm format:check
-```
-
-The root scripts run Turborepo tasks across workspaces. The web and API workspaces use Vitest; web tests use Testing Library, and API tests include Supertest. Playwright E2E specs and `apps/web/playwright.config.ts` exist, but there is no root or web package script to run them currently.
-
-GitHub Actions runs on pushes to `main` and `feat/**`, and pull requests targeting `main`. The workflow provisions PostgreSQL, installs with a frozen pnpm lockfile, generates Prisma Client, typechecks, lints, applies migrations, seeds the CI database, runs tests, and builds the workspaces. The seed is permitted in CI because `NODE_ENV` is not set to `production` there.
-
-Note: the root `lint` task currently reaches the web workspace; `apps/api/package.json` does not define an API lint script. The API is covered by typecheck and tests in CI.
-
-## Deployment
-
-### Verified repository configuration
-
-- Root [`vercel.json`](vercel.json) and [`apps/web/vercel.json`](apps/web/vercel.json) contain SPA rewrites to `/index.html` for client-side routes.
-- The API package defines `build`, `start`, and `db:deploy` scripts for a Node.js host.
-- The API can use PostgreSQL and has a configurable CORS allowlist, public API URL, and cookie settings.
-- The API supports local storage and S3-compatible storage adapters.
-
-No live deployment URL or backend-host-specific deployment manifest is present in the repository. The following is a deployment outline, not a verified deployed environment:
-
-1. Deploy `apps/web` as a Vite app on Vercel. Configure the project root/build settings for the monorepo and set `VITE_API_URL` to the deployed API's `/api/v1` URL. Add `VITE_GOOGLE_CLIENT_ID` if Google sign-in is enabled.
-2. Deploy `apps/api` to a persistent Node.js hosting service. Build with `pnpm --filter @snapshop/api build` and start with `pnpm --filter @snapshop/api start`.
-3. Use managed PostgreSQL. Set `DATABASE_URL` and, when the provider uses a connection pool, a direct `DIRECT_URL` for migration commands.
-4. Configure production API variables, especially strong JWT secrets, `NODE_ENV=production`, `APP_URL`, `API_PUBLIC_URL`, and `CORS_ORIGINS`. Match Google OAuth IDs across frontend and API when enabled.
-5. Run `pnpm --filter @snapshop/api db:deploy` as a release/migration step before or alongside the application rollout.
-6. For uploads on ephemeral hosting, configure a private S3-compatible bucket such as Supabase Storage and set `STORAGE_DRIVER=s3` plus the required S3 variables. Local filesystem storage is for development; production rejects it because ephemeral instances can lose uploaded files.
-7. Configure external services only as needed: Resend for email, Gemini or Groq for product digitization, and Meta WhatsApp Cloud API for WhatsApp messaging.
-
-The Compose MinIO service is available for local S3-compatible storage experiments, but the default API storage driver is local. Production cookie domain and `Secure` behavior should be reviewed against the chosen frontend/API domain topology before enabling cross-site sessions.
-
-## Screenshots and demo
-
-No application screenshots or verified public demo URL were found in the repository. Add real screenshots under a location such as `docs/images/` and link them here when available. Do not use the product-image samples in `ai-eval/images/` as UI screenshots.
-
-## Roadmap
-
-Potential next steps, separate from current capabilities:
-
-- Wire and document authenticated realtime notifications end to end.
-- Add an automated Playwright command and document a repeatable E2E environment.
-- Add a production deployment example for the API and object storage.
-- Add current application screenshots and a verified demo link when a deployment is available.
-
-## Contributing
-
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before opening a pull request.
-
-1. Fork the repository and create a focused branch from `main`.
-2. Install dependencies and configure a local database using [Getting started](#getting-started).
-3. Make the change in the owning workspace and add or update relevant tests.
-4. Run the applicable quality checks:
-
-   ```bash
-   pnpm lint
-   pnpm typecheck
-   pnpm test
-   pnpm build
-   ```
-
-5. Open a pull request with a clear summary, relevant screenshots for UI changes, and migration or configuration notes where needed.
-
-Use a Conventional Commit message and do not commit environment files, credentials, or generated build output. Report security issues according to [SECURITY.md](SECURITY.md).
-
-## License and acknowledgements
-
-SnapShop AI is licensed under the [GNU Affero General Public License v3.0](LICENSE). The project uses open-source libraries listed in the workspace package manifests and lockfile.
-
-## Contact
-
-For questions, issues, or contributions, use the [GitHub repository](https://github.com/KOUSHIK1831/SnapShop-AI) and its issue and pull request pages. No separate project contact address is published in the repository.
+\`\`\`text
+React / Vite client (apps/web)
+           |
+           | REST /api/v1
+           v
+Express API (apps/api)
+   |       |         |
+   |       |         +-- Gemini / Groq (optional AI)
+   |       +------------ Local / S3 storage
+   +-- Prisma ORM
+           |
+       PostgreSQL
+\`\`\`
+
+The API owns authentication, authorization, data validation, business logic, and persistence. The web client communicates through the API rather than connecting directly to the database.
+
+\`\`\`text
+apps/
+  web/               React storefront and seller/admin UIs
+  api/               Express routes, services, Prisma, tests
+packages/
+  shared/            Shared schemas and types
+  config/            Shared TypeScript configuration
+android/             Capacitor Android shell
+ai-eval/             AI evaluation fixtures
+docs/                Development documentation
+\`\`\`
+
+## API and development
+
+The API is served under \`/api/v1\`; [Swagger UI](http://localhost:4000/docs) documents available routes and request schemas. Route groups include \`/auth\`, \`/sellers\`, \`/products\`, \`/cart\`, \`/orders\`, \`/files\`, \`/ai\`, \`/whatsapp\`, \`/analytics\`, \`/feedback\`, and \`/admin\`. Protected routes require the appropriate authenticated role.
+
+Common workspace commands:
+
+\`\`\`bash
+pnpm dev                 # Run web and API
+pnpm build               # Build workspaces
+pnpm typecheck           # Type-check
+pnpm lint                # Lint web workspace
+pnpm test                # Run Vitest suites
+pnpm format:check        # Verify formatting
+pnpm db:studio           # Open Prisma Studio
+\`\`\`
+
+The repository also includes web Playwright E2E specs and a GitHub Actions workflow that runs migrations, tests, typechecks, linting, and builds against PostgreSQL. Apply committed migrations in production with \`pnpm --filter @snapshop/api db:deploy\`, not the development migration command.
+
+## Documentation
+
+- [Local development](docs/development.md)
+- [Buyer manual](USER_MANUAL_BUYER.md)
+- [Seller manual](USER_MANUAL_SELLER.md)
+- [Product requirements](Planning/01-PRD.md) · [Technical requirements](Planning/02-TRD.md)
+- [Application flow](Planning/03-AppFlow.md) · [UI/UX brief](Planning/04-UI-UX-Brief.md)
+- [Report a bug or request a feature](https://github.com/KOUSHIK1831/SnapShop-AI/issues)
+
+The web app includes Vercel SPA rewrite configuration; the API requires a separate Node.js host and PostgreSQL deployment. No verified public demo URL is currently published in this repository.
